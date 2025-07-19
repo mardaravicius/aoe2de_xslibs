@@ -154,7 +154,7 @@ def xs_int_list_from_range(start: int = 0, stop: int = 0, step: int = 1) -> int:
     return lst
 
 
-def xs_int_list_repeat(value: int = 0, times: int = 0) -> int:
+def xs_int_list_from_repeated_val(value: int = 0, times: int = 0) -> int:
     if times < 0 or times >= c_int_list_max_capacity:
         return c_int_list_generic_error
     lst: int = xs_array_create_int(times + 1, value)
@@ -162,6 +162,24 @@ def xs_int_list_repeat(value: int = 0, times: int = 0) -> int:
         return c_int_list_generic_error
     xs_array_set_int(lst, 0, times)
     return lst
+
+
+def xs_int_list_from_repeated_list(lst: int = -1, times: int = 0) -> int:
+    size: int = xs_array_get_int(lst, 0)
+    new_capacity: int = (size * times) + 1
+    if new_capacity > c_int_list_max_capacity:
+        return c_int_list_generic_error
+    new_lst: int = xs_array_create_int(new_capacity)
+    if new_lst < 0:
+        return c_int_list_generic_error
+    for i in range(1, size + 1):
+        val: int = xs_array_get_int(lst, i)
+        j = i
+        while j < new_capacity:
+            xs_array_set_int(new_lst, j, val)
+            j += size
+    xs_array_set_int(new_lst, 0, new_capacity - 1)
+    return new_lst
 
 
 def xs_int_list_from_array(arr: int = -1) -> int:
@@ -589,7 +607,8 @@ def int_list(include_test: bool) -> (str, str):
         xs_int_list,
         xs_int_list_create,
         xs_int_list_from_range,
-        xs_int_list_repeat,
+        xs_int_list_from_repeated_val,
+        xs_int_list_from_repeated_list,
         xs_int_list_from_array,
         xs_int_list_use_array_as_source,
         xs_int_list_get,

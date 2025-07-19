@@ -5,7 +5,7 @@ from xs_converter.symbols import XsExternConst
 
 c_int_int_dict_success = 0
 c_int_int_dict_generic_error = -1
-c_int_int_dict_no_key = -2
+c_int_int_dict_no_key_error = -2
 c_int_int_dict_resize_failed_error = -3
 c_int_int_dict_max_capacity_error = -4
 c_int_int_dict_max_capacity = 999999999
@@ -14,6 +14,7 @@ c_int_int_dict_empty_param = -999999999
 c_int_int_dict_initial_num_of_buckets = 17
 c_int_int_dict_initial_bucket_size = 3
 c_int_int_dict_min_bucket_size = 3
+c_int_int_dict_hash_constant = 16777619
 _c_int_int_dict_last_operation_status = c_int_int_dict_success
 _c_int_int_dict_key_exists = False
 _int_int_dict_temp_array = -1
@@ -24,7 +25,7 @@ _int_int_dict_iterator_prev_idx = 1
 def constants() -> None:
     c_int_int_dict_success: XsExternConst[int] = 0
     c_int_int_dict_generic_error: XsExternConst[int] = -1
-    c_int_int_dict_no_key: XsExternConst[int] = -2
+    c_int_int_dict_no_key_error: XsExternConst[int] = -2
     c_int_int_dict_resize_failed_error: XsExternConst[int] = -3
     c_int_int_dict_max_capacity_error: XsExternConst[int] = -4
     c_int_int_dict_max_capacity: XsExternConst[int] = 999999999
@@ -33,6 +34,7 @@ def constants() -> None:
     c_int_int_dict_initial_num_of_buckets: XsExternConst[int] = 17
     c_int_int_dict_initial_bucket_size: XsExternConst[int] = 3
     c_int_int_dict_min_bucket_size: XsExternConst[int] = 3
+    c_int_int_dict_hash_constant: XsExternConst[int] = 16777619
     _c_int_int_dict_last_operation_status: int = c_int_int_dict_success
     _c_int_int_dict_key_exists: bool = False
     _int_int_dict_temp_array: int = -1
@@ -47,7 +49,7 @@ def xs_int_int_dict_create() -> int:
 
 
 def _xs_int_int_dict_hash(key: int = -1, num_of_buckets: int = 0) -> int:
-    hash: int = key * 16777619
+    hash: int = key * c_int_int_dict_hash_constant
     hash = hash % num_of_buckets
     if hash < 0:
         hash = hash + num_of_buckets
@@ -67,7 +69,7 @@ def _xs_int_int_dict_replace(dct: int = -1, key: int = -1, val: int = 0, num_of_
         xs_array_set_int(bucket, 2, val)
         xs_array_set_int(bucket, 0, 2)
         xs_array_set_int(dct, hash, bucket)
-        _c_int_int_dict_last_operation_status = c_int_int_dict_no_key
+        _c_int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return c_int_int_dict_generic_error
     bucket_size: int = xs_array_get_int(bucket, 0)
     j: int = 1
@@ -94,7 +96,7 @@ def _xs_int_int_dict_replace(dct: int = -1, key: int = -1, val: int = 0, num_of_
         xs_array_set_int(bucket, bucket_size + 1, key)
         xs_array_set_int(bucket, bucket_size + 2, val)
         xs_array_set_int(bucket, 0, bucket_size + 2)
-        _c_int_int_dict_last_operation_status = c_int_int_dict_no_key
+        _c_int_int_dict_last_operation_status = c_int_int_dict_no_key_error
     else:
         _c_int_int_dict_last_operation_status = c_int_int_dict_success
     return found_value
@@ -136,7 +138,7 @@ def xs_int_int_dict_put(dct: int = -1, key: int = -1, val: int = 0) -> int:
     dict_capacity: int = xs_array_get_size(dct)
 
     previous_value: int = _xs_int_int_dict_replace(dct, key, val, dict_capacity - 1)
-    if _c_int_int_dict_last_operation_status == c_int_int_dict_no_key:
+    if _c_int_int_dict_last_operation_status == c_int_int_dict_no_key_error:
         total_size += 1
         xs_array_set_int(dct, 0, total_size)
     elif _c_int_int_dict_last_operation_status == c_int_int_dict_success:
@@ -165,7 +167,7 @@ def xs_int_int_dict_put(dct: int = -1, key: int = -1, val: int = 0) -> int:
         for t in range(0, temp_data_size, 2):
             _xs_int_int_dict_replace(dct, xs_array_get_int(_int_int_dict_temp_array, t),
                                      xs_array_get_int(_int_int_dict_temp_array, t + 1), dict_capacity - 1)
-            if _c_int_int_dict_last_operation_status < 0 and _c_int_int_dict_last_operation_status != c_int_int_dict_no_key:
+            if _c_int_int_dict_last_operation_status < 0 and _c_int_int_dict_last_operation_status != c_int_int_dict_no_key_error:
                 return c_int_int_dict_generic_error
         _c_int_int_dict_last_operation_status = store_status
     return c_int_int_dict_generic_error
@@ -216,7 +218,7 @@ def xs_int_int_dict_remove(dct: int = -1, key: int = -1) -> int:
     hash: int = _xs_int_int_dict_hash(key, dict_capacity - 1)
     bucket: int = xs_array_get_int(dct, hash)
     if bucket < 0:
-        _c_int_int_dict_last_operation_status = c_int_int_dict_no_key
+        _c_int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return c_int_int_dict_generic_error
     found: bool = False
     found_value: int = c_int_int_dict_generic_error
@@ -241,7 +243,7 @@ def xs_int_int_dict_remove(dct: int = -1, key: int = -1) -> int:
                 return c_int_int_dict_generic_error
         _c_int_int_dict_last_operation_status = c_int_int_dict_success
     else:
-        _c_int_int_dict_last_operation_status = c_int_int_dict_no_key
+        _c_int_int_dict_last_operation_status = c_int_int_dict_no_key_error
     return found_value
 
 
@@ -251,7 +253,7 @@ def xs_int_int_dict_get(dct: int = -1, key: int = -1, dft: int = -1) -> int:
     hash: int = _xs_int_int_dict_hash(key, dict_capacity - 1)
     bucket: int = xs_array_get_int(dct, hash)
     if bucket < 0:
-        _c_int_int_dict_last_operation_status = c_int_int_dict_no_key
+        _c_int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return dft
     bucket_size: int = xs_array_get_int(bucket, 0)
     for j in range(1, bucket_size + 1, 2):
@@ -259,7 +261,7 @@ def xs_int_int_dict_get(dct: int = -1, key: int = -1, dft: int = -1) -> int:
         if key == stored_key:
             _c_int_int_dict_last_operation_status = c_int_int_dict_success
             return xs_array_get_int(bucket, j + 1)
-    _c_int_int_dict_last_operation_status = c_int_int_dict_no_key
+    _c_int_int_dict_last_operation_status = c_int_int_dict_no_key_error
     return dft
 
 
@@ -434,7 +436,7 @@ def xs_int_int_dict_update(source: int = -1, dct: int = -1) -> int:
             return err
         xs_int_int_dict_put(source, key, val)
         err = xs_int_int_dict_last_error()
-        if err != 0 and err != c_int_int_dict_no_key:
+        if err != 0 and err != c_int_int_dict_no_key_error:
             return err
         _c_int_int_dict_last_operation_status = c_int_int_dict_success
     return c_int_int_dict_success

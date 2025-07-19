@@ -14,7 +14,7 @@ class IntIntDictTest(unittest.TestCase):
             else:
                 v = i * -1
             arr_prev = xs_int_int_dict_put(arr, i, v)
-            if xs_int_int_dict_last_error() == c_int_int_dict_no_key:
+            if xs_int_int_dict_last_error() == c_int_int_dict_no_key_error:
                 arr_prev = None
             d_prev = dct.get(i)
             dct[i] = v
@@ -48,7 +48,7 @@ class IntIntDictTest(unittest.TestCase):
         for i in range(0, 100):
             k = random.randint(-110, 111)
             arr_prev = xs_int_int_dict_remove(arr, k)
-            if xs_int_int_dict_last_error() == c_int_int_dict_no_key:
+            if xs_int_int_dict_last_error() == c_int_int_dict_no_key_error:
                 arr_prev = None
             if k in dct:
                 d_prev = dct.pop(k)

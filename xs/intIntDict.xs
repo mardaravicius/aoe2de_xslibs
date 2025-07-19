@@ -1,6 +1,6 @@
 extern const int cIntIntDictSuccess = 0;
 extern const int cIntIntDictGenericError = -1;
-extern const int cIntIntDictNoKey = -2;
+extern const int cIntIntDictNoKeyError = -2;
 extern const int cIntIntDictResizeFailedError = -3;
 extern const int cIntIntDictMaxCapacityError = -4;
 extern const int cIntIntDictMaxCapacity = 999999999;
@@ -9,6 +9,7 @@ extern const int cIntIntDictEmptyParam = -999999999;
 extern const int cIntIntDictInitialNumOfBuckets = 17;
 extern const int cIntIntDictInitialBucketSize = 3;
 extern const int cIntIntDictMinBucketSize = 3;
+extern const int cIntIntDictHashConstant = 16777619;
 int _cIntIntDictLastOperationStatus = cIntIntDictSuccess;
 bool _cIntIntDictKeyExists = false;
 int _intIntDictTempArray = -1;
@@ -16,7 +17,7 @@ int _intIntDictIteratorPrevKey = -1;
 int _intIntDictIteratorPrevIdx = 1;
 
 int _xsIntIntDictHash(int key = -1, int numOfBuckets = 0) {
-    int hash = key * 16777619;
+    int hash = key * cIntIntDictHashConstant;
     hash = hash % numOfBuckets;
     if (hash < 0) {
         hash = hash + numOfBuckets;
@@ -37,7 +38,7 @@ int _xsIntIntDictReplace(int dct = -1, int key = -1, int val = 0, int numOfBucke
         xsArraySetInt(bucket, 2, val);
         xsArraySetInt(bucket, 0, 2);
         xsArraySetInt(dct, hash, bucket);
-        _cIntIntDictLastOperationStatus = cIntIntDictNoKey;
+        _cIntIntDictLastOperationStatus = cIntIntDictNoKeyError;
         return (cIntIntDictGenericError);
     }
     int bucketSize = xsArrayGetInt(bucket, 0);
@@ -70,7 +71,7 @@ int _xsIntIntDictReplace(int dct = -1, int key = -1, int val = 0, int numOfBucke
         xsArraySetInt(bucket, bucketSize + 1, key);
         xsArraySetInt(bucket, bucketSize + 2, val);
         xsArraySetInt(bucket, 0, bucketSize + 2);
-        _cIntIntDictLastOperationStatus = cIntIntDictNoKey;
+        _cIntIntDictLastOperationStatus = cIntIntDictNoKeyError;
     } else {
         _cIntIntDictLastOperationStatus = cIntIntDictSuccess;
     }
@@ -120,7 +121,7 @@ int xsIntIntDictPut(int dct = -1, int key = -1, int val = 0) {
     int totalSize = xsArrayGetInt(dct, 0);
     int dictCapacity = xsArrayGetSize(dct);
     int previousValue = _xsIntIntDictReplace(dct, key, val, dictCapacity - 1);
-    if (_cIntIntDictLastOperationStatus == cIntIntDictNoKey) {
+    if (_cIntIntDictLastOperationStatus == cIntIntDictNoKeyError) {
         totalSize++;
         xsArraySetInt(dct, 0, totalSize);
     } else if (_cIntIntDictLastOperationStatus == cIntIntDictSuccess) {
@@ -153,7 +154,7 @@ int xsIntIntDictPut(int dct = -1, int key = -1, int val = 0) {
         int t = 0;
         while (t < tempDataSize) {
             _xsIntIntDictReplace(dct, xsArrayGetInt(_intIntDictTempArray, t), xsArrayGetInt(_intIntDictTempArray, t + 1), dictCapacity - 1);
-            if ((_cIntIntDictLastOperationStatus < 0) && (_cIntIntDictLastOperationStatus != cIntIntDictNoKey)) {
+            if ((_cIntIntDictLastOperationStatus < 0) && (_cIntIntDictLastOperationStatus != cIntIntDictNoKeyError)) {
                 return (cIntIntDictGenericError);
             }
             t = t + 2;
@@ -206,7 +207,7 @@ int xsIntIntDictGet(int dct = -1, int key = -1, int dft = -1) {
     int hash = _xsIntIntDictHash(key, dictCapacity - 1);
     int bucket = xsArrayGetInt(dct, hash);
     if (bucket < 0) {
-        _cIntIntDictLastOperationStatus = cIntIntDictNoKey;
+        _cIntIntDictLastOperationStatus = cIntIntDictNoKeyError;
         return (dft);
     }
     int bucketSize = xsArrayGetInt(bucket, 0);
@@ -219,7 +220,7 @@ int xsIntIntDictGet(int dct = -1, int key = -1, int dft = -1) {
         }
         j = j + 2;
     }
-    _cIntIntDictLastOperationStatus = cIntIntDictNoKey;
+    _cIntIntDictLastOperationStatus = cIntIntDictNoKeyError;
     return (dft);
 }
 
@@ -229,7 +230,7 @@ int xsIntIntDictRemove(int dct = -1, int key = -1) {
     int hash = _xsIntIntDictHash(key, dictCapacity - 1);
     int bucket = xsArrayGetInt(dct, hash);
     if (bucket < 0) {
-        _cIntIntDictLastOperationStatus = cIntIntDictNoKey;
+        _cIntIntDictLastOperationStatus = cIntIntDictNoKeyError;
         return (cIntIntDictGenericError);
     }
     bool found = false;
@@ -261,7 +262,7 @@ int xsIntIntDictRemove(int dct = -1, int key = -1) {
         }
         _cIntIntDictLastOperationStatus = cIntIntDictSuccess;
     } else {
-        _cIntIntDictLastOperationStatus = cIntIntDictNoKey;
+        _cIntIntDictLastOperationStatus = cIntIntDictNoKeyError;
     }
     return (foundValue);
 }
@@ -470,9 +471,10 @@ int xsIntIntDictUpdate(int source = -1, int dct = -1) {
         }
         xsIntIntDictPut(source, key, val);
         err = xsIntIntDictLastError();
-        if (err != 0) {
+        if ((err != 0) && (err != cIntIntDictNoKeyError)) {
             return (err);
         }
+        _cIntIntDictLastOperationStatus = cIntIntDictSuccess;
     }
     return (cIntIntDictSuccess);
 }

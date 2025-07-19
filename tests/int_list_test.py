@@ -68,19 +68,27 @@ class IntListTest(unittest.TestCase):
         self.assertEqual(arr, c_int_list_generic_error)
         xs_array_resize_int(arr, 0)
 
-    def test_xs_int_list_repeat(self):
-        arr = xs_int_list_repeat(5, 7)
+    def test_xs_int_list_from_repeated_val(self):
+        arr = xs_int_list_from_repeated_val(5, 7)
         self.assertEqual(xs_int_list_size(arr), 7)
         self.assertEqual(xs_int_list_to_string(arr), "[5, 5, 5, 5, 5, 5, 5]")
 
-    def test_xs_int_list_repeat_fail_with_negative_repeat(self):
-        arr = xs_int_list_repeat(5, -2)
+    def test_xs_int_list_from_repeated_val_fail_with_negative_repeat(self):
+        arr = xs_int_list_from_repeated_val(5, -2)
         self.assertEqual(arr, c_int_list_generic_error)
 
-    def test_xs_int_list_repeat_fail_over_max_capacity(self):
-        arr = xs_int_list_repeat(5, c_int_list_max_capacity)
+    def test_xs_int_list_from_repeated_val_fail_over_max_capacity(self):
+        arr = xs_int_list_from_repeated_val(5, c_int_list_max_capacity)
         self.assertEqual(arr, c_int_list_generic_error)
         xs_array_resize_int(arr, 0)
+
+    def test_xs_int_list_from_repeated_list(self):
+        lst1 = [1, 2, 3, 4]
+        lst2 = lst1 * 7
+        arr1 = xs_int_list(*tuple(lst1))
+        arr2 = xs_int_list_from_repeated_list(arr1, 7)
+        self.assertEqual(str(lst2), xs_int_list_to_string(arr2))
+        self.assertEqual(len(lst2), xs_int_list_size(arr2))
 
     def test_xs_int_list_from_array(self):
         arr = xs_array_create_int(10, 5)
@@ -145,7 +153,7 @@ class IntListTest(unittest.TestCase):
         self.assertEqual(xs_int_list_to_string(arr), str(lst))
 
     def test_xs_int_list_append_fail_over_max_capacity(self):
-        arr = xs_int_list_repeat(1, c_int_list_max_capacity - 1)
+        arr = xs_int_list_from_repeated_val(1, c_int_list_max_capacity - 1)
         self.assertGreaterEqual(arr, 0)
         self.assertEqual(xs_int_list_append(arr, 10), c_int_list_max_capacity_error)
         xs_array_resize_int(arr, 0)
@@ -166,7 +174,7 @@ class IntListTest(unittest.TestCase):
         self.assertEqual(xs_int_list_insert(arr, 4), c_int_list_index_out_of_range_error)
 
     def test_xs_int_list_insert_fail_over_max_capacity(self):
-        arr = xs_int_list_repeat(1, c_int_list_max_capacity - 1)
+        arr = xs_int_list_from_repeated_val(1, c_int_list_max_capacity - 1)
         self.assertEqual(xs_int_list_insert(arr, 100), c_int_list_max_capacity_error)
         xs_array_resize_int(arr, 0)
 

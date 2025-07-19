@@ -148,7 +148,7 @@ int xsIntListFromRange(int start = 0, int stop = 0, int step = 1) {
     return (lst);
 }
 
-int xsIntListRepeat(int value = 0, int times = 0) {
+int xsIntListFromRepeatedVal(int value = 0, int times = 0) {
     if ((times < 0) || (times >= cIntListMaxCapacity)) {
         return (cIntListGenericError);
     }
@@ -158,6 +158,28 @@ int xsIntListRepeat(int value = 0, int times = 0) {
     }
     xsArraySetInt(lst, 0, times);
     return (lst);
+}
+
+int xsIntListFromRepeatedList(int lst = -1, int times = 0) {
+    int size = xsArrayGetInt(lst, 0);
+    int newCapacity = (size * times) + 1;
+    if (newCapacity > cIntListMaxCapacity) {
+        return (cIntListGenericError);
+    }
+    int newLst = xsArrayCreateInt(newCapacity);
+    if (newLst < 0) {
+        return (cIntListGenericError);
+    }
+    for (i = 1; <= size) {
+        int val = xsArrayGetInt(lst, i);
+        j = i;
+        while (j < newCapacity) {
+            xsArraySetInt(newLst, j, val);
+            j = j + size;
+        }
+    }
+    xsArraySetInt(newLst, 0, newCapacity - 1);
+    return (newLst);
 }
 
 int xsIntListFromArray(int arr = -1) {
