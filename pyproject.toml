@@ -1,0 +1,8 @@
+[project]
+name = "xslibs"
+version = "0.1.0"
+description = "Various xs functions to make working with aoe2 de xs easier"
+dependencies = ["numpy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
