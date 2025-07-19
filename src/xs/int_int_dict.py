@@ -17,6 +17,8 @@ c_int_int_dict_min_bucket_size = 3
 _c_int_int_dict_last_operation_status = c_int_int_dict_success
 _c_int_int_dict_key_exists = False
 _int_int_dict_temp_array = -1
+_int_int_dict_iterator_prev_key = -1
+_int_int_dict_iterator_prev_idx = 1
 
 
 def constants() -> None:
@@ -34,6 +36,8 @@ def constants() -> None:
     _c_int_int_dict_last_operation_status: int = c_int_int_dict_success
     _c_int_int_dict_key_exists: bool = False
     _int_int_dict_temp_array: int = -1
+    _int_int_dict_iterator_prev_key: int = -1
+    _int_int_dict_iterator_prev_idx: int = 1
 
 
 def xs_int_int_dict_create() -> int:
@@ -296,6 +300,102 @@ def xs_int_int_dict_clear(dct: int = -1) -> int:
     return c_int_int_dict_success
 
 
+def xs_int_int_dict_copy(dct: int = -1) -> int:
+    dict_capacity: int = xs_array_get_size(dct)
+    new_dct: int = xs_array_create_int(dict_capacity, c_int_int_dict_empty_param)
+    if new_dct < 0:
+        return c_int_int_dict_resize_failed_error
+    for i in range(1, dict_capacity):
+        bucket: int = xs_array_get_int(dct, i)
+        if bucket >= 0:
+            bucket_capacity: int = xs_array_get_size(bucket)
+            bucket_size: int = xs_array_get_int(bucket, 0)
+            new_bucket: int = xs_array_create_int(bucket_capacity, c_int_int_dict_empty_param)
+            if new_bucket < 0:
+                return c_int_int_dict_resize_failed_error
+            for j in range(bucket_size + 1):
+                xs_array_set_int(new_bucket, j, xs_array_get_int(bucket, j))
+            xs_array_set_int(new_dct, i, new_bucket)
+    xs_array_set_int(new_dct, 0, xs_array_get_int(dct, 0))
+    return new_dct
+
+
+def xs_int_int_dct_iterator_start() -> None:
+    global _int_int_dict_iterator_prev_idx, _int_int_dict_iterator_prev_key
+    _int_int_dict_iterator_prev_idx = 0
+    _int_int_dict_iterator_prev_key = -1
+
+
+def xs_int_int_dct_iterator_has_next(dct: int = -1) -> bool:
+    global _int_int_dict_iterator_prev_idx
+    total_size: int = xs_array_get_int(dct, 0)
+    return _int_int_dict_iterator_prev_idx < total_size
+
+
+def _xs_int_int_dct_iterator_next(dct: int = -1, return_key: bool = True) -> int:
+    global _int_int_dict_iterator_prev_idx, _int_int_dict_iterator_prev_key, _c_int_int_dict_last_operation_status
+    b: int = -1
+    bucket: int = -1
+    bucket_size: int = -1
+    idx: int = 1
+    dict_capacity: int = xs_array_get_size(dct)
+    found: bool = False
+    stored_key: int = -1
+    if _int_int_dict_iterator_prev_idx == 0:
+        i: int = 1
+        while i < dict_capacity and not found:
+            bucket = xs_array_get_int(dct, i)
+            bucket_size = xs_array_get_int(bucket, 0)
+            if bucket >= 0 and bucket_size > 0:
+                found = True
+                b = i
+            i += 1
+    else:
+        hash: int = _xs_int_int_dict_hash(_int_int_dict_iterator_prev_key, dict_capacity - 1)
+        bucket = xs_array_get_int(dct, hash)
+        bucket_size = xs_array_get_int(bucket, 0)
+        j: int = 1
+        while j <= bucket_size and not found:
+            stored_key = xs_array_get_int(bucket, j)
+            if _int_int_dict_iterator_prev_key == stored_key:
+                idx = j + 2
+                b = hash
+                found = True
+            j += 2
+    if not found:
+        _int_int_dict_iterator_prev_idx = c_int_int_dict_max_capacity
+        _c_int_int_dict_last_operation_status = c_int_int_dict_generic_error
+        return c_int_int_dict_generic_error
+    for k in range(b, dict_capacity):
+        if found:
+            found = False
+        else:
+            bucket = xs_array_get_int(dct, k)
+            bucket_size = xs_array_get_int(bucket, 0)
+        if bucket >= 0:
+            for l in range(idx, bucket_size, 2):
+                stored_key = xs_array_get_int(bucket, l)
+                _c_int_int_dict_last_operation_status = c_int_int_dict_success
+                _int_int_dict_iterator_prev_idx += 1
+                _int_int_dict_iterator_prev_key = stored_key
+                if return_key:
+                    return stored_key
+                else:
+                    return xs_array_get_int(bucket, l + 1)
+        idx = 1
+    _int_int_dict_iterator_prev_idx = c_int_int_dict_max_capacity
+    _c_int_int_dict_last_operation_status = c_int_int_dict_generic_error
+    return c_int_int_dict_generic_error
+
+
+def xs_int_int_dct_iterator_next_key(dct: int = -1) -> int:
+    return _xs_int_int_dct_iterator_next(dct, True)
+
+
+def xs_int_int_dct_iterator_next_value(dct: int = -1) -> int:
+    return _xs_int_int_dct_iterator_next(dct, False)
+
+
 def xs_int_int_dict_to_string(dct: int = -1) -> str:
     dict_size: int = xs_array_get_size(dct)
     s: str = "{"
@@ -318,6 +418,26 @@ def xs_int_int_dict_to_string(dct: int = -1) -> str:
 
 def xs_int_int_dict_last_error() -> int:
     return _c_int_int_dict_last_operation_status
+
+
+def xs_int_int_dict_update(source: int = -1, dct: int = -1) -> int:
+    global _c_int_int_dict_last_operation_status
+    xs_int_int_dct_iterator_start()
+    while xs_int_int_dct_iterator_has_next(dct):
+        key: int = xs_int_int_dct_iterator_next_key(dct)
+        err: int = xs_int_int_dict_last_error()
+        if err != 0:
+            return err
+        val: int = xs_int_int_dict_get(dct, key)
+        err = xs_int_int_dict_last_error()
+        if err != 0:
+            return err
+        xs_int_int_dict_put(source, key, val)
+        err = xs_int_int_dict_last_error()
+        if err != 0 and err != c_int_int_dict_no_key:
+            return err
+        _c_int_int_dict_last_operation_status = c_int_int_dict_success
+    return c_int_int_dict_success
 
 
 def test() -> None:
@@ -346,8 +466,15 @@ def int_int_dict(include_test: bool) -> (str, str):
         xs_int_int_dict_contains,
         xs_int_int_dict_size,
         xs_int_int_dict_clear,
+        xs_int_int_dict_copy,
+        xs_int_int_dct_iterator_start,
+        xs_int_int_dct_iterator_has_next,
+        _xs_int_int_dct_iterator_next,
+        xs_int_int_dct_iterator_next_key,
+        xs_int_int_dct_iterator_next_value,
         xs_int_int_dict_to_string,
         xs_int_int_dict_last_error,
+        xs_int_int_dict_update,
         indent=True,
     )
     if include_test:

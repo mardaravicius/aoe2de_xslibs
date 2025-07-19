@@ -12,6 +12,8 @@ extern const int cIntIntDictMinBucketSize = 3;
 int _cIntIntDictLastOperationStatus = cIntIntDictSuccess;
 bool _cIntIntDictKeyExists = false;
 int _intIntDictTempArray = -1;
+int _intIntDictIteratorPrevKey = -1;
+int _intIntDictIteratorPrevIdx = 1;
 
 int _xsIntIntDictHash(int key = -1, int numOfBuckets = 0) {
     int hash = key * 16777619;
@@ -312,6 +314,117 @@ int xsIntIntDictClear(int dct = -1) {
     return (cIntIntDictSuccess);
 }
 
+int xsIntIntDictCopy(int dct = -1) {
+    int dictCapacity = xsArrayGetSize(dct);
+    int newDct = xsArrayCreateInt(dictCapacity, cIntIntDictEmptyParam);
+    if (newDct < 0) {
+        return (cIntIntDictResizeFailedError);
+    }
+    for (i = 1; < dictCapacity) {
+        int bucket = xsArrayGetInt(dct, i);
+        if (bucket >= 0) {
+            int bucketCapacity = xsArrayGetSize(bucket);
+            int bucketSize = xsArrayGetInt(bucket, 0);
+            int newBucket = xsArrayCreateInt(bucketCapacity, cIntIntDictEmptyParam);
+            if (newBucket < 0) {
+                return (cIntIntDictResizeFailedError);
+            }
+            for (j = 0; <= bucketSize) {
+                xsArraySetInt(newBucket, j, xsArrayGetInt(bucket, j));
+            }
+            xsArraySetInt(newDct, i, newBucket);
+        }
+    }
+    xsArraySetInt(newDct, 0, xsArrayGetInt(dct, 0));
+    return (newDct);
+}
+
+void xsIntIntDctIteratorStart() {
+    _intIntDictIteratorPrevIdx = 0;
+    _intIntDictIteratorPrevKey = -1;
+}
+
+bool xsIntIntDctIteratorHasNext(int dct = -1) {
+    int totalSize = xsArrayGetInt(dct, 0);
+    return (_intIntDictIteratorPrevIdx < totalSize);
+}
+
+int _xsIntIntDctIteratorNext(int dct = -1, bool returnKey = true) {
+    int b = -1;
+    int bucket = -1;
+    int bucketSize = -1;
+    int idx = 1;
+    int dictCapacity = xsArrayGetSize(dct);
+    bool found = false;
+    int storedKey = -1;
+    if (_intIntDictIteratorPrevIdx == 0) {
+        int i = 1;
+        while ((i < dictCapacity) && (found == false)) {
+            bucket = xsArrayGetInt(dct, i);
+            bucketSize = xsArrayGetInt(bucket, 0);
+            if ((bucket >= 0) && (bucketSize > 0)) {
+                found = true;
+                b = i;
+            }
+            i++;
+        }
+    } else {
+        int hash = _xsIntIntDictHash(_intIntDictIteratorPrevKey, dictCapacity - 1);
+        bucket = xsArrayGetInt(dct, hash);
+        bucketSize = xsArrayGetInt(bucket, 0);
+        int j = 1;
+        while ((j <= bucketSize) && (found == false)) {
+            storedKey = xsArrayGetInt(bucket, j);
+            if (_intIntDictIteratorPrevKey == storedKey) {
+                idx = j + 2;
+                b = hash;
+                found = true;
+            }
+            j = j + 2;
+        }
+    }
+    if (found == false) {
+        _intIntDictIteratorPrevIdx = cIntIntDictMaxCapacity;
+        _cIntIntDictLastOperationStatus = cIntIntDictGenericError;
+        return (cIntIntDictGenericError);
+    }
+    for (k = b; < dictCapacity) {
+        if (found) {
+            found = false;
+        } else {
+            bucket = xsArrayGetInt(dct, k);
+            bucketSize = xsArrayGetInt(bucket, 0);
+        }
+        if (bucket >= 0) {
+            int l = idx;
+            while (l < bucketSize) {
+                storedKey = xsArrayGetInt(bucket, l);
+                _cIntIntDictLastOperationStatus = cIntIntDictSuccess;
+                _intIntDictIteratorPrevIdx++;
+                _intIntDictIteratorPrevKey = storedKey;
+                if (returnKey) {
+                    return (storedKey);
+                } else {
+                    return (xsArrayGetInt(bucket, l + 1));
+                }
+                l = l + 2;
+            }
+        }
+        idx = 1;
+    }
+    _intIntDictIteratorPrevIdx = cIntIntDictMaxCapacity;
+    _cIntIntDictLastOperationStatus = cIntIntDictGenericError;
+    return (cIntIntDictGenericError);
+}
+
+int xsIntIntDctIteratorNextKey(int dct = -1) {
+    return (_xsIntIntDctIteratorNext(dct, true));
+}
+
+int xsIntIntDctIteratorNextValue(int dct = -1) {
+    return (_xsIntIntDctIteratorNext(dct, false));
+}
+
 string xsIntIntDictToString(int dct = -1) {
     int dictSize = xsArrayGetSize(dct);
     string s = "{";
@@ -340,4 +453,26 @@ string xsIntIntDictToString(int dct = -1) {
 
 int xsIntIntDictLastError() {
     return (_cIntIntDictLastOperationStatus);
+}
+
+int xsIntIntDictUpdate(int source = -1, int dct = -1) {
+    xsIntIntDctIteratorStart();
+    while (xsIntIntDctIteratorHasNext(dct)) {
+        int key = xsIntIntDctIteratorNextKey(dct);
+        int err = xsIntIntDictLastError();
+        if (err != 0) {
+            return (err);
+        }
+        int val = xsIntIntDictGet(dct, key);
+        err = xsIntIntDictLastError();
+        if (err != 0) {
+            return (err);
+        }
+        xsIntIntDictPut(source, key, val);
+        err = xsIntIntDictLastError();
+        if (err != 0) {
+            return (err);
+        }
+    }
+    return (cIntIntDictSuccess);
 }

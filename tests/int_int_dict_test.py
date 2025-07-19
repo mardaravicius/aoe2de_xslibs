@@ -3,7 +3,6 @@ import unittest
 
 from xs.int_int_dict import *
 
-
 class IntIntDictTest(unittest.TestCase):
 
     def test_xs_int_int_dict_put(self):
@@ -68,3 +67,89 @@ class IntIntDictTest(unittest.TestCase):
             dct[i] = i * -1
         for i in range(-120, 121):
             self.assertEqual(i in dct, xs_int_int_dict_contains(arr, i))
+
+    def test_xs_int_int_dict_clear(self):
+        arr = xs_int_int_dict_create()
+        dct = {}
+        for i in range(0, 40):
+            if i >= 20:
+                v = i - 20
+            else:
+                v = i * -1
+            xs_int_int_dict_put(arr, i, v)
+            dct[i] = v
+
+        xs_int_int_dict_clear(arr)
+        dct.clear()
+        self.assertEqual(len(dct), xs_int_int_dict_size(arr))
+
+        for i in range(0, 40):
+            if i >= 20:
+                v = i - 20
+            else:
+                v = i * -1
+            xs_int_int_dict_put(arr, i, v)
+            dct[i] = v
+            self.assertEqual(dct[i], xs_int_int_dict_get(arr, i))
+            self.assertEqual(len(dct), xs_int_int_dict_size(arr))
+
+    def test_xs_int_int_dict_copy(self):
+        arr = xs_int_int_dict_create()
+        for i in range(0, 40):
+            if i >= 20:
+                v = i - 20
+            else:
+                v = i * -1
+            xs_int_int_dict_put(arr, i, v)
+
+        arr_copy = xs_int_int_dict_copy(arr)
+        self.assertEqual(xs_int_int_dict_to_string(arr), xs_int_int_dict_to_string(arr_copy))
+        self.assertEqual(xs_int_int_dict_size(arr), xs_int_int_dict_size(arr_copy))
+
+        xs_int_int_dict_put(arr, 1001, -1001)
+        self.assertGreater(xs_int_int_dict_size(arr), xs_int_int_dict_size(arr_copy))
+
+    def test_xs_int_int_dict_key_iterator(self):
+        arr = xs_int_int_dict_create()
+        dct = {}
+        for i in range(-100, 101):
+            xs_int_int_dict_put(arr, i, i * -1)
+            dct[i] = i * -1
+        result_dct = {}
+        xs_int_int_dct_iterator_start()
+        while xs_int_int_dct_iterator_has_next(arr):
+            key = xs_int_int_dct_iterator_next_key(arr)
+            result_dct[key] = xs_int_int_dict_get(arr, key)
+        self.assertEqual(dct, result_dct)
+
+    def test_xs_int_int_dict_value_iterator(self):
+        arr = xs_int_int_dict_create()
+        dct = {}
+        for i in range(-100, 101):
+            xs_int_int_dict_put(arr, i, i * -1)
+            dct[i] = i * -1
+        result_set = set()
+        xs_int_int_dct_iterator_start()
+        while xs_int_int_dct_iterator_has_next(arr):
+            value = xs_int_int_dct_iterator_next_value(arr)
+            result_set.add(value)
+        self.assertEqual(set(dct.keys()), result_set)
+
+    def test_xs_int_int_dict_update(self):
+        arr1 = xs_int_int_dict_create()
+        arr2 = xs_int_int_dict_create()
+        dct = {}
+        for i in range(100):
+            v = random.randint(-100, 100)
+            dct[v] = v * -1
+            xs_int_int_dict_put(arr1, v, v * -1)
+        for i in range(100):
+            v = random.randint(-100, 100)
+            dct[v] = v * -1
+            xs_int_int_dict_put(arr2, v, v * -1)
+
+        self.assertEqual(c_int_int_dict_success, xs_int_int_dict_update(arr1, arr2))
+
+        self.assertEqual(len(dct), xs_int_int_dict_size(arr1))
+        for key in dct.keys():
+            self.assertEqual(dct[key], xs_int_int_dict_get(arr1, key))

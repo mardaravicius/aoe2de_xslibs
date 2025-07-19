@@ -175,6 +175,19 @@ def xs_int_list_from_array(arr: int = -1) -> int:
     return lst
 
 
+def xs_int_list_use_array_as_source(arr: int = -1) -> int:
+    arr_size: int = xs_array_get_size(arr)
+    if arr_size + 1 > c_int_list_max_capacity:
+        return c_int_list_max_capacity_error
+    r: int = xs_array_resize_int(arr, arr_size + 1)
+    if r < 0:
+        return c_int_list_resize_failed_error
+    for i in range(arr_size - 1, -1, -1):
+        xs_array_set_int(arr, i + 1, xs_array_get_int(arr, i))
+    xs_array_set_int(arr, 0, arr_size)
+    return c_int_list_success
+
+
 def xs_int_list_get(lst: int = -1, idx: int = -1) -> int:
     global _int_list_last_operation_status
     size: int = xs_array_get_int(lst, 0)
@@ -307,18 +320,28 @@ def xs_int_list_remove(lst: int = -1, value: int = -1) -> int:
     return found_idx - 1
 
 
-def xs_int_list_index(lst: int = -1, value: int = -1) -> int:
+def xs_int_list_index(lst: int = -1, value: int = -1, start: int = 0, stop: int = c_int_list_empty_param) -> int:
     size: int = xs_array_get_int(lst, 0)
-    found_idx: int = -1
-    i: int = 1
-    while i <= size and found_idx == -1:
-        c_val: int = xs_array_get_int(lst, i)
-        if c_val == value:
-            found_idx = i
-        i += 1
-    if found_idx == -1:
-        return c_int_list_generic_error
-    return found_idx - 1
+
+    if stop == c_int_list_empty_param or stop > size:
+        stop = size
+    if start < 0:
+        start += size
+    if stop < 0:
+        stop += size
+    if start < 0:
+        start = 0
+    if stop > size:
+        stop = size
+
+    for i in range(start, stop):
+        if xs_array_get_int(lst, i + 1) == value:
+            return i
+    return c_int_list_generic_error
+
+
+def xs_int_list_contains(lst: int = -1, value: int = -1) -> bool:
+    return xs_int_list_index(lst, value) > -1
 
 
 def _xs_int_list_compare_elem(a: int = -1, b: int = -1, reverse: bool = False) -> bool:
@@ -472,6 +495,59 @@ def xs_int_list_reverse(lst: int = -1) -> None:
         xs_array_set_int(lst, back_i, temp)
 
 
+def xs_int_list_count(arr: int = -1, value: int = -1) -> int:
+    count: int = 0
+    size: int = xs_array_get_int(arr, 0)
+    for i in range(1, size + 1):
+        if xs_array_get_int(arr, i) == value:
+            count += 1
+    return count
+
+
+def xs_int_list_sum(arr: int = -1) -> int:
+    s: int = 0
+    size: int = xs_array_get_int(arr, 0)
+    for i in range(1, size + 1):
+        s += xs_array_get_int(arr, i)
+    return s
+
+
+def xs_int_list_min(arr: int = -1) -> int:
+    global _int_list_last_operation_status
+    size: int = xs_array_get_int(arr, 0)
+    if size == 0:
+        _int_list_last_operation_status = c_int_list_index_out_of_range_error
+        return c_int_list_generic_error
+    m: int = xs_array_get_int(arr, 1)
+    if size == 1:
+        _int_list_last_operation_status = c_int_list_success
+        return m
+    for i in range(2, size + 1):
+        v: int = xs_array_get_int(arr, i)
+        if v < m:
+            m = v
+    _int_list_last_operation_status = c_int_list_success
+    return m
+
+
+def xs_int_list_max(arr: int = -1) -> int:
+    global _int_list_last_operation_status
+    size: int = xs_array_get_int(arr, 0)
+    if size == 0:
+        _int_list_last_operation_status = c_int_list_index_out_of_range_error
+        return c_int_list_generic_error
+    m: int = xs_array_get_int(arr, 1)
+    if size == 1:
+        _int_list_last_operation_status = c_int_list_success
+        return m
+    for i in range(2, size + 1):
+        v: int = xs_array_get_int(arr, i)
+        if v > m:
+            m = v
+    _int_list_last_operation_status = c_int_list_success
+    return m
+
+
 def xs_int_list_last_error() -> int:
     return _int_list_last_operation_status
 
@@ -514,6 +590,8 @@ def int_list(include_test: bool) -> (str, str):
         xs_int_list_create,
         xs_int_list_from_range,
         xs_int_list_repeat,
+        xs_int_list_from_array,
+        xs_int_list_use_array_as_source,
         xs_int_list_get,
         xs_int_list_set,
         xs_int_list_size,
@@ -525,6 +603,7 @@ def int_list(include_test: bool) -> (str, str):
         xs_int_list_insert,
         xs_int_list_remove,
         xs_int_list_index,
+        xs_int_list_contains,
         _xs_int_list_compare_elem,
         _xs_int_list_sift_down,
         xs_int_list_sort,
@@ -533,6 +612,10 @@ def int_list(include_test: bool) -> (str, str):
         xs_int_list_extend,
         xs_int_list_extend_with_array,
         xs_int_list_compare,
+        xs_int_list_count,
+        xs_int_list_sum,
+        xs_int_list_min,
+        xs_int_list_max,
         xs_int_list_last_error,
         indent=True,
     )

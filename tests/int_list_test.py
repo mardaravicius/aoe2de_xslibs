@@ -95,6 +95,15 @@ class IntListTest(unittest.TestCase):
         self.assertEqual(c_int_list_generic_error, xs_int_list_from_array(arr))
         xs_array_resize_int(arr, 0)
 
+    def test_xs_int_list_use_array_as_source(self):
+        arr = xs_array_create_int(10, 5)
+        lst = [5] * 10
+        self.assertEqual(c_int_list_success, xs_int_list_use_array_as_source(arr))
+        self.assertEqual(str(lst), xs_int_list_to_string(arr))
+        self.assertEqual(len(lst), xs_int_list_size(arr))
+        xs_array_set_int(arr, 1, 2000)
+        self.assertEqual(xs_array_get_int(arr, 1), xs_int_list_get(arr, 0))
+
     def test_xs_int_list_get(self):
         lst = list(range(-1, 100))
         arr = xs_int_list_from_range(-1, 100)
@@ -212,9 +221,47 @@ class IntListTest(unittest.TestCase):
             val = lst[randint(0, len(lst) - 1)]
             self.assertEqual(xs_int_list_index(arr, val), lst.index(val))
 
+    def test_xs_int_list_index_with_ranges(self):
+        arr = xs_int_list()
+        lst = []
+        for _ in range(500):
+            val = randint(-100, 101)
+            xs_int_list_append(arr, val)
+            lst.append(val)
+        test_data = [
+            (0, 0),
+            (0, 1),
+            (0, 10),
+            (0, 10),
+            (0, 10),
+            (10, 0),
+            (10, 0),
+            (10, 0),
+            (-4, 4),
+            (5, -5),
+            (-17, -13),
+            (-8, -22),
+        ]
+        for _ in range(100):
+            for data in test_data:
+                val = randint(-110, 111)
+                params_xs = (arr, val) + data
+                params = (val,) + data
+                try:
+                    r = lst.index(params[0], params[1], params[2])
+                except ValueError:
+                    r = c_int_list_generic_error
+                self.assertEqual(r, xs_int_list_index(*params_xs))
+
     def test_xs_int_list_index_fail_with_incorrect_idx(self):
         arr = xs_int_list(1, 2, 3)
         self.assertEqual(xs_int_list_index(arr, 4), c_int_list_generic_error)
+
+    def test_xs_int_list_contains(self):
+        arr = xs_int_list(1, 2)
+        self.assertTrue(xs_int_list_contains(arr, 1))
+        self.assertTrue(xs_int_list_contains(arr, 2))
+        self.assertFalse(xs_int_list_contains(arr, 3))
 
     def test_xs_int_list_sort(self):
         for _ in range(100):
@@ -353,3 +400,27 @@ class IntListTest(unittest.TestCase):
         arr2 = xs_int_list()
 
         self.assertEqual(xs_int_list_compare(arr1, arr2), 0)
+
+    def test_xs_int_list_sum_count_min_max(self):
+        arr = xs_int_list()
+        lst = []
+        for i in range(100):
+            v = randint(-20, 21)
+            xs_int_list_append(arr, v)
+            lst.append(v)
+
+        self.assertEqual(sum(lst), xs_int_list_sum(arr))
+        self.assertEqual(lst.count(1), xs_int_list_count(arr, 1))
+        self.assertEqual(min(lst), xs_int_list_min(arr))
+        self.assertEqual(max(lst), xs_int_list_max(arr))
+
+    def test_xs_int_list_sum_count_min_max_on_empty(self):
+        arr = xs_int_list()
+        lst = []
+
+        self.assertEqual(sum(lst), xs_int_list_sum(arr))
+        self.assertEqual(lst.count(1), xs_int_list_count(arr, 1))
+        self.assertEqual(c_int_list_generic_error, xs_int_list_min(arr))
+        self.assertEqual(c_int_list_index_out_of_range_error, xs_int_list_last_error())
+        self.assertEqual(c_int_list_generic_error, xs_int_list_max(arr))
+        self.assertEqual(c_int_list_index_out_of_range_error, xs_int_list_last_error())

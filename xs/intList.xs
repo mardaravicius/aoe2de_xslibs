@@ -160,6 +160,37 @@ int xsIntListRepeat(int value = 0, int times = 0) {
     return (lst);
 }
 
+int xsIntListFromArray(int arr = -1) {
+    int arrSize = xsArrayGetSize(arr);
+    lst = xsIntListCreate(arrSize);
+    if (lst < 0) {
+        return (lst);
+    }
+    for (i = 0; < arrSize) {
+        xsArraySetInt(lst, i + 1, xsArrayGetInt(arr, i));
+    }
+    xsArraySetInt(lst, 0, arrSize);
+    return (lst);
+}
+
+int xsIntListUseArrayAsSource(int arr = -1) {
+    int arrSize = xsArrayGetSize(arr);
+    if ((arrSize + 1) > cIntListMaxCapacity) {
+        return (cIntListMaxCapacityError);
+    }
+    int r = xsArrayResizeInt(arr, arrSize + 1);
+    if (r < 0) {
+        return (cIntListResizeFailedError);
+    }
+    int i = arrSize - 1;
+    while (i > -1) {
+        xsArraySetInt(arr, i + 1, xsArrayGetInt(arr, i));
+        i--;
+    }
+    xsArraySetInt(arr, 0, arrSize);
+    return (cIntListSuccess);
+}
+
 int xsIntListGet(int lst = -1, int idx = -1) {
     int size = xsArrayGetInt(lst, 0);
     if ((idx < 0) || (idx >= size)) {
@@ -308,21 +339,33 @@ int xsIntListRemove(int lst = -1, int value = -1) {
     return (foundIdx - 1);
 }
 
-int xsIntListIndex(int lst = -1, int value = -1) {
+int xsIntListIndex(int lst = -1, int value = -1, int start = 0, int stop = cIntListEmptyParam) {
     int size = xsArrayGetInt(lst, 0);
-    int foundIdx = -1;
-    int i = 1;
-    while ((i <= size) && (foundIdx == -1)) {
-        int cVal = xsArrayGetInt(lst, i);
-        if (cVal == value) {
-            foundIdx = i;
+    if ((stop == cIntListEmptyParam) || (stop > size)) {
+        stop = size;
+    }
+    if (start < 0) {
+        start = start + size;
+    }
+    if (stop < 0) {
+        stop = stop + size;
+    }
+    if (start < 0) {
+        start = 0;
+    }
+    if (stop > size) {
+        stop = size;
+    }
+    for (i = start; < stop) {
+        if (xsArrayGetInt(lst, i + 1) == value) {
+            return (i);
         }
-        i++;
     }
-    if (foundIdx == -1) {
-        return (cIntListGenericError);
-    }
-    return (foundIdx - 1);
+    return (cIntListGenericError);
+}
+
+bool xsIntListContains(int lst = -1, int value = -1) {
+    return (xsIntListIndex(lst, value) > -1);
 }
 
 bool _xsIntListCompareElem(int a = -1, int b = -1, bool reverse = false) {
@@ -484,6 +527,68 @@ int xsIntListCompare(int lst1 = -1, int lst2 = -1) {
         return (1);
     }
     return (0);
+}
+
+int xsIntListCount(int arr = -1, int value = -1) {
+    int count = 0;
+    int size = xsArrayGetInt(arr, 0);
+    for (i = 1; <= size) {
+        if (xsArrayGetInt(arr, i) == value) {
+            count++;
+        }
+    }
+    return (count);
+}
+
+int xsIntListSum(int arr = -1) {
+    int s = 0;
+    int size = xsArrayGetInt(arr, 0);
+    for (i = 1; <= size) {
+        s = s + xsArrayGetInt(arr, i);
+    }
+    return (s);
+}
+
+int xsIntListMin(int arr = -1) {
+    int size = xsArrayGetInt(arr, 0);
+    if (size == 0) {
+        _intListLastOperationStatus = cIntListIndexOutOfRangeError;
+        return (cIntListGenericError);
+    }
+    int m = xsArrayGetInt(arr, 1);
+    if (size == 1) {
+        _intListLastOperationStatus = cIntListSuccess;
+        return (m);
+    }
+    for (i = 2; <= size) {
+        int v = xsArrayGetInt(arr, i);
+        if (v < m) {
+            m = v;
+        }
+    }
+    _intListLastOperationStatus = cIntListSuccess;
+    return (m);
+}
+
+int xsIntListMax(int arr = -1) {
+    int size = xsArrayGetInt(arr, 0);
+    if (size == 0) {
+        _intListLastOperationStatus = cIntListIndexOutOfRangeError;
+        return (cIntListGenericError);
+    }
+    int m = xsArrayGetInt(arr, 1);
+    if (size == 1) {
+        _intListLastOperationStatus = cIntListSuccess;
+        return (m);
+    }
+    for (i = 2; <= size) {
+        int v = xsArrayGetInt(arr, i);
+        if (v > m) {
+            m = v;
+        }
+    }
+    _intListLastOperationStatus = cIntListSuccess;
+    return (m);
 }
 
 int xsIntListLastError() {
