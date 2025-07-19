@@ -115,7 +115,7 @@ class PythonToXsConverter:
             name = self.to_camel_case(a.target.id)
         else:
             raise ValueError("assignment must have a variable name")
-        return f"{i * self.i}{modifier}{type} {name}{self.s}={self.s}{self.to_xs_expression(a.value, vars_to_replace)};{self.n}"
+        return f"{i * self.i}{modifier}{type} {name}{self.s}={self.s}{self.to_xs_expression(a.value, vars_to_replace, enclosed=True)};{self.n}"
 
     def to_xs_variable_assignment(self, a: Assign, i: int, vars_to_replace: dict[str, str]) -> str:
         if len(a.targets) != 1:
@@ -185,7 +185,7 @@ class PythonToXsConverter:
             if e.func.id in self.macro_functions:
                 return self.to_xs_constant(self.eval_macro_function(e))
             else:
-                return self.to_xs_call(e, vars_to_replace)
+                return self.to_xs_call(e, vars_to_replace, enclosed)
         elif isinstance(e, BinOp):
             left_xs = self.to_xs_expression(e.left, vars_to_replace)
             op_xs = self.to_xs_binary_op(e.op)
@@ -267,16 +267,22 @@ class PythonToXsConverter:
         else:
             raise ValueError(f"Unsupported variable type: {value}")
 
-    def to_xs_call(self, e: Call, vars_to_replace: dict[str, str]) -> str:
+    def to_xs_call(self, e: Call, vars_to_replace: dict[str, str], enclosed=False) -> str:
         if isinstance(e.func, Name):
             function_name = self.to_camel_case(e.func.id)
             if function_name == "str":
                 # assume no conversion is needed :(
-                xs = f'(""{self.s}+{self.s}' + self.to_xs_expression(e.args[0], vars_to_replace) + ")"
+                xs = f'""{self.s}+{self.s}' + self.to_xs_expression(e.args[0], vars_to_replace)
+                if not enclosed:
+                    xs = f"({xs})"
             elif function_name == "float":
-                xs = f'(0.0{self.s}+{self.s}' + self.to_xs_expression(e.args[0], vars_to_replace) + ")"
+                xs = f'0.0{self.s}+{self.s}' + self.to_xs_expression(e.args[0], vars_to_replace)
+                if not enclosed:
+                    xs = f"({xs})"
             elif function_name == "int":
-                xs = f'(0{self.s}+{self.s}' + self.to_xs_expression(e.args[0], vars_to_replace) + ")"
+                xs = f'0{self.s}+{self.s}' + self.to_xs_expression(e.args[0], vars_to_replace)
+                if not enclosed:
+                    xs = f"({xs})"
             else:
                 xs = f"{function_name}("
                 xs += f",{self.s}".join(

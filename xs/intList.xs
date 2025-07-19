@@ -116,13 +116,13 @@ int xsIntListFromRange(int start = 0, int stop = 0, int step = 1) {
     if ((step < 0) && (start < stop)) {
         return (cIntListGenericError);
     }
-    int distance = (0 + abs(stop - start));
-    int stepa = (0 + abs(step));
-    int size = (distance / stepa);
+    int distance = 0 + abs(stop - start);
+    int stepa = 0 + abs(step);
+    int size = distance / stepa;
     if (size >= cIntListMaxCapacity) {
         return (cIntListGenericError);
     }
-    int remain = (distance % stepa);
+    int remain = distance % stepa;
     if (remain > 0) {
         size++;
     }
@@ -187,7 +187,7 @@ int _xsIntListExtendIntArray(int lst = -1, int capacity = 0) {
     if (capacity == cIntListMaxCapacity) {
         return (cIntListMaxCapacityError);
     }
-    int newCapacity = (capacity * 2);
+    int newCapacity = capacity * 2;
     if (newCapacity > cIntListMaxCapacity) {
         newCapacity = cIntListMaxCapacity;
     }
@@ -224,7 +224,7 @@ string xsIntListToString(int lst = -1) {
 int xsIntListAppend(int lst = -1, int value = 0) {
     int capacity = xsArrayGetSize(lst);
     int size = xsArrayGetInt(lst, 0);
-    int nextIdx = (size + 1);
+    int nextIdx = size + 1;
     if (capacity == nextIdx) {
         int r = _xsIntListExtendIntArray(lst, capacity);
         if (r != cIntListSuccess) {
@@ -265,7 +265,7 @@ int xsIntListInsert(int lst = -1, int idx = -1, int value = 0) {
     if ((idx < 0) || (idx > size)) {
         return (cIntListIndexOutOfRangeError);
     }
-    int newSize = (size + 1);
+    int newSize = size + 1;
     if (capacity == newSize) {
         int r = _xsIntListExtendIntArray(lst, capacity);
         if (r != cIntListSuccess) {
@@ -335,7 +335,7 @@ bool _xsIntListCompareElem(int a = -1, int b = -1, bool reverse = false) {
 void _xsIntListSiftDown(int lst = -1, int start = -1, int end = -1, bool reverse = false) {
     int root = start;
     while (true) {
-        int child = (2 * root);
+        int child = 2 * root;
         if (child > end) {
             return;
         }
@@ -405,7 +405,7 @@ int xsIntListCopy(int lst = -1, int start = 0, int end = cIntListMaxCapacity) {
     if (to > size) {
         to = size;
     }
-    int newSize = (to - fr);
+    int newSize = to - fr;
     if (newSize < 0) {
         newSize = 0;
     }
@@ -424,7 +424,7 @@ int xsIntListExtend(int source = -1, int lst = -1) {
     int sourceSize = xsArrayGetInt(source, 0);
     int toAdd = xsArrayGetInt(lst, 0);
     int capacity = xsArrayGetSize(source);
-    int newSize = (sourceSize + toAdd);
+    int newSize = sourceSize + toAdd;
     if (newSize > capacity) {
         if (newSize >= cIntListMaxCapacity) {
             return (cIntListMaxCapacityError);
@@ -445,7 +445,7 @@ int xsIntListExtendWithArray(int source = -1, int arr = -1) {
     int sourceSize = xsArrayGetInt(source, 0);
     int toAdd = xsArrayGetSize(arr);
     int capacity = xsArrayGetSize(source);
-    int newSize = (sourceSize + toAdd);
+    int newSize = sourceSize + toAdd;
     if (newSize > capacity) {
         if ((newSize >= cIntListMaxCapacity) || (newSize < 0)) {
             return (cIntListMaxCapacityError);

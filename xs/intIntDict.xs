@@ -14,7 +14,7 @@ bool _cIntIntDictKeyExists = false;
 int _intIntDictTempArray = -1;
 
 int _xsIntIntDictHash(int key = -1, int numOfBuckets = 0) {
-    int hash = (key * 16777619);
+    int hash = key * 16777619;
     hash = hash % numOfBuckets;
     if (hash < 0) {
         hash = hash + numOfBuckets;
@@ -54,7 +54,7 @@ int _xsIntIntDictReplace(int dct = -1, int key = -1, int val = 0, int numOfBucke
     if (found == false) {
         int bucketCapacity = xsArrayGetSize(bucket);
         if (((bucketCapacity - 1) - bucketSize) < 2) {
-            int newBucketCapacity = (((bucketCapacity - 1) * 2) + 1);
+            int newBucketCapacity = ((bucketCapacity - 1) * 2) + 1;
             if (newBucketCapacity > cIntIntDictMaxCapacity) {
                 _cIntIntDictLastOperationStatus = cIntIntDictMaxCapacityError;
                 return (cIntIntDictGenericError);
@@ -76,7 +76,7 @@ int _xsIntIntDictReplace(int dct = -1, int key = -1, int val = 0, int numOfBucke
 }
 
 int _xsIntIntDictMoveToTempArray(int dct = -1, int totalSize = 0, int dictCapacity = 0) {
-    int tempDataSize = (totalSize * 2);
+    int tempDataSize = totalSize * 2;
     if (_intIntDictTempArray < 0) {
         _intIntDictTempArray = xsArrayCreateInt(tempDataSize, cIntIntDictEmptyParam);
         if (_intIntDictTempArray < 0) {
@@ -126,7 +126,7 @@ int xsIntIntDictPut(int dct = -1, int key = -1, int val = 0) {
     } else {
         return (cIntIntDictGenericError);
     }
-    float loadFactor = (totalSize / (dictCapacity - 1));
+    float loadFactor = (0.0 + totalSize) / (dictCapacity - 1);
     if (loadFactor > cIntIntDictMaxLoadFactor) {
         int storeStatus = _cIntIntDictLastOperationStatus;
         int tempDataSize = _xsIntIntDictMoveToTempArray(dct, totalSize, dictCapacity);
@@ -134,7 +134,7 @@ int xsIntIntDictPut(int dct = -1, int key = -1, int val = 0) {
             _cIntIntDictLastOperationStatus = tempDataSize;
             return (cIntIntDictGenericError);
         }
-        int newDictCapacity = (((dictCapacity - 1) * 2) + 1);
+        int newDictCapacity = ((dictCapacity - 1) * 2) + 1;
         if (newDictCapacity > cIntIntDictMaxCapacity) {
             _cIntIntDictLastOperationStatus = cIntIntDictResizeFailedError;
             return (cIntIntDictGenericError);
@@ -249,7 +249,7 @@ int xsIntIntDictRemove(int dct = -1, int key = -1) {
     }
     int bucketCapacity = xsArrayGetSize(bucket);
     if (found) {
-        int sizeThreshold = ((bucketCapacity - 1) / 2);
+        int sizeThreshold = (bucketCapacity - 1) / 2;
         if ((sizeThreshold >= (bucketSize - 2)) && (bucketCapacity > cIntIntDictMinBucketSize)) {
             int r = xsArrayResizeInt(bucket, sizeThreshold + 1);
             if (r != 0) {

@@ -140,7 +140,7 @@ def xs_int_int_dict_put(dct: int = -1, key: int = -1, val: int = 0) -> int:
     else:
         return c_int_int_dict_generic_error
 
-    load_factor: float = total_size / (dict_capacity - 1)
+    load_factor: float = float(total_size) / (dict_capacity - 1)
     if load_factor > c_int_int_dict_max_load_factor:
         store_status: int = _c_int_int_dict_last_operation_status
         temp_data_size: int = _xs_int_int_dict_move_to_temp_array(dct, total_size, dict_capacity)
