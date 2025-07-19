@@ -273,7 +273,7 @@ int xsIntListInsert(int lst = -1, int idx = -1, int value = 0) {
         }
     }
     int i = size;
-    while (i > (idx + 2)) {
+    while (i > idx) {
         xsArraySetInt(lst, i + 1, xsArrayGetInt(lst, i));
         i--;
     }

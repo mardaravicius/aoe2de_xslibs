@@ -257,7 +257,7 @@ def xs_int_list_insert(lst: int = -1, idx: int = -1, value: int = 0) -> int:
         r: int = _xs_int_list_extend_int_array(lst, capacity)
         if r != c_int_list_success:
             return r
-    for i in range(size, idx + 2, -1):
+    for i in range(size, idx, -1):
         xs_array_set_int(lst, i + 1, xs_array_get_int(lst, i))
     xs_array_set_int(lst, idx + 1, value)
     xs_array_set_int(lst, 0, new_size)
