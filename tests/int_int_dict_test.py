@@ -1,25 +1,23 @@
 import random
 import unittest
 
-from xs.int_int_dict import *
+from xs.int_int_dict2 import *
 
 class IntIntDictTest(unittest.TestCase):
 
     def test_xs_int_int_dict_put(self):
         arr = xs_int_int_dict_create()
         dct = {}
-        for i in range(0, 40):
-            if i >= 20:
-                v = i - 20
-            else:
-                v = i * -1
-            arr_prev = xs_int_int_dict_put(arr, i, v)
+        for _ in range(100):
+            k = random.randint(-100, 100)
+            v = k * -1
+            arr_prev = xs_int_int_dict_put(arr, k, v)
             if xs_int_int_dict_last_error() == c_int_int_dict_no_key_error:
                 arr_prev = None
-            d_prev = dct.get(i)
-            dct[i] = v
+            d_prev = dct.get(k)
+            dct[k] = v
             self.assertEqual(d_prev, arr_prev)
-            self.assertEqual(dct[i], xs_int_int_dict_get(arr, i))
+            self.assertEqual(dct[k], xs_int_int_dict_get(arr, k))
             self.assertEqual(len(dct), xs_int_int_dict_size(arr))
 
     def test_xs_int_int_dict(self):
@@ -71,36 +69,30 @@ class IntIntDictTest(unittest.TestCase):
     def test_xs_int_int_dict_clear(self):
         arr = xs_int_int_dict_create()
         dct = {}
-        for i in range(0, 40):
-            if i >= 20:
-                v = i - 20
-            else:
-                v = i * -1
-            xs_int_int_dict_put(arr, i, v)
-            dct[i] = v
+        for _ in range(100):
+            k = random.randint(-100, 100)
+            v = k * -1
+            xs_int_int_dict_put(arr, k, v)
+            dct[k] = v
 
         xs_int_int_dict_clear(arr)
         dct.clear()
         self.assertEqual(len(dct), xs_int_int_dict_size(arr))
 
-        for i in range(0, 40):
-            if i >= 20:
-                v = i - 20
-            else:
-                v = i * -1
-            xs_int_int_dict_put(arr, i, v)
-            dct[i] = v
-            self.assertEqual(dct[i], xs_int_int_dict_get(arr, i))
+        for _ in range(100):
+            k = random.randint(-100, 100)
+            v = k * -1
+            xs_int_int_dict_put(arr, k, v)
+            dct[k] = v
+            self.assertEqual(dct[k], xs_int_int_dict_get(arr, k))
             self.assertEqual(len(dct), xs_int_int_dict_size(arr))
 
     def test_xs_int_int_dict_copy(self):
         arr = xs_int_int_dict_create()
-        for i in range(0, 40):
-            if i >= 20:
-                v = i - 20
-            else:
-                v = i * -1
-            xs_int_int_dict_put(arr, i, v)
+        for _ in range(100):
+            k = random.randint(-100, 100)
+            v = k * -1
+            xs_int_int_dict_put(arr, k, v)
 
         arr_copy = xs_int_int_dict_copy(arr)
         self.assertEqual(xs_int_int_dict_to_string(arr), xs_int_int_dict_to_string(arr_copy))
@@ -109,31 +101,26 @@ class IntIntDictTest(unittest.TestCase):
         xs_int_int_dict_put(arr, 1001, -1001)
         self.assertGreater(xs_int_int_dict_size(arr), xs_int_int_dict_size(arr_copy))
 
-    def test_xs_int_int_dict_key_iterator(self):
-        arr = xs_int_int_dict_create()
-        dct = {}
-        for i in range(-100, 101):
-            xs_int_int_dict_put(arr, i, i * -1)
-            dct[i] = i * -1
-        result_dct = {}
-        xs_int_int_dct_iterator_start()
-        while xs_int_int_dct_iterator_has_next(arr):
-            key = xs_int_int_dct_iterator_next_key(arr)
-            result_dct[key] = xs_int_int_dict_get(arr, key)
-        self.assertEqual(dct, result_dct)
 
-    def test_xs_int_int_dict_value_iterator(self):
+    def test_xs_int_int_next_key(self):
         arr = xs_int_int_dict_create()
         dct = {}
-        for i in range(-100, 101):
-            xs_int_int_dict_put(arr, i, i * -1)
-            dct[i] = i * -1
-        result_set = set()
-        xs_int_int_dct_iterator_start()
-        while xs_int_int_dct_iterator_has_next(arr):
-            value = xs_int_int_dct_iterator_next_value(arr)
-            result_set.add(value)
-        self.assertEqual(set(dct.keys()), result_set)
+        for i in range(100):
+            v = random.randint(-100, 100)
+            dct[v] = v * -1
+            xs_int_int_dict_put(arr, v, v * -1)
+
+        res = {}
+        first = True
+        key = -1
+        while xs_int_int_dict_has_next(arr, first, key):
+            key = xs_int_int_dict_next_key(arr, first, key)
+            first = False
+            val = xs_int_int_dict_get(arr, key)
+            res[key] = val
+
+        self.assertEqual(dct, res)
+
 
     def test_xs_int_int_dict_update(self):
         arr1 = xs_int_int_dict_create()

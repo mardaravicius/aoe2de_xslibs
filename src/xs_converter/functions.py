@@ -1,6 +1,7 @@
 from xs_converter.symbols import XsVector
 from xs_converter.testkit.xs_functions_testkit import *
 
+
 def vector(x: float, y: float, z: float) -> XsVector:
     return XsVector(x, y, z)
 
@@ -173,3 +174,11 @@ def xs_array_get_float(array_id: int = -1, idx: int = 0) -> float:
 
 def xs_array_resize_float(array_id: int = -1, new_size: int = 0) -> int:
     return xs_array_resize_float_impl(array_id, new_size)
+
+
+def bit_cast_to_float(number: int) -> float:
+    return bit_cast_to_float_impl(number)
+
+
+def bit_cast_to_int(number: float) -> int:
+    return bit_cast_to_int_impl(number)

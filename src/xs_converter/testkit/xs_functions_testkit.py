@@ -112,10 +112,10 @@ def xs_chat_data_impl(msg: str, value: int) -> None:
 
 
 def bit_cast_to_float_impl(number: int) -> float:
-    i = numpy.int32(1.5)
+    i = numpy.int32(number)
     return float(i.view(numpy.float32))
 
 
 def bit_cast_to_int_impl(number: float) -> int:
-    f = numpy.float32(1.5)
+    f = numpy.float32(number)
     return int(f.view(numpy.int32))

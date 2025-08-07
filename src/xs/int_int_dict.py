@@ -15,11 +15,11 @@ c_int_int_dict_initial_num_of_buckets = 17
 c_int_int_dict_initial_bucket_size = 3
 c_int_int_dict_min_bucket_size = 3
 c_int_int_dict_hash_constant = 16777619
-_c_int_int_dict_last_operation_status = c_int_int_dict_success
+_int_int_dict_last_operation_status = c_int_int_dict_success
 _c_int_int_dict_key_exists = False
 _int_int_dict_temp_array = -1
 _int_int_dict_iterator_prev_key = -1
-_int_int_dict_iterator_prev_idx = 1
+_int_int_dict_iterator_curr_idx = 1
 
 
 def constants() -> None:
@@ -57,7 +57,7 @@ def _xs_int_int_dict_hash(key: int = -1, num_of_buckets: int = 0) -> int:
 
 
 def _xs_int_int_dict_replace(dct: int = -1, key: int = -1, val: int = 0, num_of_buckets: int = 0) -> int:
-    global _c_int_int_dict_last_operation_status
+    global _int_int_dict_last_operation_status
     hash: int = _xs_int_int_dict_hash(key, num_of_buckets)
     bucket: int = xs_array_get_int(dct, hash)
     if bucket < 0:
@@ -133,7 +133,7 @@ def _xs_int_int_dict_move_to_temp_array(dct: int = -1, total_size: int = 0, dict
 
 
 def xs_int_int_dict_put(dct: int = -1, key: int = -1, val: int = 0) -> int:
-    global _int_int_dict_temp_array, _c_int_int_dict_last_operation_status
+    global _int_int_dict_temp_array, _int_int_dict_last_operation_status
     total_size: int = xs_array_get_int(dct, 0)
     dict_capacity: int = xs_array_get_size(dct)
 
@@ -212,7 +212,7 @@ def xs_int_int_dict(
 
 
 def xs_int_int_dict_remove(dct: int = -1, key: int = -1) -> int:
-    global _c_int_int_dict_last_operation_status, _int_int_dict_temp_array
+    global _int_int_dict_last_operation_status, _int_int_dict_temp_array
     total_size: int = xs_array_get_int(dct, 0)
     dict_capacity: int = xs_array_get_size(dct)
     hash: int = _xs_int_int_dict_hash(key, dict_capacity - 1)
@@ -248,7 +248,7 @@ def xs_int_int_dict_remove(dct: int = -1, key: int = -1) -> int:
 
 
 def xs_int_int_dict_get(dct: int = -1, key: int = -1, dft: int = -1) -> int:
-    global _c_int_int_dict_last_operation_status
+    global _int_int_dict_last_operation_status
     dict_capacity: int = xs_array_get_size(dct)
     hash: int = _xs_int_int_dict_hash(key, dict_capacity - 1)
     bucket: int = xs_array_get_int(dct, hash)
@@ -323,19 +323,19 @@ def xs_int_int_dict_copy(dct: int = -1) -> int:
 
 
 def xs_int_int_dct_iterator_start() -> None:
-    global _int_int_dict_iterator_prev_idx, _int_int_dict_iterator_prev_key
+    global _int_int_dict_iterator_curr_idx, _int_int_dict_iterator_prev_key
     _int_int_dict_iterator_prev_idx = 0
     _int_int_dict_iterator_prev_key = -1
 
 
 def xs_int_int_dct_iterator_has_next(dct: int = -1) -> bool:
-    global _int_int_dict_iterator_prev_idx
+    global _int_int_dict_iterator_curr_idx
     total_size: int = xs_array_get_int(dct, 0)
     return _int_int_dict_iterator_prev_idx < total_size
 
 
 def _xs_int_int_dct_iterator_next(dct: int = -1, return_key: bool = True) -> int:
-    global _int_int_dict_iterator_prev_idx, _int_int_dict_iterator_prev_key, _c_int_int_dict_last_operation_status
+    global _int_int_dict_iterator_curr_idx, _int_int_dict_iterator_prev_key, _int_int_dict_last_operation_status
     b: int = -1
     bucket: int = -1
     bucket_size: int = -1
@@ -419,11 +419,11 @@ def xs_int_int_dict_to_string(dct: int = -1) -> str:
 
 
 def xs_int_int_dict_last_error() -> int:
-    return _c_int_int_dict_last_operation_status
+    return _int_int_dict_last_operation_status
 
 
 def xs_int_int_dict_update(source: int = -1, dct: int = -1) -> int:
-    global _c_int_int_dict_last_operation_status
+    global _int_int_dict_last_operation_status
     xs_int_int_dct_iterator_start()
     while xs_int_int_dct_iterator_has_next(dct):
         key: int = xs_int_int_dct_iterator_next_key(dct)
