@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-from xs.int_int_dict import int_int_dict
+from xs.int_int_dict2 import int_int_dict
 from xs.int_list import int_list
 
 

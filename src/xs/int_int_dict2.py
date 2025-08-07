@@ -16,7 +16,6 @@ c_int_int_dict_initial_bucket_size = 4
 c_int_int_dict_min_bucket_size = 2
 c_int_int_dict_hash_constant = 16777619
 _int_int_dict_last_operation_status = c_int_int_dict_success
-_c_int_int_dict_key_exists = False
 _int_int_dict_temp_array = -1
 
 
@@ -30,11 +29,10 @@ def constants() -> None:
     c_int_int_dict_max_load_factor: XsExternConst[float] = 0.75
     c_int_int_dict_empty_param: XsExternConst[int] = -999999999
     c_int_int_dict_initial_num_of_buckets: XsExternConst[int] = 49
-    c_int_int_dict_initial_bucket_size: XsExternConst[int] = 2
+    c_int_int_dict_initial_bucket_size: XsExternConst[int] = 4
     c_int_int_dict_min_bucket_size: XsExternConst[int] = 2
     c_int_int_dict_hash_constant: XsExternConst[int] = 16777619
-    _c_int_int_dict_last_operation_status: int = c_int_int_dict_success
-    _c_int_int_dict_key_exists: bool = False
+    _int_int_dict_last_operation_status: int = c_int_int_dict_success
     _int_int_dict_temp_array: int = -1
 
 
@@ -49,7 +47,7 @@ def _xs_int_int_dict_hash(key: int = -1, capacity: int = 0) -> int:
     num_of_buckets: int = (capacity - 1) // 3
     hash = hash % num_of_buckets
     if hash < 0:
-        hash = hash + num_of_buckets
+        hash += num_of_buckets
     return (hash * 3) + 1
 
 
@@ -193,7 +191,7 @@ def xs_int_int_dict_put(dct: int = -1, key: int = -1, val: int = 0) -> int:
     return c_int_int_dict_generic_error
 
 
-def _xs_int_int_dict_clear_arrays(dct: int = -1, capacity: int = -1, new_capacity: int = -1):
+def _xs_int_int_dict_clear_arrays(dct: int = -1, capacity: int = -1, new_capacity: int = -1) -> None:
     for i in range(1, capacity, 3):
         bucket_type: int = xs_array_get_int(dct, i)
         if bucket_type == 1:
@@ -274,6 +272,7 @@ def xs_int_int_dict_remove(dct: int = -1, key: int = -1) -> int:
     capacity: int = xs_array_get_size(dct)
     hash: int = _xs_int_int_dict_hash(key, capacity)
     bucket_type: int = xs_array_get_int(dct, hash)
+    stored_key: int = 0
     if bucket_type == 0:
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return c_int_int_dict_generic_error
@@ -287,8 +286,8 @@ def xs_int_int_dict_remove(dct: int = -1, key: int = -1) -> int:
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return c_int_int_dict_generic_error
     if bucket_type == 2:
-        bucket_arr = xs_array_get_int(dct, hash + 1)
-        bucket_size = xs_array_get_int(dct, hash + 2)
+        bucket_arr: int = xs_array_get_int(dct, hash + 1)
+        bucket_size: int = xs_array_get_int(dct, hash + 2)
         found: bool = False
         prev_value: int = 0
         for i in range(0, bucket_size, 2):
@@ -416,7 +415,7 @@ def xs_int_int_dict_last_error() -> int:
     return _int_int_dict_last_operation_status
 
 
-def _xs_int_int_find_next_from_bucket(bucket: int = -1, dct: int = -1, dict_size: int = -1):
+def _xs_int_int_find_next_from_bucket(bucket: int = -1, dct: int = -1, dict_size: int = -1) -> int:
     global _int_int_dict_last_operation_status
     for i in range(bucket, dict_size, 3):
         bucket_type: int = xs_array_get_int(dct, i)
@@ -469,7 +468,7 @@ def xs_int_int_dict_update(source: int = -1, dct: int = -1) -> int:
     key: int = xs_int_int_dict_next_key(dct)
     while xs_int_int_dict_last_error() != c_int_int_dict_no_key_error:
         val: int = xs_int_int_dict_get(dct, key)
-        err = xs_int_int_dict_last_error()
+        err: int = xs_int_int_dict_last_error()
         if err != 0:
             return err
         xs_int_int_dict_put(source, key, val)
@@ -499,6 +498,7 @@ def int_int_dict(include_test: bool) -> (str, str):
         _xs_int_int_dict_hash,
         _xs_int_int_dict_replace,
         _xs_int_int_dict_move_to_temp_array,
+        _xs_int_int_dict_clear_arrays,
         xs_int_int_dict_put,
         xs_int_int_dict_create,
         xs_int_int_dict,
@@ -508,12 +508,18 @@ def int_int_dict(include_test: bool) -> (str, str):
         xs_int_int_dict_size,
         xs_int_int_dict_clear,
         xs_int_int_dict_copy,
+        _xs_int_int_find_next_from_bucket,
         xs_int_int_dict_next_key,
+        xs_int_int_dict_has_next,
         xs_int_int_dict_to_string,
         xs_int_int_dict_last_error,
         xs_int_int_dict_update,
         indent=True,
     )
+    constants_xs = (constants_function_xs[constants_function_xs.find("extern"):constants_function_xs.rfind("}")]
+                    .strip()
+                    .replace("    ", "")
+                    ) + "\n\n"
     if include_test:
         xs += constants_xs + PythonToXsConverter.to_xs_script(
             test,

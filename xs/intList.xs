@@ -172,7 +172,7 @@ int xsIntListFromRepeatedList(int lst = -1, int times = 0) {
     }
     for (i = 1; <= size) {
         int val = xsArrayGetInt(lst, i);
-        j = i;
+        int j = i;
         while (j < newCapacity) {
             xsArraySetInt(newLst, j, val);
             j = j + size;
@@ -184,7 +184,7 @@ int xsIntListFromRepeatedList(int lst = -1, int times = 0) {
 
 int xsIntListFromArray(int arr = -1) {
     int arrSize = xsArrayGetSize(arr);
-    lst = xsIntListCreate(arrSize);
+    int lst = xsIntListCreate(arrSize);
     if (lst < 0) {
         return (lst);
     }
