@@ -5,7 +5,7 @@ extern const int cIntListResizeFailedError = -3;
 extern const int cIntListMaxCapacityError = -4;
 extern const int cIntListMaxCapacity = 999999999;
 extern const int cIntListEmptyParam = -999999999;
-extern int _intListLastOperationStatus = cIntListSuccess;
+int _intListLastOperationStatus = cIntListSuccess;
 
 /*
     Creates a list with provided values. The first value that equals `cIntListEmptyParam` will stop further insertion.

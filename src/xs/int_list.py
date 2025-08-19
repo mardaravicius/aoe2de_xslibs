@@ -21,7 +21,7 @@ def constants() -> None:
     c_int_list_max_capacity_error: XsExternConst[int] = -4
     c_int_list_max_capacity: XsExternConst[int] = 999999999
     c_int_list_empty_param: XsExternConst[int] = -999999999
-    _int_list_last_operation_status: XsExtern[int] = c_int_list_success
+    _int_list_last_operation_status: int = c_int_list_success
 
 
 def xs_int_list_create(capacity: int = 7) -> int:

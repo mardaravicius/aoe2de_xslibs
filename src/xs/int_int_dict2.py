@@ -316,9 +316,7 @@ def xs_int_int_dict_contains(dct: int = -1, key: int = -1) -> bool:
     if bucket_type == 0:
         return False
     if bucket_type == 1:
-        if xs_array_get_int(dct, hash + 1) == key:
-            return True
-        return False
+        return xs_array_get_int(dct, hash + 1) == key
     if bucket_type == 2:
         bucket_size: int = xs_array_get_int(dct, hash + 2)
         for j in range(0, bucket_size, 2):

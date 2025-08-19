@@ -331,10 +331,7 @@ bool xsIntIntDictContains(int dct = -1, int key = -1) {
         return (false);
     }
     if (bucketType == 1) {
-        if (xsArrayGetInt(dct, hash + 1) == key) {
-            return (true);
-        }
-        return (false);
+        return (xsArrayGetInt(dct, hash + 1) == key);
     }
     if (bucketType == 2) {
         int bucketSize = xsArrayGetInt(dct, hash + 2);
