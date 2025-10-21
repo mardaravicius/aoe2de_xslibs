@@ -6,8 +6,12 @@ def vector(x: float, y: float, z: float) -> XsVector:
     return XsVector(x, y, z)
 
 
-def abs(x: float) -> float:
-    return abs_impl(x)
+def abs(x: float | float32) -> float32:
+    return abs_impl(float32(x))
+
+
+def pow(x: float | float32, y: float | float32) -> float32:
+    return pow_impl(float32(x), float32(y))
 
 
 def xs_chat_data(message: str, value: int = -1) -> None:

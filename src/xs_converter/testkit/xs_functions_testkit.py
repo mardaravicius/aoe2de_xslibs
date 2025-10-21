@@ -2,6 +2,7 @@ import dataclasses
 from typing import TypeVar
 
 import numpy
+from numpy import float32
 
 T = TypeVar('T')
 
@@ -15,8 +16,12 @@ class XsArray:
     array: list
 
 
-def abs_impl(x: float) -> float:
-    return abs(x)
+def abs_impl(x: float32) -> float32:
+    return numpy.abs(x)
+
+
+def pow_impl(x: float32, y: float32) -> float32:
+    return numpy.pow(x, y)
 
 
 def xs_array_get_size_impl(array_id: int) -> int:
