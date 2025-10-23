@@ -1,12 +1,14 @@
 import dataclasses
 from typing import _SpecialForm, Optional
 
+from numpy import float32, arange, int32
+
 
 @dataclasses.dataclass
 class XsVector:
-    x: float
-    y: float
-    z: float
+    x: float32
+    y: float32
+    z: float32
 
 
 @_SpecialForm
@@ -35,3 +37,7 @@ def xs_rule(group: str = None, active: bool = False, high_frequency: bool = Fals
         return function
 
     return xs_rule_inner
+
+
+def i32range(start =  None, *args, **kwargs):
+    return arange(start, *args, **kwargs, dtype=int32)

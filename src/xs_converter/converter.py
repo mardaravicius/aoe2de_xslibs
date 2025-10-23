@@ -340,7 +340,7 @@ class PythonToXsConverter:
 
     def to_xs_for(self, e: For, i: int, vars_to_replace: dict[str, str]) -> str:
         xs = ""
-        if isinstance(e.iter, Call) and isinstance(e.iter.func, Name) and e.iter.func.id == "range":
+        if isinstance(e.iter, Call) and isinstance(e.iter.func, Name) and e.iter.func.id in {"range", "i32range"}:
             args = e.iter.args
             if 2 >= len(args) > 0 or (len(args) == 3 and isinstance(args[2], Constant) and args[2].value == 1):
                 if isinstance(e.target, Name):
