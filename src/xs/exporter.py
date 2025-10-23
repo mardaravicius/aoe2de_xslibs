@@ -1,6 +1,7 @@
 import subprocess
 from pathlib import Path
 
+from xs.functions import functions
 from xs.int_int_dict2 import int_int_dict
 from xs.int_list import int_list
 
@@ -9,6 +10,7 @@ def main(include_xs_tests: bool = False) -> None:
     xs_file_creators = [
         int_list,
         int_int_dict,
+        functions,
     ]
     for fc in xs_file_creators:
         xs, name = fc(include_xs_tests)

@@ -4,9 +4,9 @@ import unittest
 import numpy
 from numpy import int32, uint32
 
-from xs.functions import xs_bit_shift_arithmetic_right, xs_bit_shift_left, xs_bit_not, xs_bit_and, xs_bit_xor, \
+from xs.functions import xs_bit_shift_right_arithmetic, xs_bit_shift_left, xs_bit_not, xs_bit_and, xs_bit_xor, \
     xs_bit_or, \
-    xs_mersenne_twister_seed, xs_mersenne_twister_random, xs_bit_shift_logical_right, \
+    xs_mersenne_twister_seed, xs_mersenne_twister_random, xs_bit_shift_right_logical, \
     xs_mersenne_twister_random_uniform_range
 
 
@@ -20,7 +20,7 @@ class FunctionsTest(unittest.TestCase):
             else:
                 b = int32(random.randint(-2147483648, 2147483647))
             expected = int32(a) >> int32(b)
-            actual = xs_bit_shift_arithmetic_right(int32(a), int32(b))
+            actual = xs_bit_shift_right_arithmetic(int32(a), int32(b))
             self.assertEqual(expected, actual, f"{a} >> {b}")
 
     def test_right_shift_arithmetic_edges(self):
@@ -28,7 +28,7 @@ class FunctionsTest(unittest.TestCase):
         for a in edges:
             for b in list(range(-32, 64)) + edges:
                 expected = int32(a) >> int32(b)
-                actual = xs_bit_shift_arithmetic_right(int32(a), int32(b))
+                actual = xs_bit_shift_right_arithmetic(int32(a), int32(b))
                 self.assertEqual(expected, actual, f"{a} >> {b}")
 
     def test_right_shift_logical(self):
@@ -39,7 +39,7 @@ class FunctionsTest(unittest.TestCase):
             else:
                 b = int32(random.randint(-2147483648, 2147483647))
             expected = int32(uint32(int32(a)) >> uint32(int32(b)))
-            actual = xs_bit_shift_logical_right(int32(a), int32(b))
+            actual = xs_bit_shift_right_logical(int32(a), int32(b))
             self.assertEqual(expected, actual, f"{a} >>> {b}")
 
     def test_right_shift_logical_edges(self):
@@ -47,7 +47,7 @@ class FunctionsTest(unittest.TestCase):
         for a in edges:
             for b in list(range(-32, 64)) + edges:
                 expected = int32(uint32(int32(a)) >> uint32(int32(b)))
-                actual = xs_bit_shift_logical_right(int32(a), int32(b))
+                actual = xs_bit_shift_right_logical(int32(a), int32(b))
                 self.assertEqual(expected, actual, f"{a} >>> {b}")
 
     def test_left_shift(self):

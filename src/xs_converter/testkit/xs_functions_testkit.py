@@ -1,8 +1,9 @@
 import dataclasses
+import random
 from typing import TypeVar
 
 import numpy
-from numpy import float32
+from numpy import float32, int32
 
 T = TypeVar('T')
 
@@ -117,10 +118,14 @@ def xs_chat_data_impl(msg: str, value: int) -> None:
 
 
 def bit_cast_to_float_impl(number: int) -> float:
-    i = numpy.int32(number)
-    return float(i.view(numpy.float32))
+    i = int32(number)
+    return float(i.view(float32))
 
 
 def bit_cast_to_int_impl(number: float) -> int:
-    f = numpy.float32(number)
-    return int(f.view(numpy.int32))
+    f = float32(number)
+    return int(f.view(int32))
+
+
+def xs_get_random_number_impl() -> int32:
+    return int32(random.randint(0, 32766))

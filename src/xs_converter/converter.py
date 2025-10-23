@@ -55,9 +55,9 @@ class PythonToXsConverter:
         return prefix + s
 
     def to_xs_type(self, python_type: str) -> str:
-        if python_type == 'int':
+        if python_type == 'int' or python_type == 'int32':
             return 'int'
-        if python_type == 'float':
+        if python_type == 'float' or python_type == 'float32':
             return 'float'
         if python_type == 'bool':
             return 'bool'
@@ -142,7 +142,7 @@ class PythonToXsConverter:
     def to_xs_expression_top(self, e: Expr, i: int, vars_to_replace: dict[str, str]) -> str:
         if isinstance(e.value, Constant) and isinstance(e.value.value, str) and e.value.value.strip().replace("\n",
                                                                                                               "").replace(
-                " ", "") in self.doc_strings:
+            " ", "") in self.doc_strings:
             return ""
         return f"{i * self.i}{self.to_xs_expression(e.value, vars_to_replace)};{self.n}"
 
@@ -175,7 +175,7 @@ class PythonToXsConverter:
 
     def to_xs_expression(self, e: expr, vars_to_replace: dict[str, str], enclosed=False) -> str:
         if isinstance(e, Constant):
-            return self.to_xs_constant(e.value)
+            return self.to_xs_constant(e.value, enclosed)
         if isinstance(e, Name):
             if e.id in vars_to_replace:
                 return vars_to_replace[e.id]
@@ -183,7 +183,7 @@ class PythonToXsConverter:
                 return self.to_camel_case(e.id)
         elif isinstance(e, Call):
             if e.func.id in self.macro_functions:
-                return self.to_xs_constant(self.eval_macro_function(e))
+                return self.to_xs_constant(self.eval_macro_function(e), enclosed)
             else:
                 return self.to_xs_call(e, vars_to_replace, enclosed)
         elif isinstance(e, BinOp):
@@ -196,7 +196,7 @@ class PythonToXsConverter:
             return xs
         elif isinstance(e, UnaryOp):
             if isinstance(e.op, USub) and isinstance(e.operand, Constant):
-                return self.to_xs_constant(e.operand.value * -1)
+                return self.to_xs_constant(e.operand.value * -1, enclosed)
             if isinstance(e.op, Not):
                 xs = f"{self.to_xs_expression(e.operand, vars_to_replace)}{self.s}=={self.s}false"
                 if not enclosed:
@@ -242,7 +242,7 @@ class PythonToXsConverter:
             return f"{self.to_xs_expression(op.values[0], vars_to_replace)}{self.s}&&{self.s}{self.to_xs_expression(op.values[1], vars_to_replace)}"
         raise ValueError(f"Unsupported bool op: {op}")
 
-    def to_xs_constant(self, value):
+    def to_xs_constant(self, value, enclosed: bool = False):
         if isinstance(value, str):
             return f'"{value}"'
         if isinstance(value, bool):
@@ -253,14 +253,20 @@ class PythonToXsConverter:
                     raise ValueError(f"xs int can't hold such big value: {value}")
                 base = int(value / 10)
                 remainder = int(value % 10)
-                return f"({base}{self.s}*{self.s}10{self.s}+{self.s}{remainder})"
+                xs = f"{base}{self.s}*{self.s}10{self.s}+{self.s}{remainder}"
+                if not enclosed:
+                    xs = f"({xs})"
+                return xs
             if value < -999_999_999:
                 if value < -2_147_483_648:
                     raise ValueError(f"xs int can't hold such small value: {value}")
                 value = value * -1
                 base = int(value / 10)
                 remainder = int(value % 10)
-                return f"(-{base}{self.s}*{self.s}10{self.s}-{self.s}{remainder})"
+                xs = f"-{base}{self.s}*{self.s}10{self.s}-{self.s}{remainder}"
+                if not enclosed:
+                    xs = f"({xs})"
+                return xs
             return f"{value}"
         if isinstance(value, float):
             return f"{value}"
@@ -275,14 +281,30 @@ class PythonToXsConverter:
                 xs = f'""{self.s}+{self.s}' + self.to_xs_expression(e.args[0], vars_to_replace)
                 if not enclosed:
                     xs = f"({xs})"
-            elif function_name == "float":
-                xs = f'0.0{self.s}+{self.s}' + self.to_xs_expression(e.args[0], vars_to_replace)
-                if not enclosed:
-                    xs = f"({xs})"
-            elif function_name == "int":
-                xs = f'0{self.s}+{self.s}' + self.to_xs_expression(e.args[0], vars_to_replace)
-                if not enclosed:
-                    xs = f"({xs})"
+            elif function_name == "float" or function_name == "float32":
+                if len(e.args) == 1 and ((isinstance(e.args[0], UnaryOp) and isinstance(e.args[0].op,
+                                                                                        USub) and isinstance(
+                        e.args[0].operand, Constant)) or (isinstance(e.args[0], Constant))):
+                    if isinstance(e.args[0], UnaryOp):
+                        xs = self.to_xs_expression(e.args[0], vars_to_replace, enclosed=enclosed)
+                    else:
+                        xs = self.to_xs_constant(e.args[0].value, enclosed)
+                else:
+                    xs = f'0.0{self.s}+{self.s}' + self.to_xs_expression(e.args[0], vars_to_replace)
+                    if not enclosed:
+                        xs = f"({xs})"
+            elif function_name == "int" or function_name == "int32":
+                if len(e.args) == 1 and ((isinstance(e.args[0], UnaryOp) and isinstance(e.args[0].op,
+                                                                                        USub) and isinstance(
+                        e.args[0].operand, Constant)) or (isinstance(e.args[0], Constant))):
+                    if isinstance(e.args[0], UnaryOp):
+                        xs = self.to_xs_expression(e.args[0], vars_to_replace, enclosed=enclosed)
+                    else:
+                        xs = self.to_xs_constant(e.args[0].value, enclosed)
+                else:
+                    xs = f'0{self.s}+{self.s}' + self.to_xs_expression(e.args[0], vars_to_replace)
+                    if not enclosed:
+                        xs = f"({xs})"
             else:
                 xs = f"{function_name}("
                 xs += f",{self.s}".join(
@@ -344,7 +366,8 @@ class PythonToXsConverter:
                 else:
                     raise ValueError(f"loop target must be a new variable")
                 increment_arg = args[2]
-                if isinstance(increment_arg, UnaryOp) and isinstance(increment_arg.op, USub) and isinstance(increment_arg.operand, Constant) and isinstance(increment_arg.operand.value, int):
+                if isinstance(increment_arg, UnaryOp) and isinstance(increment_arg.op, USub) and isinstance(
+                        increment_arg.operand, Constant) and isinstance(increment_arg.operand.value, int):
                     increment_val = increment_arg.operand.value * - 1
                     increment_arg = increment_arg.operand
                 elif isinstance(increment_arg, Constant) and isinstance(increment_arg.value, int):

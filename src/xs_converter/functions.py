@@ -1,3 +1,5 @@
+from numpy import int32
+
 from xs_converter.symbols import XsVector
 from xs_converter.testkit.xs_functions_testkit import *
 
@@ -60,18 +62,6 @@ def xs_get_player_in_game(player_number: int) -> bool:
 
 
 def xs_get_player_number_of_techs(player_number: int) -> int:
-    pass
-
-
-def xs_get_random_number() -> int:
-    pass
-
-
-def xs_get_random_number_l_h(low: int, high: int) -> int:
-    pass
-
-
-def xs_get_random_number_max(max: int) -> int:
     pass
 
 
@@ -144,23 +134,23 @@ def xs_trigger_variable(variable_id: int) -> int:
     pass
 
 
-def xs_array_get_size(array_id: int = -1) -> int:
+def xs_array_get_size(array_id: int | int32 = -1) -> int:
     return xs_array_get_size_impl(array_id)
 
 
-def xs_array_create_int(size: int = -1, default_value: int = 0, unique_name: str = "") -> int:
+def xs_array_create_int(size: int | int32 = -1, default_value: int | int32 = 0, unique_name: str = "") -> int:
     return xs_array_create_int_impl(size, default_value, unique_name)
 
 
-def xs_array_set_int(array_id: int = -1, idx: int = 0, value: int = 0) -> int:
+def xs_array_set_int(array_id: int | int32 = -1, idx: int | int32 = 0, value: int | int32 = 0) -> int:
     return xs_array_set_int_impl(array_id, idx, value)
 
 
-def xs_array_get_int(array_id: int = -1, idx: int = 0) -> int:
+def xs_array_get_int(array_id: int | int32 = -1, idx: int | int32 = 0) -> int:
     return xs_array_get_int_impl(array_id, idx)
 
 
-def xs_array_resize_int(array_id: int = -1, new_size: int = 0) -> int:
+def xs_array_resize_int(array_id: int | int32 = -1, new_size: int | int32 = 0) -> int:
     return xs_array_resize_int_impl(array_id, new_size)
 
 
@@ -186,3 +176,7 @@ def bit_cast_to_float(number: int) -> float:
 
 def bit_cast_to_int(number: float) -> int:
     return bit_cast_to_int_impl(number)
+
+
+def xs_get_random_number() -> int32:
+    return xs_get_random_number_impl()
