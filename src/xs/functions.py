@@ -161,8 +161,8 @@ def xs_mt_seed(seed: int32 = int32(0)) -> None:
         _mt_state_index, _mt_seed_set
     if _mt_state_array < 0:
         _c_mt_matrix_a = int32(-1727483681)
-        _c_mt_upper_mask = int32(-2147483648)
-        _c_mt_lower_mask = int32(2147483647)
+        _c_mt_upper_mask = xs_bit_shift_left(int32(-1), _c_mt_r)
+        _c_mt_lower_mask = xs_bit_shift_right_logical(int32(-1), _c_mt_w - _c_mt_r)
         _c_mt_a = int32(-1727483681)
         _c_mt_b = int32(-1658038656)
         _c_mt_f = int32(1812433253)
@@ -195,7 +195,7 @@ def xs_mt_random() -> int32:
     )
 
     xa: int32 = xs_bit_shift_right_logical(x, int32(1))
-    if (xs_bit_and(x, int32(1)) != 0):
+    if xs_bit_and(x, int32(1)) != 0:
         xa = xs_bit_xor(xa, _c_mt_a)
 
     j = k - (_c_mt_n - _c_mt_m)
@@ -219,25 +219,29 @@ def xs_mt_random() -> int32:
 
 
 def xs_mt_random_uniform_range(start: int32 = int32(0), end: int32 = int32(999999999)) -> int32:
-    rg: int32 = end - start
-    if rg <= 0:
+    if end <= start:
         return int32(-1)
 
-    if rg == 1:
+    dist: int32 = end - start
+    if dist == 1:
         return start
 
-    if xs_bit_and(rg, (rg - 1)) == 0:
-        return start + xs_bit_and(xs_mt_random(), (rg - 1))
+    distm: int32 = dist - 1
+    if xs_bit_and(dist, distm) == 0:
+        return xs_bit_and(xs_mt_random(), distm) + start
 
-    threshold: int32 = (-1 * rg) % rg
+    if dist > 0:
+        while True:
+            r: int32 = xs_bit_shift_right_logical(xs_mt_random(), int32(1))
+            c: int32 = r % dist
+
+            if r + distm - c >= 0:
+                return c + start
 
     while True:
-        r: int32 = xs_mt_random()
-        unsigned_r: int32 = r + _xs_bit_operator_get_int_min_value()
-        if unsigned_r >= threshold:
-            result: int32 = unsigned_r % rg
-            return start + result
-
+        rr: int32 = xs_mt_random()
+        if rr >= start and rr < end:
+            return rr
 
 def functions(include_test: bool = False) -> tuple[str, str]:
     constants_function_xs = PythonToXsConverter.to_xs_script(

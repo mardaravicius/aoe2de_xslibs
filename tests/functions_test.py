@@ -154,11 +154,25 @@ class FunctionsTest(unittest.TestCase):
             s = int32(random.randint(-2147483648, 2147483647))
             e = int32(random.randint(s, 2147483647))
             r = xs_mt_random_uniform_range(s, e)
-            if s == e:
+            if e <= s:
                 self.assertEqual(-1, r)
             else:
                 self.assertGreaterEqual(r, s, f"[{s}, {e}]")
                 self.assertLess(r, e, f"[{s}, {e}]")
+
+
+    def test_random_uniform_in_range_edges(self):
+        xs_mt_seed(int32(1))
+        edges = [-2147483648, -2147483647, 2147483647, 2147483646, 0, 1, -1, 2, -2]
+        for s in edges:
+            for e in edges:
+                r = xs_mt_random_uniform_range(int32(s), int32(e))
+                if e <= s:
+                    self.assertEqual(-1, r)
+                else:
+                    self.assertGreaterEqual(r, s, f"[{s}, {e}]")
+                    self.assertLess(r, e, f"[{s}, {e}]")
+
 
     def test_random_uniform_is_uniform(self):
         with numpy.errstate(over='ignore'):
@@ -190,7 +204,7 @@ class FunctionsTest(unittest.TestCase):
 
         for _ in range(200):
             r = int32(uint32(random.getrandbits(32)))
-            print(r)
+            # print(r)
             r2 = xs_mt_random()
             print(r2)
 

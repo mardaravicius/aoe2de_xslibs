@@ -139,8 +139,8 @@ int xsBitXor(int a = 0, int b = 0) {
 void xsMtSeed(int seed = 0) {
     if (_mtStateArray < 0) {
         _cMtMatrixA = -172748368 * 10 - 1;
-        _cMtUpperMask = -214748364 * 10 - 8;
-        _cMtLowerMask = 214748364 * 10 + 7;
+        _cMtUpperMask = xsBitShiftLeft(-1, _cMtR);
+        _cMtLowerMask = xsBitShiftRightLogical(-1, _cMtW - _cMtR);
         _cMtA = -172748368 * 10 - 1;
         _cMtB = -165803865 * 10 - 6;
         _cMtF = 181243325 * 10 + 3;
@@ -190,23 +190,30 @@ int xsMtRandom() {
 }
 
 int xsMtRandomUniformRange(int start = 0, int end = 999999999) {
-    int rg = end - start;
-    if (rg <= 0) {
+    if (end <= start) {
         return (-1);
     }
-    if (rg == 1) {
+    int dist = end - start;
+    if (dist == 1) {
         return (start);
     }
-    if (xsBitAnd(rg, rg - 1) == 0) {
-        return (start + xsBitAnd(xsMtRandom(), rg - 1));
+    int distm = dist - 1;
+    if (xsBitAnd(dist, distm) == 0) {
+        return (xsBitAnd(xsMtRandom(), distm) + start);
     }
-    int threshold = (-1 * rg) % rg;
+    if (dist > 0) {
+        while (true) {
+            int r = xsBitShiftRightLogical(xsMtRandom(), 1);
+            int c = r % dist;
+            if (((r + distm) - c) >= 0) {
+                return (c + start);
+            }
+        }
+    }
     while (true) {
-        int r = xsMtRandom();
-        int unsignedR = r + _xsBitOperatorGetIntMinValue();
-        if (unsignedR >= threshold) {
-            int result = unsignedR % rg;
-            return (start + result);
+        int rr = xsMtRandom();
+        if ((rr >= start) && (rr < end)) {
+            return (rr);
         }
     }
 }
