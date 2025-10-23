@@ -204,10 +204,8 @@ int xsIntListUseArrayAsSource(int arr = -1) {
     if (r < 0) {
         return (cIntListResizeFailedError);
     }
-    int i = arrSize - 1;
-    while (i > -1) {
+    for (i = arrSize - 1; > -1) {
         xsArraySetInt(arr, i + 1, xsArrayGetInt(arr, i));
-        i--;
     }
     xsArraySetInt(arr, 0, arrSize);
     return (cIntListSuccess);
@@ -325,10 +323,8 @@ int xsIntListInsert(int lst = -1, int idx = -1, int value = 0) {
             return (r);
         }
     }
-    int i = size;
-    while (i > idx) {
+    for (i = size; > idx) {
         xsArraySetInt(lst, i + 1, xsArrayGetInt(lst, i));
-        i--;
     }
     xsArraySetInt(lst, idx + 1, value);
     xsArraySetInt(lst, 0, newSize);
@@ -423,18 +419,14 @@ void _xsIntListSiftDown(int lst = -1, int start = -1, int end = -1, bool reverse
 
 void xsIntListSort(int lst = -1, bool reverse = false) {
     int size = xsArrayGetInt(lst, 0);
-    int start = size / 2;
-    while (start > 0) {
+    for (start = size / 2; > 0) {
         _xsIntListSiftDown(lst, start, size, reverse);
-        start--;
     }
-    int end = size;
-    while (end > 1) {
+    for (end = size; > 1) {
         int temp = xsArrayGetInt(lst, 1);
         xsArraySetInt(lst, 1, xsArrayGetInt(lst, end));
         xsArraySetInt(lst, end, temp);
         _xsIntListSiftDown(lst, 1, end - 1, reverse);
-        end--;
     }
 }
 

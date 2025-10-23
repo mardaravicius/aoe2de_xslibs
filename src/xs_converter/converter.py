@@ -4,7 +4,7 @@ from ast import FunctionDef, Constant, Name, expr, arg, Expr, AnnAssign, Call, A
     operator, If, Compare, Eq, Gt, GtE, Lt, LtE, NotEq, cmpop, For, While, AugAssign, Match, MatchValue, MatchAs, \
     Return, Pass, Subscript, stmt, Attribute, keyword, With, Tuple, UnaryOp, USub, JoinedStr, FormattedValue, Global, \
     BoolOp, Or, And, Not, FloorDiv
-from typing import Iterable
+from typing import Iterable, Optional
 
 from xs_converter.macro import macro_pass_value, macro_repeat_with_iterable
 
@@ -342,7 +342,7 @@ class PythonToXsConverter:
         xs = ""
         if isinstance(e.iter, Call) and isinstance(e.iter.func, Name) and e.iter.func.id in {"range", "i32range"}:
             args = e.iter.args
-            if 2 >= len(args) > 0 or (len(args) == 3 and isinstance(args[2], Constant) and args[2].value == 1):
+            if 2 >= len(args) > 0 or (len(args) == 3 and self.unpackIntConstant(args[2]) in {1, -1}):
                 if isinstance(e.target, Name):
                     xs_loop_var = self.to_camel_case(e.target.id)
                 else:
@@ -353,7 +353,8 @@ class PythonToXsConverter:
                     to_xs = self.to_xs_for_to(args[0], vars_to_replace, True, True)
                 else:
                     from_xs = self.to_xs_expression(args[0], vars_to_replace, enclosed=True)
-                    to_xs = self.to_xs_for_to(args[1], vars_to_replace, True, True)
+                    positive = not self.unpackIntConstant(args[2]) == -1 if len(args) == 3 else True
+                    to_xs = self.to_xs_for_to(args[1], vars_to_replace, positive, True)
 
                 xs += f"{i * self.i}for{self.s}({xs_loop_var}{self.s}={self.s}{from_xs};{self.s}{to_xs}){self.s}{{{self.n}"
                 xs += self.to_xs_body(e.body, i, vars_to_replace)
@@ -365,23 +366,17 @@ class PythonToXsConverter:
                     xs += f"{i * self.i}int {xs_loop_var}{self.s}={self.s}{self.to_xs_expression(args[0], vars_to_replace, enclosed=True)};{self.n}"
                 else:
                     raise ValueError(f"loop target must be a new variable")
-                increment_arg = args[2]
-                if isinstance(increment_arg, UnaryOp) and isinstance(increment_arg.op, USub) and isinstance(
-                        increment_arg.operand, Constant) and isinstance(increment_arg.operand.value, int):
-                    increment_val = increment_arg.operand.value * - 1
-                    increment_arg = increment_arg.operand
-                elif isinstance(increment_arg, Constant) and isinstance(increment_arg.value, int):
-                    increment_val = increment_arg.value
-                else:
+                increment_val = self.unpackIntConstant(args[2])
+                if increment_val is None or isinstance(increment_val, float):
                     raise ValueError(f"loop increment value must be a constant")
                 if increment_val == 1:
                     xs_loop_increment = "++;"
                 elif increment_val == -1:
                     xs_loop_increment = "--;"
                 elif increment_val < 0:
-                    xs_loop_increment = f"{self.s}={self.s}{xs_loop_var}{self.s}-{self.s}{self.to_xs_constant(abs(increment_arg.value))};"
+                    xs_loop_increment = f"{self.s}={self.s}{xs_loop_var}{self.s}-{self.s}{self.to_xs_constant(abs(increment_val))};"
                 elif increment_val > 0:
-                    xs_loop_increment = f"{self.s}={self.s}{xs_loop_var}{self.s}+{self.s}{self.to_xs_constant(increment_arg.value)};"
+                    xs_loop_increment = f"{self.s}={self.s}{xs_loop_var}{self.s}+{self.s}{self.to_xs_constant(increment_val)};"
                 else:
                     raise ValueError("last range arg can't be 0")
                 to_xs = self.to_xs_for_to(args[1], vars_to_replace, increment_val >= 0, False)
@@ -393,6 +388,15 @@ class PythonToXsConverter:
             else:
                 raise ValueError("for loops are only supported over 1 argument range expressions")
         raise ValueError("for loops are only supported over 1 argument range expressions")
+
+
+    def unpackIntConstant(self, expr) -> Optional[int]:
+        if isinstance(expr, UnaryOp) and isinstance(expr.op, USub) and isinstance(
+            expr.operand, Constant) and isinstance(expr.operand.value, int):
+            return expr.operand.value * -1
+        if isinstance(expr, Constant) and isinstance(expr.value, int):
+            return expr.value
+        return None
 
     def to_xs_while(self, e: While, i: int, vars_to_replace: dict[str, str]) -> str:
         xs = ""
