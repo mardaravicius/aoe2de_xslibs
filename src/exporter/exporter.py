@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-from xs.functions import functions
+from xs.binary_functions import functions
 from xs.int_int_dict2 import int_int_dict
 from xs.int_list import int_list
 
@@ -26,5 +26,5 @@ def write_xs_file(path: Path, data: str):
         file.write(data)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

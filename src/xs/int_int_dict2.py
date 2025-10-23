@@ -534,5 +534,5 @@ def int_int_dict(include_test: bool) -> tuple[str, str]:
     return (xs, "intIntDict")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     int_int_dict(True)

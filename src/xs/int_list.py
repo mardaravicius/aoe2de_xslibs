@@ -649,5 +649,5 @@ def int_list(include_test: bool) -> tuple[str, str]:
     return (xs, "intList")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     int_list(True)

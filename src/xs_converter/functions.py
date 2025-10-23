@@ -1,7 +1,5 @@
-from numpy import int32
-
 from xs_converter.symbols import XsVector
-from xs_converter.testkit.xs_functions_testkit import *
+from xs_converter.impl.xs_functions_impl import *
 
 
 def vector(x: float | float32, y: float | float32, z: float | float32) -> XsVector:

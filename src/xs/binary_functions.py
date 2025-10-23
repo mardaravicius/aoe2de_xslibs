@@ -271,8 +271,8 @@ def functions(include_test: bool = False) -> tuple[str, str]:
         indent=True,
     )
     print(xs)
-    return (xs, "functions")
+    return (xs, "binaryFunctions")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     functions()

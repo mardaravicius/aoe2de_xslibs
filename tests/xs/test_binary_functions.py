@@ -4,10 +4,8 @@ import unittest
 import numpy
 from numpy import int32, uint32
 
-from xs.functions import xs_bit_shift_right_arithmetic, xs_bit_shift_left, xs_bit_not, xs_bit_and, xs_bit_xor, \
-    xs_bit_or, \
-    xs_mt_seed, xs_mt_random, xs_bit_shift_right_logical, \
-    xs_mt_random_uniform_range
+from xs.binary_functions import xs_bit_shift_right_arithmetic, xs_bit_shift_left, xs_bit_not, xs_bit_and, xs_bit_xor, \
+    xs_bit_or, xs_mt_seed, xs_bit_shift_right_logical, xs_mt_random_uniform_range
 
 
 class FunctionsTest(unittest.TestCase):
@@ -197,15 +195,3 @@ class FunctionsTest(unittest.TestCase):
                 self.assertGreaterEqual(occurrences, avg_items * 0.67,
                                         f"{seed=}, {s=}, {e=}, {number=}, {occurrences=}")
                 self.assertLessEqual(occurrences, avg_items * 1.33, f"{seed=}, {s=}, {e=}, {number=}, {occurrences=}")
-
-    def test_random(self):
-        random.seed(1)
-        xs_mt_seed(int32(1))
-
-        for _ in range(200):
-            r = int32(uint32(random.getrandbits(32)))
-            # print(r)
-            r2 = xs_mt_random()
-            print(r2)
-
-        self.assertEqual(1, 1)
