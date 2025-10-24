@@ -9,6 +9,7 @@ _c_bit_operator_int_min_value: int32 = int32(-1)
 
 _c_mt_n: int32 = int32(624)
 _c_mt_m: int32 = int32(397)
+_c_mt_nm: int32 = int32(-1)
 _c_mt_w: int32 = int32(32)
 _c_mt_r: int32 = int32(31)
 _c_mt_matrix_a: int32 = int32(-1)
@@ -34,6 +35,7 @@ def constants() -> None:
 
     _c_mt_n: XsConst[int32] = int32(624)
     _c_mt_m: XsConst[int32] = int32(397)
+    _c_mt_nm: int32 = int32(-1)
     _c_mt_w: XsConst[int32] = int32(32)
     _c_mt_r: XsConst[int32] = int32(31)
     _c_mt_matrix_a: int32 = int32(-1)
@@ -158,7 +160,7 @@ def xs_bit_or(a: int32 = int32(0), b: int32 = int32(0)) -> int32:
 
 def xs_mt_seed(seed: int32 = int32(0)) -> None:
     global _mt_state_array, _c_mt_matrix_a, _c_mt_upper_mask, _c_mt_lower_mask, _c_mt_a, _c_mt_b, _c_mt_f, \
-        _mt_state_index, _mt_seed_set
+        _mt_state_index, _mt_seed_set, _c_mt_nm
     if _mt_state_array < 0:
         _c_mt_matrix_a = int32(-1727483681)
         _c_mt_upper_mask = xs_bit_shift_left(int32(-1), _c_mt_r)
@@ -166,6 +168,7 @@ def xs_mt_seed(seed: int32 = int32(0)) -> None:
         _c_mt_a = int32(-1727483681)
         _c_mt_b = int32(-1658038656)
         _c_mt_f = int32(1812433253)
+        _c_mt_nm = _c_mt_n - _c_mt_m
         _mt_state_array = xs_array_create_int(_c_mt_n, 0, "_mtStateArray")
     xs_array_set_int(_mt_state_array, 0, seed)
     i: int32 = int32(1)
@@ -198,7 +201,7 @@ def xs_mt_random() -> int32:
     if xs_bit_and(x, int32(1)) != 0:
         xa = xs_bit_xor(xa, _c_mt_a)
 
-    j = k - (_c_mt_n - _c_mt_m)
+    j = k - _c_mt_nm
     if j < 0:
         j += _c_mt_n
 
@@ -213,9 +216,7 @@ def xs_mt_random() -> int32:
     y: int32 = xs_bit_xor(x, xs_bit_shift_right_logical(x, _c_mt_u))
     y = xs_bit_xor(y, xs_bit_and(xs_bit_shift_left(y, _c_mt_s), _c_mt_b))
     y = xs_bit_xor(y, xs_bit_and(xs_bit_shift_left(y, _c_mt_t), _c_mt_c))
-    z: int32 = xs_bit_xor(y, xs_bit_shift_right_logical(y, _c_mt_l))
-
-    return z
+    return xs_bit_xor(y, xs_bit_shift_right_logical(y, _c_mt_l))
 
 
 def xs_mt_random_uniform_range(start: int32 = int32(0), end: int32 = int32(999999999)) -> int32:

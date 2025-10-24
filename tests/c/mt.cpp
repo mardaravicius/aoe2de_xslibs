@@ -11,9 +11,8 @@ int main(const int argc, const char * const * const argv) {
         const int32_t seed = static_cast<int32_t>(std::stol(argv[1]));
         const int32_t iterations = static_cast<int32_t>(std::stol(argv[2]));
         std::mt19937 mt(seed);
-        for (int i = 0; i < iterations; i++) {
-            uint32_t u32 = mt();
-            int32_t i32 = static_cast<int32_t>(u32);
+        for (int32_t i = 0; i < iterations; i++) {
+            const int32_t i32 = static_cast<int32_t>(mt());
             std::cout << i32 << "\n";
         }
         return 0;
