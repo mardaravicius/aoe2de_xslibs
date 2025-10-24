@@ -1,5 +1,4 @@
 int _bitOperatorPowers = -1;
-int _cBitOperatorIntMinValue = -1;
 const int _cMtN = 624;
 const int _cMtM = 397;
 int _cMtNm = -1;
@@ -19,13 +18,6 @@ int _cMtF = -1;
 bool _mtSeedSet = false;
 int _mtStateArray = -1;
 int _mtStateIndex = 0;
-
-int _xsBitOperatorGetIntMinValue() {
-    if (_cBitOperatorIntMinValue == -1) {
-        _cBitOperatorIntMinValue = -214748364 * 10 - 8;
-    }
-    return (_cBitOperatorIntMinValue);
-}
 
 int _xsBitGetPowers() {
     if (_bitOperatorPowers == -1) {
@@ -51,7 +43,7 @@ int xsBitShiftRightLogical(int x = 0, int n = 0) {
     }
     int powers = _xsBitGetPowers();
     if (x < 0) {
-        x = x + _xsBitOperatorGetIntMinValue();
+        x = x + xsArrayGetInt(powers, 31);
         x = _xsBitShiftRightDivide(x, n, powers);
         return (x + xsArrayGetInt(powers, 31 - n));
     }

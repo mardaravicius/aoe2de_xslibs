@@ -5,7 +5,6 @@ from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_arr
 from xs_converter.symbols import XsConst
 
 _bit_operator_powers: int32 = int32(-1)
-_c_bit_operator_int_min_value: int32 = int32(-1)
 
 _c_mt_n: int32 = int32(624)
 _c_mt_m: int32 = int32(397)
@@ -31,7 +30,6 @@ _mt_state_index: int32 = int32(0)
 
 def constants() -> None:
     _bit_operator_powers: int32 = int32(-1)
-    _c_bit_operator_int_min_value: int32 = int32(-1)
 
     _c_mt_n: XsConst[int32] = int32(624)
     _c_mt_m: XsConst[int32] = int32(397)
@@ -55,11 +53,13 @@ def constants() -> None:
     _mt_state_index: int32 = int32(0)
 
 
-def _xs_bit_operator_get_int_min_value() -> int32:
-    global _c_bit_operator_int_min_value
-    if _c_bit_operator_int_min_value == -1:
-        _c_bit_operator_int_min_value = int32(-2147483648)
-    return _c_bit_operator_int_min_value
+def _xs_bit_get_powers() -> int32:
+    global _bit_operator_powers
+    if _bit_operator_powers == -1:
+        _bit_operator_powers = xs_array_create_int(32, 1, "_bitOperatorPowers")
+        for i in range(1, 32):
+            xs_array_set_int(_bit_operator_powers, i, xs_array_get_int(_bit_operator_powers, i - 1) * 2)
+    return _bit_operator_powers
 
 
 def _xs_bit_shift_right_divide(x: int32 = int32(-1), n: int32 = int32(-1), powers: int32 = int32(-1)) -> int32:
@@ -88,7 +88,7 @@ def xs_bit_shift_right_logical(x: int32 = int32(0), n: int32 = int32(0)) -> int3
         return int32(0)
     powers: int32 = _xs_bit_get_powers()
     if x < 0:
-        x += _xs_bit_operator_get_int_min_value()
+        x += xs_array_get_int(powers, 31)
         x = _xs_bit_shift_right_divide(x, n, powers)
         return x + xs_array_get_int(powers, 31 - n)
     return _xs_bit_shift_right_divide(x, n, powers)
@@ -96,15 +96,6 @@ def xs_bit_shift_right_logical(x: int32 = int32(0), n: int32 = int32(0)) -> int3
 
 def xs_bit_not(n: int32 = int32(0)) -> int32:
     return (n * -1) - 1
-
-
-def _xs_bit_get_powers() -> int32:
-    global _bit_operator_powers
-    if _bit_operator_powers == -1:
-        _bit_operator_powers = xs_array_create_int(32, 1, "_bitOperatorPowers")
-        for i in range(1, 32):
-            xs_array_set_int(_bit_operator_powers, i, xs_array_get_int(_bit_operator_powers, i - 1) * 2)
-    return _bit_operator_powers
 
 
 def xs_bit_and(a: int32 = int32(0), b: int32 = int32(0)) -> int32:
@@ -240,7 +231,6 @@ def functions(include_test: bool = False) -> tuple[str, str]:
                     .replace("    ", "")
                     ) + "\n\n"
     xs = constants_xs + PythonToXsConverter.to_xs_script(
-        _xs_bit_operator_get_int_min_value,
         _xs_bit_get_powers,
         _xs_bit_shift_right_divide,
         xs_bit_shift_right_logical,
