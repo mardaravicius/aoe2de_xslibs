@@ -2,6 +2,7 @@ int _bitOperatorPowers = -1;
 int _cBitOperatorIntMinValue = -1;
 const int _cMtN = 624;
 const int _cMtM = 397;
+int _cMtNm = -1;
 const int _cMtW = 32;
 const int _cMtR = 31;
 int _cMtMatrixA = -1;
@@ -144,6 +145,7 @@ void xsMtSeed(int seed = 0) {
         _cMtA = -172748368 * 10 - 1;
         _cMtB = -165803865 * 10 - 6;
         _cMtF = 181243325 * 10 + 3;
+        _cMtNm = _cMtN - _cMtM;
         _mtStateArray = xsArrayCreateInt(_cMtN, 0, "_mtStateArray");
     }
     xsArraySetInt(_mtStateArray, 0, seed);
@@ -171,7 +173,7 @@ int xsMtRandom() {
     if (xsBitAnd(x, 1) != 0) {
         xa = xsBitXor(xa, _cMtA);
     }
-    j = k - (_cMtN - _cMtM);
+    j = k - _cMtNm;
     if (j < 0) {
         j = j + _cMtN;
     }
@@ -185,8 +187,7 @@ int xsMtRandom() {
     int y = xsBitXor(x, xsBitShiftRightLogical(x, _cMtU));
     y = xsBitXor(y, xsBitAnd(xsBitShiftLeft(y, _cMtS), _cMtB));
     y = xsBitXor(y, xsBitAnd(xsBitShiftLeft(y, _cMtT), _cMtC));
-    int z = xsBitXor(y, xsBitShiftRightLogical(y, _cMtL));
-    return (z);
+    return (xsBitXor(y, xsBitShiftRightLogical(y, _cMtL)));
 }
 
 int xsMtRandomUniformRange(int start = 0, int end = 999999999) {

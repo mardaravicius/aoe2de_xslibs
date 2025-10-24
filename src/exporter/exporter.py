@@ -16,7 +16,7 @@ def main(include_xs_tests: bool = False) -> None:
         xs, name = fc(include_xs_tests)
         path = Path("..") / ".." / "xs" / (name + ".xs")
         write_xs_file(path, xs)
-        result = subprocess.run(["xs-check", f'{path.resolve()}', "--ignores", "DiscardedFn,NoNumPromo,FirstOprArith"])
+        result = subprocess.run(["xs-check", f'{path.resolve()}', "--ignores", "DiscardedFn"])
         if result.returncode != 0:
             raise Exception(result.returncode)
 
