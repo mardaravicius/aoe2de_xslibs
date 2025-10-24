@@ -1,11 +1,14 @@
+import os
 import random
+import subprocess
 import unittest
+from pathlib import Path
 
 import numpy
 from numpy import int32, uint32
 
 from xs.binary_functions import xs_bit_shift_right_arithmetic, xs_bit_shift_left, xs_bit_not, xs_bit_and, xs_bit_xor, \
-    xs_bit_or, xs_mt_seed, xs_bit_shift_right_logical, xs_mt_random_uniform_range
+    xs_bit_or, xs_mt_seed, xs_bit_shift_right_logical, xs_mt_random_uniform_range, xs_mt_random
 
 
 class FunctionsTest(unittest.TestCase):
@@ -158,7 +161,6 @@ class FunctionsTest(unittest.TestCase):
                 self.assertGreaterEqual(r, s, f"[{s}, {e}]")
                 self.assertLess(r, e, f"[{s}, {e}]")
 
-
     def test_random_uniform_in_range_edges(self):
         xs_mt_seed(int32(1))
         edges = [-2147483648, -2147483647, 2147483647, 2147483646, 0, 1, -1, 2, -2]
@@ -170,7 +172,6 @@ class FunctionsTest(unittest.TestCase):
                 else:
                     self.assertGreaterEqual(r, s, f"[{s}, {e}]")
                     self.assertLess(r, e, f"[{s}, {e}]")
-
 
     def test_random_uniform_is_uniform(self):
         with numpy.errstate(over='ignore'):
@@ -195,3 +196,24 @@ class FunctionsTest(unittest.TestCase):
                 self.assertGreaterEqual(occurrences, avg_items * 0.67,
                                         f"{seed=}, {s=}, {e=}, {number=}, {occurrences=}")
                 self.assertLessEqual(occurrences, avg_items * 1.33, f"{seed=}, {s=}, {e=}, {number=}, {occurrences=}")
+
+    def test_random(self):
+        curr_dir = os.getcwd()
+        c_dir = Path(curr_dir) / "tests/c"
+        result = subprocess.run(['g++', c_dir / "mt.cpp", "-o", c_dir / "mt", "-O3"])
+        attempts = 20
+        random_iterations = 500
+        if result.returncode != 0:
+            raise Exception(f"g++ failed with return code {result.returncode}")
+        for _ in range(attempts):
+            seed = int32(random.randint(-2147483648, 2147483647))
+            result = subprocess.run([c_dir / "mt", str(seed), str(random_iterations)], stdout=subprocess.PIPE)
+            if result.returncode != 0:
+                raise Exception(f"mt failed with return code {result.returncode}")
+            expected_results = result.stdout.decode("utf-8").split("\n")
+            expected_results = [int32(x.strip()) for x in expected_results if len(x.strip()) > 0]
+            xs_mt_seed(seed)
+            actual_results = []
+            for _ in range(random_iterations):
+                actual_results.append(xs_mt_random())
+            self.assertEqual(actual_results, expected_results, f"{seed=}, {random_iterations=}")
