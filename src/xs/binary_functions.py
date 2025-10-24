@@ -55,10 +55,11 @@ def constants() -> None:
     _mt_state_index: int32 = int32(0)
 
 
-def xs_bit_shift_left(x: int32 = int32(0), n: int32 = int32(0)) -> int32:
-    if n < 0 or n >= 32:
-        return int32(0)
-    return x * xs_array_get_int(_xs_bit_get_powers(), n)
+def _xs_bit_operator_get_int_min_value() -> int32:
+    global _c_bit_operator_int_min_value
+    if _c_bit_operator_int_min_value == -1:
+        _c_bit_operator_int_min_value = int32(-2147483648)
+    return _c_bit_operator_int_min_value
 
 
 def _xs_bit_shift_right_divide(x: int32 = int32(-1), n: int32 = int32(-1), powers: int32 = int32(-1)) -> int32:
@@ -68,19 +69,18 @@ def _xs_bit_shift_right_divide(x: int32 = int32(-1), n: int32 = int32(-1), power
     return x // xs_array_get_int(powers, n)
 
 
+def xs_bit_shift_left(x: int32 = int32(0), n: int32 = int32(0)) -> int32:
+    if n < 0 or n >= 32:
+        return int32(0)
+    return x * xs_array_get_int(_xs_bit_get_powers(), n)
+
+
 def xs_bit_shift_right_arithmetic(x: int32 = int32(0), n: int32 = int32(0)) -> int32:
     if n < 0 or n >= 32:
         if x < 0:
             return int32(-1)
         return int32(0)
     return _xs_bit_shift_right_divide(x, n, _xs_bit_get_powers())
-
-
-def _xs_bit_operator_get_int_min_value() -> int32:
-    global _c_bit_operator_int_min_value
-    if _c_bit_operator_int_min_value == -1:
-        _c_bit_operator_int_min_value = int32(-2147483648)
-    return _c_bit_operator_int_min_value
 
 
 def xs_bit_shift_right_logical(x: int32 = int32(0), n: int32 = int32(0)) -> int32:
@@ -107,54 +107,39 @@ def _xs_bit_get_powers() -> int32:
     return _bit_operator_powers
 
 
-def _xs_bit_get(x: int32 = int32(0), i: int32 = int32(0), powers: int32 = int32(-1)) -> int32:
-    mod: int32 = xs_array_get_int(powers, i + 1)
-    b: int32 = (x % mod) // xs_array_get_int(powers, i)
-    if b < 0:
-        b += 2
-    return b
-
-
-def _xs_bit_set(bit: int32 = int32(0), i: int32 = int32(0), powers: int32 = int32(-1)) -> int32:
-    return bit * xs_array_get_int(powers, i)
-
-
 def xs_bit_and(a: int32 = int32(0), b: int32 = int32(0)) -> int32:
     powers: int32 = _xs_bit_get_powers()
     res: int32 = int32(0)
-    for i in range(0, 31):
-        abit: int32 = _xs_bit_get(a, i, powers)
-        bbit: int32 = _xs_bit_get(b, i, powers)
-        bit: int32 = abit * bbit
-        res += _xs_bit_set(bit, i, powers)
-    if a < 0 and b < 0:
-        res += _xs_bit_operator_get_int_min_value()
+    for i in range(0, 32):
+        m: int32 = xs_array_get_int(powers, 31 - i)
+        an: int32 = a * m
+        bn: int32 = b * m
+        if an < 0 and bn < 0:
+            res += int32(1) * xs_array_get_int(powers, i)
     return res
 
 
 def xs_bit_xor(a: int32 = int32(0), b: int32 = int32(0)) -> int32:
     powers: int32 = _xs_bit_get_powers()
     res: int32 = int32(0)
-    for i in range(0, 31):
-        abit: int32 = _xs_bit_get(a, i, powers)
-        bbit: int32 = _xs_bit_get(b, i, powers)
-        bit: int32 = (abit + bbit) % 2
-        res += _xs_bit_set(bit, i, powers)
-    if (a < 0 and b >= 0) or (a >= 0 and b < 0):
-        res += _xs_bit_operator_get_int_min_value()
+    for i in range(0, 32):
+        m: int32 = xs_array_get_int(powers, 31 - i)
+        an: int32 = a * m
+        bn: int32 = b * m
+        if (an < 0 and bn >= 0) or (an >= 0 and bn < 0):
+            res += int32(1) * xs_array_get_int(powers, i)
     return res
 
 
 def xs_bit_or(a: int32 = int32(0), b: int32 = int32(0)) -> int32:
     powers: int32 = _xs_bit_get_powers()
     res: int32 = int32(0)
-    for i in range(0, 31):
-        abit: int32 = _xs_bit_get(a, i, powers)
-        bbit: int32 = _xs_bit_get(b, i, powers)
-        bit: int32 = abit + bbit - abit * bbit
-        res += _xs_bit_set(bit, i, powers)
-    if a < 0 or b < 0:
-        res += _xs_bit_operator_get_int_min_value()
+    for i in range(0, 32):
+        m: int32 = xs_array_get_int(powers, 31 - i)
+        an: int32 = a * m
+        bn: int32 = b * m
+        if an < 0 or bn < 0:
+            res += int32(1) * xs_array_get_int(powers, i)
     return res
 
 
@@ -244,6 +229,7 @@ def xs_mt_random_uniform_range(start: int32 = int32(0), end: int32 = int32(99999
         if rr >= start and rr < end:
             return rr
 
+
 def functions(include_test: bool = False) -> tuple[str, str]:
     constants_function_xs = PythonToXsConverter.to_xs_script(
         constants,
@@ -256,8 +242,6 @@ def functions(include_test: bool = False) -> tuple[str, str]:
     xs = constants_xs + PythonToXsConverter.to_xs_script(
         _xs_bit_operator_get_int_min_value,
         _xs_bit_get_powers,
-        _xs_bit_get,
-        _xs_bit_set,
         _xs_bit_shift_right_divide,
         xs_bit_shift_right_logical,
         xs_bit_shift_right_arithmetic,

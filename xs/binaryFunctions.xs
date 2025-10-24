@@ -37,19 +37,6 @@ int _xsBitGetPowers() {
     return (_bitOperatorPowers);
 }
 
-int _xsBitGet(int x = 0, int i = 0, int powers = -1) {
-    int mod = xsArrayGetInt(powers, i + 1);
-    int b = (x % mod) / xsArrayGetInt(powers, i);
-    if (b < 0) {
-        b = b + 2;
-    }
-    return (b);
-}
-
-int _xsBitSet(int bit = 0, int i = 0, int powers = -1) {
-    return (bit * xsArrayGetInt(powers, i));
-}
-
 int _xsBitShiftRightDivide(int x = -1, int n = -1, int powers = -1) {
     if (n == 31) {
         int p = xsArrayGetInt(powers, 30);
@@ -95,14 +82,13 @@ int xsBitNot(int n = 0) {
 int xsBitAnd(int a = 0, int b = 0) {
     int powers = _xsBitGetPowers();
     int res = 0;
-    for (i = 0; < 31) {
-        int abit = _xsBitGet(a, i, powers);
-        int bbit = _xsBitGet(b, i, powers);
-        int bit = abit * bbit;
-        res = res + _xsBitSet(bit, i, powers);
-    }
-    if ((a < 0) && (b < 0)) {
-        res = res + _xsBitOperatorGetIntMinValue();
+    for (i = 0; < 32) {
+        int m = xsArrayGetInt(powers, 31 - i);
+        int an = a * m;
+        int bn = b * m;
+        if ((an < 0) && (bn < 0)) {
+            res = res + (1 * xsArrayGetInt(powers, i));
+        }
     }
     return (res);
 }
@@ -110,14 +96,13 @@ int xsBitAnd(int a = 0, int b = 0) {
 int xsBitOr(int a = 0, int b = 0) {
     int powers = _xsBitGetPowers();
     int res = 0;
-    for (i = 0; < 31) {
-        int abit = _xsBitGet(a, i, powers);
-        int bbit = _xsBitGet(b, i, powers);
-        int bit = (abit + bbit) - (abit * bbit);
-        res = res + _xsBitSet(bit, i, powers);
-    }
-    if ((a < 0) || (b < 0)) {
-        res = res + _xsBitOperatorGetIntMinValue();
+    for (i = 0; < 32) {
+        int m = xsArrayGetInt(powers, 31 - i);
+        int an = a * m;
+        int bn = b * m;
+        if ((an < 0) || (bn < 0)) {
+            res = res + (1 * xsArrayGetInt(powers, i));
+        }
     }
     return (res);
 }
@@ -125,14 +110,13 @@ int xsBitOr(int a = 0, int b = 0) {
 int xsBitXor(int a = 0, int b = 0) {
     int powers = _xsBitGetPowers();
     int res = 0;
-    for (i = 0; < 31) {
-        int abit = _xsBitGet(a, i, powers);
-        int bbit = _xsBitGet(b, i, powers);
-        int bit = (abit + bbit) % 2;
-        res = res + _xsBitSet(bit, i, powers);
-    }
-    if (((a < 0) && (b >= 0)) || ((a >= 0) && (b < 0))) {
-        res = res + _xsBitOperatorGetIntMinValue();
+    for (i = 0; < 32) {
+        int m = xsArrayGetInt(powers, 31 - i);
+        int an = a * m;
+        int bn = b * m;
+        if (((an < 0) && (bn >= 0)) || ((an >= 0) && (bn < 0))) {
+            res = res + (1 * xsArrayGetInt(powers, i));
+        }
     }
     return (res);
 }

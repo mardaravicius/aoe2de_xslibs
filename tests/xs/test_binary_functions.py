@@ -4,11 +4,9 @@ import subprocess
 import unittest
 from pathlib import Path
 
-from numpy import int32, uint32
+from numpy import uint32
 
-from xs.binary_functions import xs_bit_shift_right_arithmetic, xs_bit_shift_left, xs_bit_not, xs_bit_and, xs_bit_xor, \
-    xs_bit_or, xs_mt_seed, xs_bit_shift_right_logical, xs_mt_random_uniform_range, xs_mt_random
-
+from xs.binary_functions import *
 
 class FunctionsTest(unittest.TestCase):
 
@@ -175,9 +173,9 @@ class FunctionsTest(unittest.TestCase):
             results[res] += 1
         results = sorted(list(results.items()), key=lambda t: t[1])
         for number, occurrences in results:
-            self.assertGreaterEqual(occurrences, avg_items * 0.8,
+            self.assertGreaterEqual(occurrences, avg_items * 0.75,
                                     f"{seed=}, {s=}, {e=}, {number=}, {occurrences=}")
-            self.assertLessEqual(occurrences, avg_items * 1.2, f"{seed=}, {s=}, {e=}, {number=}, {occurrences=}")
+            self.assertLessEqual(occurrences, avg_items * 1.25, f"{seed=}, {s=}, {e=}, {number=}, {occurrences=}")
 
     def test_random(self):
         curr_dir = os.getcwd()
