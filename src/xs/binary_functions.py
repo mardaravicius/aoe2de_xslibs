@@ -219,6 +219,7 @@ def xs_mt_random_uniform_range(start: int32 = int32(0), end: int32 = int32(99999
         rr: int32 = xs_mt_random()
         if rr >= start and rr < end:
             return rr
+    return int32(-1)
 
 
 def functions(include_test: bool = False) -> tuple[str, str]:

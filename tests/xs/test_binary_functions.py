@@ -181,14 +181,28 @@ class FunctionsTest(unittest.TestCase):
         curr_dir = os.getcwd()
         curr_dir = curr_dir[:curr_dir.find("aoe2de_xslibs") + len("aoe2de_xslibs")]
         c_dir = Path(curr_dir) / "tests/c"
-        result = subprocess.run(['g++', c_dir / "mt.cpp", "-o", c_dir / "mt", "-O3"])
-        attempts = 10
-        random_iterations = 500
+        if os.name == 'nt':
+            c_dir = str(c_dir)
+            c = str(c_dir).find(":")
+            c_dir = c_dir[:c-1] + c_dir[c-1:c].lower() + c_dir[c:]
+            c_dir = "/mnt/" + c_dir.replace("\\", "/").replace(":", "")
+            cpp_path = str(c_dir + "/mt.cpp")
+            exec_path = str(c_dir + "/mt")
+            result = subprocess.run(["wsl", "--exec", "g++", cpp_path, "-o", exec_path, "-O3"])
+        else:
+            cpp_path = str(c_dir / "mt.cpp")
+            exec_path = str(c_dir / "mt")
+            result = subprocess.run(['g++', cpp_path, "-o", exec_path, "-O3"])
         if result.returncode != 0:
             raise Exception(f"g++ failed with return code {result.returncode}")
+        attempts = 10
+        random_iterations = 500
         for _ in range(attempts):
             seed = int32(random.randint(-2147483648, 2147483647))
-            result = subprocess.run([c_dir / "mt", str(seed), str(random_iterations)], stdout=subprocess.PIPE)
+            if os.name == "nt":
+                result = subprocess.run(["wsl", "--exec", exec_path, str(seed), str(random_iterations)], stdout=subprocess.PIPE)
+            else:
+                result = subprocess.run([exec_path, str(seed), str(random_iterations)], stdout=subprocess.PIPE)
             if result.returncode != 0:
                 raise Exception(f"mt failed with return code {result.returncode}")
             expected_results = result.stdout.decode("utf-8").split("\n")

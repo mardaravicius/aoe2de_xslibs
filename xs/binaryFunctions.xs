@@ -193,4 +193,5 @@ int xsMtRandomUniformRange(int start = 0, int end = 999999999) {
             return (rr);
         }
     }
+    return (-1);
 }
