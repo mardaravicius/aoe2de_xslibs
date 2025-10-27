@@ -31,8 +31,10 @@ int _xsBitGetPowers() {
 
 int _xsBitShiftRightDivide(int x = -1, int n = -1, int powers = -1) {
     if (n == 31) {
-        int p = xsArrayGetInt(powers, 30);
-        return ((x / p) / 2);
+        if (x < 0) {
+            return (-1);
+        }
+        return (0);
     }
     return (x / xsArrayGetInt(powers, n));
 }

@@ -64,8 +64,9 @@ def _xs_bit_get_powers() -> int32:
 
 def _xs_bit_shift_right_divide(x: int32 = int32(-1), n: int32 = int32(-1), powers: int32 = int32(-1)) -> int32:
     if n == 31:
-        p: int32 = xs_array_get_int(powers, 30)
-        return x // p // 2
+        if x < 0:
+            return int32(-1)
+        return int32(0)
     return x // xs_array_get_int(powers, n)
 
 
