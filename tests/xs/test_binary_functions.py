@@ -137,7 +137,7 @@ class FunctionsTest(unittest.TestCase):
             e = int32(random.randint(s, 2147483647))
             r = xs_mt_random_uniform_range(s, e)
             if e <= s:
-                self.assertEqual(-1, r)
+                self.assertEqual(-1, r, f"[{s}, {e}]")
             else:
                 self.assertGreaterEqual(r, s, f"[{s}, {e}]")
                 self.assertLess(r, e, f"[{s}, {e}]")
