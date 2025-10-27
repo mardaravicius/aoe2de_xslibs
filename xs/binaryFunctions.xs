@@ -76,9 +76,7 @@ int xsBitAnd(int a = 0, int b = 0) {
     int res = 0;
     for (i = 0; < 32) {
         int m = xsArrayGetInt(powers, 31 - i);
-        int an = a * m;
-        int bn = b * m;
-        if ((an < 0) && (bn < 0)) {
+        if (((a * m) < 0) && ((b * m) < 0)) {
             res = res + (1 * xsArrayGetInt(powers, i));
         }
     }
@@ -90,9 +88,7 @@ int xsBitOr(int a = 0, int b = 0) {
     int res = 0;
     for (i = 0; < 32) {
         int m = xsArrayGetInt(powers, 31 - i);
-        int an = a * m;
-        int bn = b * m;
-        if ((an < 0) || (bn < 0)) {
+        if (((a * m) < 0) || ((b * m) < 0)) {
             res = res + (1 * xsArrayGetInt(powers, i));
         }
     }

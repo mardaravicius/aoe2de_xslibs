@@ -103,9 +103,7 @@ def xs_bit_and(a: int32 = int32(0), b: int32 = int32(0)) -> int32:
     res: int32 = int32(0)
     for i in range(0, 32):
         m: int32 = xs_array_get_int(powers, 31 - i)
-        an: int32 = a * m
-        bn: int32 = b * m
-        if an < 0 and bn < 0:
+        if a * m < 0 and b * m < 0:
             res += int32(1) * xs_array_get_int(powers, i)
     return res
 
@@ -127,9 +125,7 @@ def xs_bit_or(a: int32 = int32(0), b: int32 = int32(0)) -> int32:
     res: int32 = int32(0)
     for i in range(0, 32):
         m: int32 = xs_array_get_int(powers, 31 - i)
-        an: int32 = a * m
-        bn: int32 = b * m
-        if an < 0 or bn < 0:
+        if a * m < 0 or b * m < 0:
             res += int32(1) * xs_array_get_int(powers, i)
     return res
 
