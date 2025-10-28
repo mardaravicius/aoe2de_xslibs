@@ -543,39 +543,39 @@ int xsIntListCompare(int lst1 = -1, int lst2 = -1) {
     return (0);
 }
 
-int xsIntListCount(int arr = -1, int value = -1) {
+int xsIntListCount(int lst = -1, int value = -1) {
     int count = 0;
-    int size = xsArrayGetInt(arr, 0);
+    int size = xsArrayGetInt(lst, 0);
     for (i = 1; <= size) {
-        if (xsArrayGetInt(arr, i) == value) {
+        if (xsArrayGetInt(lst, i) == value) {
             count++;
         }
     }
     return (count);
 }
 
-int xsIntListSum(int arr = -1) {
+int xsIntListSum(int lst = -1) {
     int s = 0;
-    int size = xsArrayGetInt(arr, 0);
+    int size = xsArrayGetInt(lst, 0);
     for (i = 1; <= size) {
-        s = s + xsArrayGetInt(arr, i);
+        s = s + xsArrayGetInt(lst, i);
     }
     return (s);
 }
 
-int xsIntListMin(int arr = -1) {
-    int size = xsArrayGetInt(arr, 0);
+int xsIntListMin(int lst = -1) {
+    int size = xsArrayGetInt(lst, 0);
     if (size == 0) {
         _intListLastOperationStatus = cIntListIndexOutOfRangeError;
         return (cIntListGenericError);
     }
-    int m = xsArrayGetInt(arr, 1);
+    int m = xsArrayGetInt(lst, 1);
     if (size == 1) {
         _intListLastOperationStatus = cIntListSuccess;
         return (m);
     }
     for (i = 2; <= size) {
-        int v = xsArrayGetInt(arr, i);
+        int v = xsArrayGetInt(lst, i);
         if (v < m) {
             m = v;
         }
@@ -584,19 +584,19 @@ int xsIntListMin(int arr = -1) {
     return (m);
 }
 
-int xsIntListMax(int arr = -1) {
-    int size = xsArrayGetInt(arr, 0);
+int xsIntListMax(int lst = -1) {
+    int size = xsArrayGetInt(lst, 0);
     if (size == 0) {
         _intListLastOperationStatus = cIntListIndexOutOfRangeError;
         return (cIntListGenericError);
     }
-    int m = xsArrayGetInt(arr, 1);
+    int m = xsArrayGetInt(lst, 1);
     if (size == 1) {
         _intListLastOperationStatus = cIntListSuccess;
         return (m);
     }
     for (i = 2; <= size) {
-        int v = xsArrayGetInt(arr, i);
+        int v = xsArrayGetInt(lst, i);
         if (v > m) {
             m = v;
         }

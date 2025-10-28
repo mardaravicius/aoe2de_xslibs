@@ -11,7 +11,7 @@ c_int_list_index_out_of_range_error = int32(-2)
 c_int_list_resize_failed_error = int32(-3)
 c_int_list_max_capacity_error = int32(-4)
 c_int_list_max_capacity = int32(999999999)
-c_int_list_empty_param = -int32(999999999)
+c_int_list_empty_param = int32(-999999999)
 _int_list_last_operation_status = c_int_list_success
 
 
@@ -263,23 +263,6 @@ def xs_int_list_append(lst: int32 = int32(-1), value: int32 = int32(0)) -> int32
     return c_int_list_success
 
 
-# def xs_int_list_pop(lst: int32 = int32(-1)) -> int32:
-#     global _int_array_list_last_operation_status
-#     capacity: int32 = xs_array_get_size(lst)
-#     size: int32 = xs_array_get_int(lst, 0)
-#     if size == 0:
-#         _int_array_list_last_operation_status = c_int_list_index_out_of_range_error
-#         return c_int_list_generic_error
-#     removed_elem: int32 = xs_array_get_int(lst, size)
-#     r: int32 = _shrink_int_array(lst, size, capacity)
-#     if r != c_int_list_success:
-#         _int_array_list_last_operation_status = r
-#         return c_int_list_generic_error
-#     xs_array_set_int(lst, 0, size - 1)
-#     _int_array_list_last_operation_status = c_int_list_success
-#     return removed_elem
-
-
 def xs_int_list_insert(lst: int32 = int32(-1), idx: int32 = int32(-1), value: int32 = int32(0)) -> int32:
     capacity: int32 = xs_array_get_size(lst)
     size: int32 = xs_array_get_int(lst, 0)
@@ -515,53 +498,53 @@ def xs_int_list_reverse(lst: int32 = int32(-1)) -> None:
         xs_array_set_int(lst, back_i, temp)
 
 
-def xs_int_list_count(arr: int32 = int32(-1), value: int32 = int32(-1)) -> int32:
+def xs_int_list_count(lst: int32 = int32(-1), value: int32 = int32(-1)) -> int32:
     count: int32 = int32(0)
-    size: int32 = xs_array_get_int(arr, 0)
+    size: int32 = xs_array_get_int(lst, 0)
     for i in i32range(1, size + 1):
-        if xs_array_get_int(arr, i) == value:
+        if xs_array_get_int(lst, i) == value:
             count += 1
     return count
 
 
-def xs_int_list_sum(arr: int32 = int32(-1)) -> int32:
+def xs_int_list_sum(lst: int32 = int32(-1)) -> int32:
     s: int32 = int32(0)
-    size: int32 = xs_array_get_int(arr, 0)
+    size: int32 = xs_array_get_int(lst, 0)
     for i in i32range(1, size + 1):
-        s += xs_array_get_int(arr, i)
+        s += xs_array_get_int(lst, i)
     return s
 
 
-def xs_int_list_min(arr: int32 = int32(-1)) -> int32:
+def xs_int_list_min(lst: int32 = int32(-1)) -> int32:
     global _int_list_last_operation_status
-    size: int32 = xs_array_get_int(arr, 0)
+    size: int32 = xs_array_get_int(lst, 0)
     if size == 0:
         _int_list_last_operation_status = c_int_list_index_out_of_range_error
         return c_int_list_generic_error
-    m: int32 = xs_array_get_int(arr, 1)
+    m: int32 = xs_array_get_int(lst, 1)
     if size == 1:
         _int_list_last_operation_status = c_int_list_success
         return m
     for i in i32range(2, size + 1):
-        v: int32 = xs_array_get_int(arr, i)
+        v: int32 = xs_array_get_int(lst, i)
         if v < m:
             m = v
     _int_list_last_operation_status = c_int_list_success
     return m
 
 
-def xs_int_list_max(arr: int32 = int32(-1)) -> int32:
+def xs_int_list_max(lst: int32 = int32(-1)) -> int32:
     global _int_list_last_operation_status
-    size: int32 = xs_array_get_int(arr, 0)
+    size: int32 = xs_array_get_int(lst, 0)
     if size == 0:
         _int_list_last_operation_status = c_int_list_index_out_of_range_error
         return c_int_list_generic_error
-    m: int32 = xs_array_get_int(arr, 1)
+    m: int32 = xs_array_get_int(lst, 1)
     if size == 1:
         _int_list_last_operation_status = c_int_list_success
         return m
     for i in i32range(2, size + 1):
-        v: int32 = xs_array_get_int(arr, i)
+        v: int32 = xs_array_get_int(lst, i)
         if v > m:
             m = v
     _int_list_last_operation_status = c_int_list_success
@@ -573,27 +556,27 @@ def xs_int_list_last_error() -> int32:
 
 
 def test() -> None:
-    arr: int32 = xs_array_create_int(20)
-    xs_chat_data("arr: " + str(arr))
-    xs_int_list_append(arr, int32(1))
-    xs_int_list_append(arr, int32(2))
-    xs_int_list_append(arr, int32(3))
-    xs_chat_data(xs_int_list_to_string(arr))
-    xs_chat_data("pop 1: " + str(xs_int_list_pop(arr)))
-    xs_chat_data("pop 2: " + str(xs_int_list_pop(arr)))
-    xs_chat_data(xs_int_list_to_string(arr))
-    xs_chat_data("pop 3: " + str(xs_int_list_pop(arr)))
-    xs_chat_data("pop 4: " + str(xs_int_list_pop(arr)))
-    xs_int_list_insert(arr, int32(0), int32(1))
-    xs_int_list_insert(arr, int32(0), int32(2))
-    xs_int_list_insert(arr, int32(0), int32(3))
-    xs_int_list_insert(arr, int32(1), int32(4))
-    xs_int_list_insert(arr, int32(1), int32(5))
-    xs_int_list_insert(arr, int32(5), int32(6))
-    xs_int_list_insert(arr, int32(7), int32(7))
-    xs_chat_data(xs_int_list_to_string(arr))
-    xs_int_list_sort(arr, True)
-    xs_chat_data(xs_int_list_to_string(arr))
+    lst: int32 = xs_int_list_create(int32(20))
+    xs_chat_data("lst: " + str(lst))
+    xs_int_list_append(lst, int32(1))
+    xs_int_list_append(lst, int32(2))
+    xs_int_list_append(lst, int32(3))
+    xs_chat_data(xs_int_list_to_string(lst))
+    xs_chat_data("pop 1: " + str(xs_int_list_pop(lst)))
+    xs_chat_data("pop 2: " + str(xs_int_list_pop(lst)))
+    xs_chat_data(xs_int_list_to_string(lst))
+    xs_chat_data("pop 3: " + str(xs_int_list_pop(lst)))
+    xs_chat_data("pop 4: " + str(xs_int_list_pop(lst)))
+    xs_int_list_insert(lst, int32(0), int32(1))
+    xs_int_list_insert(lst, int32(0), int32(2))
+    xs_int_list_insert(lst, int32(0), int32(3))
+    xs_int_list_insert(lst, int32(1), int32(4))
+    xs_int_list_insert(lst, int32(1), int32(5))
+    xs_int_list_insert(lst, int32(5), int32(6))
+    xs_int_list_insert(lst, int32(7), int32(7))
+    xs_chat_data(xs_int_list_to_string(lst))
+    xs_int_list_sort(lst, True)
+    xs_chat_data(xs_int_list_to_string(lst))
 
 
 def int_list(include_test: bool) -> tuple[str, str]:

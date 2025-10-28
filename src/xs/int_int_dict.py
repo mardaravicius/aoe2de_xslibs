@@ -388,7 +388,7 @@ def _xs_int_int_dct_iterator_next(dct: int32 = int32(-1), return_key: bool = Tru
                     return stored_key
                 else:
                     return xs_array_get_int(bucket, l + 1)
-        idx = 1
+        idx = int32(1)
     _int_int_dict_iterator_prev_idx = c_int_int_dict_max_capacity
     _int_int_dict_last_operation_status = c_int_int_dict_generic_error
     return c_int_int_dict_generic_error

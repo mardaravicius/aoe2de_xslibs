@@ -41,3 +41,6 @@ def xs_rule(group: str = None, active: bool = False, high_frequency: bool = Fals
 
 def i32range(start =  None, *args, **kwargs):
     return arange(start, *args, **kwargs, dtype=int32)
+
+def f32range(start =  None, *args, **kwargs):
+    return arange(start, *args, **kwargs, dtype=float32)
