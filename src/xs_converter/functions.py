@@ -1,5 +1,5 @@
-from xs_converter.symbols import XsVector
 from xs_converter.impl.xs_functions_impl import *
+from xs_converter.symbols import XsVector
 
 
 def vector(x: float | float32, y: float | float32, z: float | float32) -> XsVector:
@@ -135,6 +135,10 @@ def xs_trigger_variable(variable_id: int | int32) -> int:
 
 
 def xs_array_get_size(array_id: int | int32) -> int32:
+    """
+
+    :rtype: int32
+    """
     return xs_array_get_size_impl(int32(array_id))
 
 
@@ -168,6 +172,22 @@ def xs_array_get_float(array_id: int | int32, idx: int | int32) -> float32:
 
 def xs_array_resize_float(array_id: int | int32, new_size: int | int32) -> int32:
     return xs_array_resize_float_impl(int32(array_id), int32(new_size))
+
+
+def xs_array_create_string(size: int | int32, default_value: str = "", unique_name: str = "") -> int32:
+    return xs_array_create_string_impl(int32(size), default_value, unique_name)
+
+
+def xs_array_set_string(array_id: int | int32, idx: int | int32, value: str) -> int32:
+    return xs_array_set_string_impl(int32(array_id), int32(idx), value)
+
+
+def xs_array_get_string(array_id: int | int32, idx: int | int32) -> str:
+    return xs_array_get_string_impl(int32(array_id), int32(idx))
+
+
+def xs_array_resize_string(array_id: int | int32, new_size: int | int32) -> int32:
+    return xs_array_resize_string_impl(int32(array_id), int32(new_size))
 
 
 def bit_cast_to_float(number: int | int32) -> float32:

@@ -63,6 +63,22 @@ def xs_array_resize_float_impl(array_id: int32, new_size: int32) -> int32:
     return xs_array_resize_impl(array_id, new_size, type(float32))
 
 
+def xs_array_create_string_impl(size: int32, default_value: str, unique_name: str) -> int32:
+    return xs_array_create_impl(size, default_value, unique_name, type(str))
+
+
+def xs_array_set_string_impl(array_id: int32, idx: int32, value: str) -> int32:
+    return xs_array_set_impl(array_id, idx, value, type(str))
+
+
+def xs_array_get_string_impl(array_id: int32, idx: int32) -> str:
+    return xs_array_get_impl(array_id, idx, type(str))
+
+
+def xs_array_resize_string_impl(array_id: int32, new_size: int32) -> int32:
+    return xs_array_resize_impl(array_id, new_size, type(str))
+
+
 def xs_array_create_impl(size: int32, default_value: T, unique_name: str, t: type[T]) -> int32:
     if size < 0:
         return int32(-1)
