@@ -18,7 +18,7 @@ int xsStringListSize(int lst = -1) {
     @param v1 through v11 - value at a given index of a list
     @return created list id, or error if negative
 */
-int xsStringList(string v0 = cStringListEmptyParam, string v1 = cStringListEmptyParam, string v2 = cStringListEmptyParam, string v3 = cStringListEmptyParam, string v4 = cStringListEmptyParam, string v5 = cStringListEmptyParam, string v6 = cStringListEmptyParam, string v7 = cStringListEmptyParam, string v8 = cStringListEmptyParam, string v9 = cStringListEmptyParam, string v10 = cStringListEmptyParam, string v11 = cStringListEmptyParam) {
+int xsStringList(string v0 = "!<[empty", string v1 = "!<[empty", string v2 = "!<[empty", string v3 = "!<[empty", string v4 = "!<[empty", string v5 = "!<[empty", string v6 = "!<[empty", string v7 = "!<[empty", string v8 = "!<[empty", string v9 = "!<[empty", string v10 = "!<[empty", string v11 = "!<[empty") {
     int strLst = xsArrayCreateString(12);
     int lst = xsArrayCreateInt(2, strLst);
     if ((strLst < 0) || (lst < 0)) {
@@ -440,7 +440,7 @@ int xsStringListCopy(int lst = -1, int start = 0, int end = cStringListMaxCapaci
     if (newSize < 0) {
         newSize = 0;
     }
-    newLst = xsArrayCreateInt(2, newSize);
+    int newLst = xsArrayCreateInt(2, newSize);
     int newStrLst = xsArrayCreateString(newSize);
     if ((newLst < 0) || (newStrLst < 0)) {
         return (cStringListGenericError);

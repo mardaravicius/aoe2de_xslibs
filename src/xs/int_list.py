@@ -629,7 +629,7 @@ def int_list(include_test: bool) -> tuple[str, str]:
             indent=True,
         )
     print(xs)
-    return (xs, "intList")
+    return xs, "intList"
 
 
 if __name__ == "__main__":

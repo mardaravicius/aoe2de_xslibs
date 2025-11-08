@@ -593,8 +593,8 @@ def float_list(include_test: bool) -> tuple[str, str]:
             indent=True,
         )
     print(xs)
-    return (xs, "floatList")
+    return xs, "floatList"
 
 
 if __name__ == "__main__":
-    int_list(True)
+    float_list(True)

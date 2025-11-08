@@ -489,7 +489,7 @@ def int_int_dict(include_test: bool) -> tuple[str, str]:
             indent=True,
         )
     print(xs)
-    return (xs, "intIntDict")
+    return xs, "intIntDict"
 
 
 if __name__ == "__main__":

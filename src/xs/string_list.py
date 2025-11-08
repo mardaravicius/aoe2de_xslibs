@@ -11,7 +11,6 @@ c_string_list_index_out_of_range_error = int32(-2)
 c_string_list_resize_failed_error = int32(-3)
 c_string_list_max_capacity_error = int32(-4)
 c_string_list_max_capacity = int32(999999999)
-c_string_list_empty_param = "!<[empty"
 c_string_list_empty_int_param = -999999999
 _int_list_last_operation_status = c_string_list_success
 
@@ -23,7 +22,6 @@ def constants() -> None:
     c_string_list_resize_failed_error: XsExternConst[int32] = int32(-3)
     c_string_list_max_capacity_error: XsExternConst[int32] = int32(-4)
     c_string_list_max_capacity: XsExternConst[int32] = int32(999999999)
-    c_string_list_empty_param: XsExternConst[str] = "!<[empty"
     c_string_list_empty_int_param: XsExternConst[int32] = int32(-999999999)
     _int_list_last_operation_status: int32 = c_string_list_success
 
@@ -49,18 +47,18 @@ def xs_string_list_create(capacity: int32 = int32(7)) -> int32:
 
 
 def xs_string_list(
-        v0: str = c_string_list_empty_param,
-        v1: str = c_string_list_empty_param,
-        v2: str = c_string_list_empty_param,
-        v3: str = c_string_list_empty_param,
-        v4: str = c_string_list_empty_param,
-        v5: str = c_string_list_empty_param,
-        v6: str = c_string_list_empty_param,
-        v7: str = c_string_list_empty_param,
-        v8: str = c_string_list_empty_param,
-        v9: str = c_string_list_empty_param,
-        v10: str = c_string_list_empty_param,
-        v11: str = c_string_list_empty_param,
+        v0: str = "!<[empty",
+        v1: str = "!<[empty",
+        v2: str = "!<[empty",
+        v3: str = "!<[empty",
+        v4: str = "!<[empty",
+        v5: str = "!<[empty",
+        v6: str = "!<[empty",
+        v7: str = "!<[empty",
+        v8: str = "!<[empty",
+        v9: str = "!<[empty",
+        v10: str = "!<[empty",
+        v11: str = "!<[empty",
 ) -> int32:
     """
     Creates a list with provided values. The first value that equals `cStringListEmptyParam` will stop further insertion.
@@ -72,51 +70,51 @@ def xs_string_list(
     lst: int32 = xs_array_create_int(2, str_lst)
     if str_lst < 0 or lst < 0:
         return c_string_list_generic_error
-    if v0 == c_string_list_empty_param:
+    if v0 == "!<[empty":
         xs_array_set_int(lst, 0, int32(0))
         return lst
     xs_array_set_string(str_lst, 0, v0)
-    if v1 == c_string_list_empty_param:
+    if v1 == "!<[empty":
         xs_array_set_int(lst, 0, int32(1))
         return lst
     xs_array_set_string(str_lst, 1, v1)
-    if v2 == c_string_list_empty_param:
+    if v2 == "!<[empty":
         xs_array_set_int(lst, 0, int32(2))
         return lst
     xs_array_set_string(str_lst, 2, v2)
-    if v3 == c_string_list_empty_param:
+    if v3 == "!<[empty":
         xs_array_set_int(lst, 0, int32(3))
         return lst
     xs_array_set_string(str_lst, 3, v3)
-    if v4 == c_string_list_empty_param:
+    if v4 == "!<[empty":
         xs_array_set_int(lst, 0, int32(4))
         return lst
     xs_array_set_string(str_lst, 4, v4)
-    if v5 == c_string_list_empty_param:
+    if v5 == "!<[empty":
         xs_array_set_int(lst, 0, int32(5))
         return lst
     xs_array_set_string(str_lst, 5, v5)
-    if v6 == c_string_list_empty_param:
+    if v6 == "!<[empty":
         xs_array_set_int(lst, 0, int32(6))
         return lst
     xs_array_set_string(str_lst, 6, v6)
-    if v7 == c_string_list_empty_param:
+    if v7 == "!<[empty":
         xs_array_set_int(lst, 0, int32(7))
         return lst
     xs_array_set_string(str_lst, 7, v7)
-    if v8 == c_string_list_empty_param:
+    if v8 == "!<[empty":
         xs_array_set_int(lst, 0, int32(8))
         return lst
     xs_array_set_string(str_lst, 8, v8)
-    if v9 == c_string_list_empty_param:
+    if v9 == "!<[empty":
         xs_array_set_int(lst, 0, int32(9))
         return lst
     xs_array_set_string(str_lst, 9, v9)
-    if v10 == c_string_list_empty_param:
+    if v10 == "!<[empty":
         xs_array_set_int(lst, 0, int32(10))
         return lst
     xs_array_set_string(str_lst, 10, v10)
-    if v11 == c_string_list_empty_param:
+    if v11 == "!<[empty":
         xs_array_set_int(lst, 0, int32(11))
         return lst
     xs_array_set_string(str_lst, 11, v11)
@@ -212,7 +210,8 @@ def _xs_string_list_extend_string_array(lst: int32 = int32(-1), capacity: int32 
     return c_string_list_success
 
 
-def _xs_string_list_shrink_string_array(lst: int32 = int32(-1), size: int32 = int32(0), capacity: int32 = int32(0)) -> int32:
+def _xs_string_list_shrink_string_array(lst: int32 = int32(-1), size: int32 = int32(0),
+                                        capacity: int32 = int32(0)) -> int32:
     if size <= (capacity // 2):
         r: int32 = xs_array_resize_string(lst, size)
         if r != 1:
@@ -297,7 +296,8 @@ def xs_string_list_remove(lst: int32 = int32(-1), value: str = "") -> int32:
     return found_idx
 
 
-def xs_string_list_index(lst: int32 = int32(-1), value: str = "", start: int32 = int32(0), stop: int32 = c_string_list_empty_int_param) -> int32:
+def xs_string_list_index(lst: int32 = int32(-1), value: str = "", start: int32 = int32(0),
+                         stop: int32 = c_string_list_empty_int_param) -> int32:
     size: int32 = xs_array_get_int(lst, 0)
     str_lst: int32 = xs_array_get_int(lst, 1)
 
@@ -328,7 +328,8 @@ def _xs_string_list_compare_elem(a: str = "", b: str = "", reverse: bool = False
     return a < b
 
 
-def _xs_string_list_sift_down(lst: int32 = int32(-1), start: int32 = int32(-1), end: int32 = int32(-1), reverse: bool = False) -> None:
+def _xs_string_list_sift_down(lst: int32 = int32(-1), start: int32 = int32(-1), end: int32 = int32(-1),
+                              reverse: bool = False) -> None:
     root: int32 = start
     while True:
         child: int32 = 2 * root + 1
@@ -378,7 +379,8 @@ def xs_string_list_to_string(lst: int32 = int32(-1)) -> str:
     return s
 
 
-def xs_string_list_copy(lst: int32 = int32(-1), start: int32 = int32(0), end: int32 = c_string_list_max_capacity) -> int32:
+def xs_string_list_copy(lst: int32 = int32(-1), start: int32 = int32(0),
+                        end: int32 = c_string_list_max_capacity) -> int32:
     size: int32 = xs_array_get_int(lst, 0)
     fr: int32 = int32(0)
     if start < 0:
@@ -397,7 +399,7 @@ def xs_string_list_copy(lst: int32 = int32(-1), start: int32 = int32(0), end: in
     new_size: int32 = to - fr
     if new_size < 0:
         new_size = int32(0)
-    new_lst = xs_array_create_int(2, new_size)
+    new_lst: int32 = xs_array_create_int(2, new_size)
     new_str_lst: int32 = xs_array_create_string(new_size)
     if new_lst < 0 or new_str_lst < 0:
         return c_string_list_generic_error
@@ -613,7 +615,7 @@ def string_list(include_test: bool) -> tuple[str, str]:
             indent=True,
         )
     print(xs)
-    return (xs, "stringList")
+    return xs, "stringList"
 
 
 if __name__ == "__main__":
