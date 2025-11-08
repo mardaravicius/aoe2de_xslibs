@@ -64,7 +64,7 @@ def xs_float_list(
         v11: float32 = c_float_list_empty_param,
 ) -> int32:
     """
-    Creates a list with provided values. The first value that equals `cIntListEmptyParam` will stop further insertion.
+    Creates a list with provided values. The first value that equals `cFloatListEmptyParam` will stop further insertion.
     This Function can create a list with 12 values at the maximum, but further values can be added with other functions.
     :param v1 through v11: value at a given index of a list
     :return: created list id, or error if negative

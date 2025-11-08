@@ -273,7 +273,7 @@ class IntListTest(unittest.TestCase):
     def test_xs_int_list_sort(self):
         for _ in range(100):
             size = randint(1, 100)
-            arr = xs_int_list_create(int32(size))
+            arr = xs_int_list_create(int32(0))
             lst = []
             for _ in range(size):
                 val = randint(-100, 100)

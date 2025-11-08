@@ -107,7 +107,14 @@ def xs_array_get_impl(array_id: int32, idx: int32, t: type[T]) -> T:
         return int32(-1)
     xs_array = ARRAYS[array_id]
     if xs_array.arr_type != t or idx < 0 or idx >= len(xs_array.array):
-        return int32(-1)
+        if t == type(int):
+            return int32(-1)
+        if t == type(float):
+            return float32(-1.0)
+        if t == type(str):
+            return "-1"
+        return None
+
     return xs_array.array[idx]
 
 
@@ -121,7 +128,15 @@ def xs_array_resize_impl(array_id: int32, new_size: int32, t: type[T]) -> int32:
     if new_size == size:
         return int32(1)
     if new_size > size:
-        xs_array.array.extend([-1337] * (new_size - size))
+        if t == type(int):
+            value = [int32(-1337)]
+        elif t == type(float):
+            value = [float32(-13.37)]
+        elif t == type(str):
+            value = ["<default string>"]
+        else:
+            value = [None]
+        xs_array.array.extend(value * (new_size - size))
     else:
         xs_array.array = xs_array.array[:new_size - size]
     return int32(1)

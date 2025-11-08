@@ -244,7 +244,7 @@ class PythonToXsConverter:
 
     def to_xs_constant(self, value, enclosed: bool = False):
         if isinstance(value, str):
-            return f'"{value}"'
+            return '"' + value.replace('"', '\\"') + '"'
         if isinstance(value, bool):
             return f'{str(value).lower()}'
         if isinstance(value, int):

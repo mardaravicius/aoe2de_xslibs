@@ -1,16 +1,18 @@
 import subprocess
 from pathlib import Path
 
-from xs.float_list import float_list
 from xs.binary_functions import functions
+from xs.float_list import float_list
 from xs.int_int_dict2 import int_int_dict
 from xs.int_list import int_list
+from xs.string_list import string_list
 
 
 def main(include_xs_tests: bool = False) -> None:
     xs_file_creators = [
         int_list,
         float_list,
+        string_list,
         int_int_dict,
         functions,
     ]
