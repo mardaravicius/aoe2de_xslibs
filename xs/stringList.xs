@@ -4,7 +4,6 @@ extern const int cStringListIndexOutOfRangeError = -2;
 extern const int cStringListResizeFailedError = -3;
 extern const int cStringListMaxCapacityError = -4;
 extern const int cStringListMaxCapacity = 999999999;
-extern const string cStringListEmptyParam = "!<[empty";
 extern const int cStringListEmptyIntParam = -999999999;
 int _intListLastOperationStatus = cStringListSuccess;
 
@@ -24,62 +23,62 @@ int xsStringList(string v0 = "!<[empty", string v1 = "!<[empty", string v2 = "!<
     if ((strLst < 0) || (lst < 0)) {
         return (cStringListGenericError);
     }
-    if (v0 == cStringListEmptyParam) {
+    if (v0 == "!<[empty") {
         xsArraySetInt(lst, 0, 0);
         return (lst);
     }
     xsArraySetString(strLst, 0, v0);
-    if (v1 == cStringListEmptyParam) {
+    if (v1 == "!<[empty") {
         xsArraySetInt(lst, 0, 1);
         return (lst);
     }
     xsArraySetString(strLst, 1, v1);
-    if (v2 == cStringListEmptyParam) {
+    if (v2 == "!<[empty") {
         xsArraySetInt(lst, 0, 2);
         return (lst);
     }
     xsArraySetString(strLst, 2, v2);
-    if (v3 == cStringListEmptyParam) {
+    if (v3 == "!<[empty") {
         xsArraySetInt(lst, 0, 3);
         return (lst);
     }
     xsArraySetString(strLst, 3, v3);
-    if (v4 == cStringListEmptyParam) {
+    if (v4 == "!<[empty") {
         xsArraySetInt(lst, 0, 4);
         return (lst);
     }
     xsArraySetString(strLst, 4, v4);
-    if (v5 == cStringListEmptyParam) {
+    if (v5 == "!<[empty") {
         xsArraySetInt(lst, 0, 5);
         return (lst);
     }
     xsArraySetString(strLst, 5, v5);
-    if (v6 == cStringListEmptyParam) {
+    if (v6 == "!<[empty") {
         xsArraySetInt(lst, 0, 6);
         return (lst);
     }
     xsArraySetString(strLst, 6, v6);
-    if (v7 == cStringListEmptyParam) {
+    if (v7 == "!<[empty") {
         xsArraySetInt(lst, 0, 7);
         return (lst);
     }
     xsArraySetString(strLst, 7, v7);
-    if (v8 == cStringListEmptyParam) {
+    if (v8 == "!<[empty") {
         xsArraySetInt(lst, 0, 8);
         return (lst);
     }
     xsArraySetString(strLst, 8, v8);
-    if (v9 == cStringListEmptyParam) {
+    if (v9 == "!<[empty") {
         xsArraySetInt(lst, 0, 9);
         return (lst);
     }
     xsArraySetString(strLst, 9, v9);
-    if (v10 == cStringListEmptyParam) {
+    if (v10 == "!<[empty") {
         xsArraySetInt(lst, 0, 10);
         return (lst);
     }
     xsArraySetString(strLst, 10, v10);
-    if (v11 == cStringListEmptyParam) {
+    if (v11 == "!<[empty") {
         xsArraySetInt(lst, 0, 11);
         return (lst);
     }
