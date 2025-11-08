@@ -210,7 +210,7 @@ def _xs_string_list_extend_string_array(lst: int32 = int32(-1), capacity: int32 
     return c_string_list_success
 
 
-def _xs_string_list_shrink_int_array(lst: int32 = int32(-1), size: int32 = int32(0), capacity: int32 = int32(0)) -> int32:
+def _xs_string_list_shrink_string_array(lst: int32 = int32(-1), size: int32 = int32(0), capacity: int32 = int32(0)) -> int32:
     if size <= (capacity // 2):
         r: int32 = xs_array_resize_string(lst, size)
         if r != 1:
@@ -238,54 +238,56 @@ def xs_string_list_insert(lst: int32 = int32(-1), idx: int32 = int32(-1), value:
     if idx < 0 or idx > size:
         return c_string_list_index_out_of_range_error
     new_size: int32 = size + 1
-    if capacity == new_size:
+    if capacity < new_size:
         r: int32 = _xs_string_list_extend_string_array(lst, capacity)
         if r != c_string_list_success:
             return r
-    for i in i32range(size, idx, -1):
-        xs_array_set_float(lst, i + 1, xs_array_get_float(lst, i))
-    xs_array_set_float(lst, idx + 1, value)
-    _xs_string_list_set_size(lst, new_size)
+    for i in i32range(size - 1, idx, -1):
+        xs_array_set_string(str_lst, i + 1, xs_array_get_string(lst, i))
+    xs_array_set_string(str_lst, idx, value)
+    xs_array_set_int(lst, 0, new_size)
 
     return c_string_list_success
 
 
-def xs_string_list_pop(lst: int32 = int32(-1), idx: int32 = c_string_list_max_capacity) -> float32:
+def xs_string_list_pop(lst: int32 = int32(-1), idx: int32 = c_string_list_max_capacity) -> str:
     global _int_list_last_operation_status
-    capacity: int32 = xs_array_get_size(lst)
+    str_lst: int32 = xs_array_get_int(lst, 1)
+    capacity: int32 = xs_array_get_size(str_lst)
     size: int32 = xs_string_list_size(lst)
     if idx == c_string_list_max_capacity:
         idx = size - 1
     elif idx < 0 or idx >= size:
         _int_list_last_operation_status = c_string_list_index_out_of_range_error
-        return float32(c_string_list_generic_error)
-    removed_elem: float32 = xs_array_get_float(lst, idx + 1)
-    for i in i32range(idx + 2, size + 1):
-        xs_array_set_float(lst, i - 1, xs_array_get_float(lst, i))
-    r: int32 = _xs_string_list_shrink_int_array(lst, size, capacity)
+        return str(c_string_list_generic_error)
+    removed_elem: str = xs_array_get_string(str_lst, idx)
+    for i in i32range(idx + 1, size):
+        xs_array_set_string(str_lst, i - 1, xs_array_get_string(str_lst, i))
+    r: int32 = _xs_string_list_shrink_string_array(str_lst, size, capacity)
     if r != c_string_list_success:
         _int_list_last_operation_status = r
-        return float32(c_string_list_generic_error)
-    _xs_string_list_set_size(lst, size - 1)
+        return str(c_string_list_generic_error)
+    xs_array_set_int(lst, 0, size - 1)
     _int_list_last_operation_status = c_string_list_success
     return removed_elem
 
 
-def xs_string_list_remove(lst: int32 = int32(-1), value: float32 = float32(-1)) -> int32:
-    capacity: int32 = xs_array_get_size(lst)
+def xs_string_list_remove(lst: int32 = int32(-1), value: str = "") -> int32:
+    str_lst: int32 = xs_array_get_int(lst, 1)
+    capacity: int32 = xs_array_get_size(str_lst)
     size: int32 = xs_string_list_size(lst)
     found_idx: int32 = int32(-1)
     i: int32 = int32(1)
     while i <= size and found_idx == -1:
-        c_val: float32 = xs_array_get_float(lst, i)
+        c_val: str = xs_array_get_string(str_lst, i)
         if c_val == value:
             found_idx = i
         i += 1
     if found_idx == -1:
         return c_string_list_generic_error
     for j in i32range(found_idx + 1, size + 1):
-        xs_array_set_float(lst, j - 1, xs_array_get_float(lst, j))
-    r: int32 = _xs_string_list_shrink_int_array(lst, size, capacity)
+        xs_array_set_string(lst, j - 1, xs_array_get_string(lst, j))
+    r: int32 = _xs_string_list_shrink_string_array(lst, size, capacity)
     if r != c_string_list_success:
         return r
     _xs_string_list_set_size(lst, size - 1)
@@ -569,7 +571,7 @@ def float_list(include_test: bool) -> tuple[str, str]:
         xs_string_list_get,
         xs_string_list_set,
         _xs_string_list_extend_string_array,
-        _xs_string_list_shrink_int_array,
+        _xs_string_list_shrink_string_array,
         xs_string_list_to_string,
         xs_string_list_append,
         xs_string_list_pop,
