@@ -5,7 +5,7 @@ extern const int cStringListResizeFailedError = -3;
 extern const int cStringListMaxCapacityError = -4;
 extern const int cStringListMaxCapacity = 999999999;
 extern const int cStringListEmptyIntParam = -999999999;
-int _intListLastOperationStatus = cStringListSuccess;
+int _stringListLastOperationStatus = cStringListSuccess;
 
 int xsStringListSize(int lst = -1) {
     return (xsArrayGetInt(lst, 0));
@@ -175,10 +175,10 @@ int xsStringListUseArrayAsSource(int arr = -1) {
 string xsStringListGet(int lst = -1, int idx = -1) {
     int size = xsStringListSize(lst);
     if ((idx < 0) || (idx >= size)) {
-        _intListLastOperationStatus = cStringListIndexOutOfRangeError;
-        return ("" + cStringListGenericError);
+        _stringListLastOperationStatus = cStringListIndexOutOfRangeError;
+        return ("-1");
     }
-    _intListLastOperationStatus = cStringListSuccess;
+    _stringListLastOperationStatus = cStringListSuccess;
     return (xsArrayGetString(xsArrayGetInt(lst, 1), idx));
 }
 
@@ -260,8 +260,8 @@ string xsStringListPop(int lst = -1, int idx = cStringListMaxCapacity) {
     if (idx == cStringListMaxCapacity) {
         idx = size - 1;
     } else if ((idx < 0) || (idx >= size)) {
-        _intListLastOperationStatus = cStringListIndexOutOfRangeError;
-        return ("" + cStringListGenericError);
+        _stringListLastOperationStatus = cStringListIndexOutOfRangeError;
+        return ("-1");
     }
     string removedElem = xsArrayGetString(strLst, idx);
     for (i = idx; < size - 1) {
@@ -269,11 +269,11 @@ string xsStringListPop(int lst = -1, int idx = cStringListMaxCapacity) {
     }
     int r = _xsStringListShrinkStringArray(strLst, size, capacity);
     if (r != cStringListSuccess) {
-        _intListLastOperationStatus = r;
-        return ("" + cStringListGenericError);
+        _stringListLastOperationStatus = r;
+        return ("-1");
     }
     xsArraySetInt(lst, 0, size - 1);
-    _intListLastOperationStatus = cStringListSuccess;
+    _stringListLastOperationStatus = cStringListSuccess;
     return (removedElem);
 }
 
@@ -538,13 +538,13 @@ int xsStringListCount(int lst = -1, string value = "") {
 string xsStringListMin(int lst = -1) {
     int size = xsArrayGetInt(lst, 0);
     if (size == 0) {
-        _intListLastOperationStatus = cStringListIndexOutOfRangeError;
-        return ("" + cStringListGenericError);
+        _stringListLastOperationStatus = cStringListIndexOutOfRangeError;
+        return ("-1");
     }
     int strList = xsArrayGetInt(lst, 1);
     string m = xsArrayGetString(strList, 0);
     if (size == 1) {
-        _intListLastOperationStatus = cStringListSuccess;
+        _stringListLastOperationStatus = cStringListSuccess;
         return (m);
     }
     for (i = 1; < size) {
@@ -553,20 +553,20 @@ string xsStringListMin(int lst = -1) {
             m = v;
         }
     }
-    _intListLastOperationStatus = cStringListSuccess;
+    _stringListLastOperationStatus = cStringListSuccess;
     return (m);
 }
 
 string xsStringListMax(int lst = -1) {
     int size = xsArrayGetInt(lst, 0);
     if (size == 0) {
-        _intListLastOperationStatus = cStringListIndexOutOfRangeError;
-        return ("" + cStringListGenericError);
+        _stringListLastOperationStatus = cStringListIndexOutOfRangeError;
+        return ("-1");
     }
     int strList = xsArrayGetInt(lst, 1);
     string m = xsArrayGetString(strList, 0);
     if (size == 1) {
-        _intListLastOperationStatus = cStringListSuccess;
+        _stringListLastOperationStatus = cStringListSuccess;
         return (m);
     }
     for (i = 1; < size) {
@@ -575,10 +575,10 @@ string xsStringListMax(int lst = -1) {
             m = v;
         }
     }
-    _intListLastOperationStatus = cStringListSuccess;
+    _stringListLastOperationStatus = cStringListSuccess;
     return (m);
 }
 
 int xsStringListLastError() {
-    return (_intListLastOperationStatus);
+    return (_stringListLastOperationStatus);
 }

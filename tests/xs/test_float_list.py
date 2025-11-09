@@ -69,11 +69,11 @@ class FloatListTest(unittest.TestCase):
     def test_xs_float_list_use_array_as_source(self):
         arr = xs_array_create_float(10, 5.5)
         lst = [float32(5.5)] * 10
-        self.assertEqual(c_float_list_success, xs_float_list_use_array_as_source(arr))
-        self.assertEqual(fstr(lst), xs_float_list_to_string(arr))
-        self.assertEqual(len(lst), xs_float_list_size(arr))
+        arr_lst = xs_float_list_use_array_as_source(arr)
+        self.assertEqual(fstr(lst), xs_float_list_to_string(arr_lst))
+        self.assertEqual(len(lst), xs_float_list_size(arr_lst))
         xs_array_set_float(arr, 1, 2000.2222)
-        self.assertEqual(xs_array_get_float(arr, 1), xs_float_list_get(arr, int32(0)))
+        self.assertEqual(xs_array_get_float(arr, 1), xs_float_list_get(arr_lst, int32(0)))
 
     def test_xs_float_list_get(self):
         lst = list(f32range(-1.0, 100.0, 1.1))
@@ -275,7 +275,7 @@ class FloatListTest(unittest.TestCase):
 
     def test_xs_float_list_to_string_test(self):
         arr = xs_float_list(float32(-1.1), float32(0.0), float32(1.1), float32(2.2), float32(3.3))
-        self.assertEqual(xs_float_list_to_string(arr), "[-1.1, 0.0, 1.1, 2.2, 3.3]")
+        self.assertEqual("[-1.1, 0.0, 1.1, 2.2, 3.3]", xs_float_list_to_string(arr))
         arr_empty = xs_float_list()
         self.assertEqual("[]", xs_float_list_to_string(arr_empty))
 

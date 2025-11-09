@@ -1,11 +1,13 @@
 extern const int cFloatListSuccess = 0;
 extern const int cFloatListGenericError = -1;
+extern const float cFloatListGenericErrorFloat = -1.0;
 extern const int cFloatListIndexOutOfRangeError = -2;
 extern const int cFloatListResizeFailedError = -3;
 extern const int cFloatListMaxCapacityError = -4;
 extern const int cFloatListMaxCapacity = 999999999;
 extern const float cFloatListEmptyParam = -9999999.0;
-int _intListLastOperationStatus = cFloatListSuccess;
+extern const int cFloatListEmptyIntParam = -999999999;
+int _floatListLastOperationStatus = cFloatListSuccess;
 
 int xsFloatListSize(int lst = -1) {
     return (bitCastToInt(xsArrayGetFloat(lst, 0)));
@@ -167,16 +169,16 @@ int xsFloatListUseArrayAsSource(int arr = -1) {
         xsArraySetFloat(arr, i + 1, xsArrayGetFloat(arr, i));
     }
     _xsFloatListSetSize(arr, arrSize);
-    return (cFloatListSuccess);
+    return (arr);
 }
 
 float xsFloatListGet(int lst = -1, int idx = -1) {
     int size = xsFloatListSize(lst);
     if ((idx < 0) || (idx >= size)) {
-        _intListLastOperationStatus = cFloatListIndexOutOfRangeError;
-        return (0.0 + cFloatListGenericError);
+        _floatListLastOperationStatus = cFloatListIndexOutOfRangeError;
+        return (cFloatListGenericErrorFloat);
     }
-    _intListLastOperationStatus = cFloatListSuccess;
+    _floatListLastOperationStatus = cFloatListSuccess;
     return (xsArrayGetFloat(lst, idx + 1));
 }
 
@@ -248,8 +250,8 @@ float xsFloatListPop(int lst = -1, int idx = cFloatListMaxCapacity) {
     if (idx == cFloatListMaxCapacity) {
         idx = size - 1;
     } else if ((idx < 0) || (idx >= size)) {
-        _intListLastOperationStatus = cFloatListIndexOutOfRangeError;
-        return (0.0 + cFloatListGenericError);
+        _floatListLastOperationStatus = cFloatListIndexOutOfRangeError;
+        return (cFloatListGenericErrorFloat);
     }
     float removedElem = xsArrayGetFloat(lst, idx + 1);
     for (i = idx + 2; <= size) {
@@ -257,11 +259,11 @@ float xsFloatListPop(int lst = -1, int idx = cFloatListMaxCapacity) {
     }
     int r = _xsFloatListShrinkIntArray(lst, size, capacity);
     if (r != cFloatListSuccess) {
-        _intListLastOperationStatus = r;
-        return (0.0 + cFloatListGenericError);
+        _floatListLastOperationStatus = r;
+        return (cFloatListGenericErrorFloat);
     }
     _xsFloatListSetSize(lst, size - 1);
-    _intListLastOperationStatus = cFloatListSuccess;
+    _floatListLastOperationStatus = cFloatListSuccess;
     return (removedElem);
 }
 
@@ -312,9 +314,9 @@ int xsFloatListRemove(int lst = -1, float value = -1) {
     return (foundIdx - 1);
 }
 
-int xsFloatListIndex(int lst = -1, float value = -1.0, int start = 0, int stop = cFloatListEmptyParam) {
+int xsFloatListIndex(int lst = -1, float value = -1.0, int start = 0, int stop = cFloatListEmptyIntParam) {
     int size = xsFloatListSize(lst);
-    if ((stop == cFloatListEmptyParam) || (stop > size)) {
+    if ((stop == cFloatListEmptyIntParam) || (stop > size)) {
         stop = size;
     }
     if (start < 0) {
@@ -393,7 +395,7 @@ int xsFloatListClear(int lst = -1) {
             return (cFloatListResizeFailedError);
         }
     }
-    _xsFloatListSetSize(lst, 0.0);
+    _xsFloatListSetSize(lst, 0);
     return (cFloatListSuccess);
 }
 
@@ -521,12 +523,12 @@ float xsFloatListSum(int lst = -1) {
 float xsFloatListMin(int lst = -1) {
     int size = xsFloatListSize(lst);
     if (size == 0) {
-        _intListLastOperationStatus = cFloatListIndexOutOfRangeError;
-        return (0.0 + cFloatListGenericError);
+        _floatListLastOperationStatus = cFloatListIndexOutOfRangeError;
+        return (cFloatListGenericErrorFloat);
     }
     float m = xsArrayGetFloat(lst, 1);
     if (size == 1) {
-        _intListLastOperationStatus = cFloatListSuccess;
+        _floatListLastOperationStatus = cFloatListSuccess;
         return (m);
     }
     for (i = 2; <= size) {
@@ -535,19 +537,19 @@ float xsFloatListMin(int lst = -1) {
             m = v;
         }
     }
-    _intListLastOperationStatus = cFloatListSuccess;
+    _floatListLastOperationStatus = cFloatListSuccess;
     return (m);
 }
 
 float xsFloatListMax(int lst = -1) {
     int size = xsFloatListSize(lst);
     if (size == 0) {
-        _intListLastOperationStatus = cFloatListIndexOutOfRangeError;
-        return (0.0 + cFloatListGenericError);
+        _floatListLastOperationStatus = cFloatListIndexOutOfRangeError;
+        return (cFloatListGenericErrorFloat);
     }
     float m = xsArrayGetFloat(lst, 1);
     if (size == 1) {
-        _intListLastOperationStatus = cFloatListSuccess;
+        _floatListLastOperationStatus = cFloatListSuccess;
         return (m);
     }
     for (i = 2; <= size) {
@@ -556,10 +558,10 @@ float xsFloatListMax(int lst = -1) {
             m = v;
         }
     }
-    _intListLastOperationStatus = cFloatListSuccess;
+    _floatListLastOperationStatus = cFloatListSuccess;
     return (m);
 }
 
 int xsFloatListLastError() {
-    return (_intListLastOperationStatus);
+    return (_floatListLastOperationStatus);
 }

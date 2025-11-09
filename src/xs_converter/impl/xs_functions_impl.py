@@ -5,6 +5,8 @@ from typing import TypeVar
 import numpy
 from numpy import float32, int32
 
+from xs_converter.symbols import XsVector
+
 T = TypeVar('T')
 
 ARRAYS = []
@@ -79,6 +81,22 @@ def xs_array_resize_string_impl(array_id: int32, new_size: int32) -> int32:
     return xs_array_resize_impl(array_id, new_size, type(str))
 
 
+def xs_array_create_vector_impl(size: int32, default_value: XsVector, unique_name: str) -> int32:
+    return xs_array_create_impl(size, default_value, unique_name, type(XsVector))
+
+
+def xs_array_set_vector_impl(array_id: int32, idx: int32, value: XsVector) -> int32:
+    return xs_array_set_impl(array_id, idx, value, type(XsVector))
+
+
+def xs_array_get_vector_impl(array_id: int32, idx: int32) -> XsVector:
+    return xs_array_get_impl(array_id, idx, type(XsVector))
+
+
+def xs_array_resize_vector_impl(array_id: int32, new_size: int32) -> int32:
+    return xs_array_resize_impl(array_id, new_size, type(XsVector))
+
+
 def xs_array_create_impl(size: int32, default_value: T, unique_name: str, t: type[T]) -> int32:
     if size < 0:
         return int32(-1)
@@ -113,6 +131,8 @@ def xs_array_get_impl(array_id: int32, idx: int32, t: type[T]) -> T:
             return float32(-1.0)
         if t == type(str):
             return "-1"
+        if t == type(XsVector):
+            return XsVector(-1.0, -1.0, -1.0)
         return None
 
     return xs_array.array[idx]
@@ -134,6 +154,8 @@ def xs_array_resize_impl(array_id: int32, new_size: int32, t: type[T]) -> int32:
             value = [float32(-13.37)]
         elif t == type(str):
             value = ["<default string>"]
+        elif t == type(XsVector):
+            value = [XsVector(-13.37, -13.37, -13.37)]
         else:
             value = [None]
         xs_array.array.extend(value * (new_size - size))

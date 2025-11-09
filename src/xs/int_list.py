@@ -205,7 +205,7 @@ def xs_int_list_use_array_as_source(arr: int32 = int32(-1)) -> int32:
     for i in i32range(arr_size - 1, -1, -1):
         xs_array_set_int(arr, i + 1, xs_array_get_int(arr, i))
     xs_array_set_int(arr, 0, arr_size)
-    return c_int_list_success
+    return arr
 
 
 def xs_int_list_get(lst: int32 = int32(-1), idx: int32 = int32(-1)) -> int32:

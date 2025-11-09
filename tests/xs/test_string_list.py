@@ -15,7 +15,7 @@ class StringListTest(unittest.TestCase):
             self.assertEqual(to_str(params), xs_string_list_to_string(arr))
 
     def test_xs_string_list_stop_at_magic_number(self):
-        arr = xs_string_list("aa", c_string_list_empty_param, "bb")
+        arr = xs_string_list("aa", "!<[empty", "bb")
         self.assertEqual(to_str(["aa"]), xs_string_list_to_string(arr))
 
     def test_xs_string_list_create_empty(self):

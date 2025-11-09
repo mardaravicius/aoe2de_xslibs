@@ -10,6 +10,14 @@ class XsVector:
     y: float32
     z: float32
 
+    def __init__(self, x: float | float32, y: float | float32, z: float | float32):
+        self.x = float32(x)
+        self.y = float32(y)
+        self.z = float32(z)
+
+    def __str__(self):
+        return f"({self.x}, {self.y}, {self.z})"
+
 
 @_SpecialForm
 def XsStatic(self):
@@ -39,8 +47,9 @@ def xs_rule(group: str = None, active: bool = False, high_frequency: bool = Fals
     return xs_rule_inner
 
 
-def i32range(start =  None, *args, **kwargs):
+def i32range(start=None, *args, **kwargs):
     return arange(start, *args, **kwargs, dtype=int32)
 
-def f32range(start =  None, *args, **kwargs):
+
+def f32range(start=None, *args, **kwargs):
     return arange(start, *args, **kwargs, dtype=float32)

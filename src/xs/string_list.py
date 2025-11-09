@@ -12,7 +12,7 @@ c_string_list_resize_failed_error = int32(-3)
 c_string_list_max_capacity_error = int32(-4)
 c_string_list_max_capacity = int32(999999999)
 c_string_list_empty_int_param = -999999999
-_int_list_last_operation_status = c_string_list_success
+_string_list_last_operation_status = c_string_list_success
 
 
 def constants() -> None:
@@ -23,7 +23,7 @@ def constants() -> None:
     c_string_list_max_capacity_error: XsExternConst[int32] = int32(-4)
     c_string_list_max_capacity: XsExternConst[int32] = int32(999999999)
     c_string_list_empty_int_param: XsExternConst[int32] = int32(-999999999)
-    _int_list_last_operation_status: int32 = c_string_list_success
+    _string_list_last_operation_status: int32 = c_string_list_success
 
 
 def xs_string_list_size(lst: int32 = int32(-1)) -> int32:
@@ -179,12 +179,12 @@ def xs_string_list_use_array_as_source(arr: int32 = int32(-1)) -> int32:
 
 
 def xs_string_list_get(lst: int32 = int32(-1), idx: int32 = int32(-1)) -> str:
-    global _int_list_last_operation_status
+    global _string_list_last_operation_status
     size: int32 = xs_string_list_size(lst)
     if idx < 0 or idx >= size:
-        _int_list_last_operation_status = c_string_list_index_out_of_range_error
-        return str(c_string_list_generic_error)
-    _int_list_last_operation_status = c_string_list_success
+        _string_list_last_operation_status = c_string_list_index_out_of_range_error
+        return "-1"
+    _string_list_last_operation_status = c_string_list_success
     return xs_array_get_string(xs_array_get_int(lst, 1), idx)
 
 
@@ -252,24 +252,24 @@ def xs_string_list_insert(lst: int32 = int32(-1), idx: int32 = int32(-1), value:
 
 
 def xs_string_list_pop(lst: int32 = int32(-1), idx: int32 = c_string_list_max_capacity) -> str:
-    global _int_list_last_operation_status
+    global _string_list_last_operation_status
     str_lst: int32 = xs_array_get_int(lst, 1)
     capacity: int32 = xs_array_get_size(str_lst)
     size: int32 = xs_array_get_int(lst, 0)
     if idx == c_string_list_max_capacity:
         idx = size - 1
     elif idx < 0 or idx >= size:
-        _int_list_last_operation_status = c_string_list_index_out_of_range_error
-        return str(c_string_list_generic_error)
+        _string_list_last_operation_status = c_string_list_index_out_of_range_error
+        return "-1"
     removed_elem: str = xs_array_get_string(str_lst, idx)
     for i in i32range(idx, size - 1):
         xs_array_set_string(str_lst, i, xs_array_get_string(str_lst, i + 1))
     r: int32 = _xs_string_list_shrink_string_array(str_lst, size, capacity)
     if r != c_string_list_success:
-        _int_list_last_operation_status = r
-        return str(c_string_list_generic_error)
+        _string_list_last_operation_status = r
+        return "-1"
     xs_array_set_int(lst, 0, size - 1)
-    _int_list_last_operation_status = c_string_list_success
+    _string_list_last_operation_status = c_string_list_success
     return removed_elem
 
 
@@ -350,7 +350,7 @@ def _xs_string_list_sift_down(lst: int32 = int32(-1), start: int32 = int32(-1), 
 
 
 def xs_string_list_sort(lst: int32 = int32(-1), reverse: bool = False) -> None:
-    global _int_list_last_operation_status
+    global _string_list_last_operation_status
     size: int32 = xs_array_get_int(lst, 0)
     str_lst: int32 = xs_array_get_int(lst, 1)
     for start in i32range(size // 2 - 1, -1, -1):
@@ -502,45 +502,45 @@ def xs_string_list_count(lst: int32 = int32(-1), value: str = "") -> int32:
 
 
 def xs_string_list_min(lst: int32 = int32(-1)) -> str:
-    global _int_list_last_operation_status
+    global _string_list_last_operation_status
     size: int32 = xs_array_get_int(lst, 0)
     if size == 0:
-        _int_list_last_operation_status = c_string_list_index_out_of_range_error
-        return str(c_string_list_generic_error)
+        _string_list_last_operation_status = c_string_list_index_out_of_range_error
+        return "-1"
     str_list: int32 = xs_array_get_int(lst, 1)
     m: str = xs_array_get_string(str_list, 0)
     if size == 1:
-        _int_list_last_operation_status = c_string_list_success
+        _string_list_last_operation_status = c_string_list_success
         return m
     for i in i32range(1, size):
         v: str = xs_array_get_string(str_list, i)
         if v < m:
             m = v
-    _int_list_last_operation_status = c_string_list_success
+    _string_list_last_operation_status = c_string_list_success
     return m
 
 
 def xs_string_list_max(lst: int32 = int32(-1)) -> str:
-    global _int_list_last_operation_status
+    global _string_list_last_operation_status
     size: int32 = xs_array_get_int(lst, 0)
     if size == 0:
-        _int_list_last_operation_status = c_string_list_index_out_of_range_error
-        return str(c_string_list_generic_error)
+        _string_list_last_operation_status = c_string_list_index_out_of_range_error
+        return "-1"
     str_list: int32 = xs_array_get_int(lst, 1)
     m: str = xs_array_get_string(str_list, 0)
     if size == 1:
-        _int_list_last_operation_status = c_string_list_success
+        _string_list_last_operation_status = c_string_list_success
         return m
     for i in i32range(1, size):
         v: str = xs_array_get_string(str_list, i)
         if v > m:
             m = v
-    _int_list_last_operation_status = c_string_list_success
+    _string_list_last_operation_status = c_string_list_success
     return m
 
 
 def xs_string_list_last_error() -> int32:
-    return _int_list_last_operation_status
+    return _string_list_last_operation_status
 
 
 def test() -> None:

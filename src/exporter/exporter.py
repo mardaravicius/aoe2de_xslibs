@@ -6,6 +6,7 @@ from xs.float_list import float_list
 from xs.int_int_dict2 import int_int_dict
 from xs.int_list import int_list
 from xs.string_list import string_list
+from xs.vector_list import vector_list
 
 
 def main(include_xs_tests: bool = False) -> None:

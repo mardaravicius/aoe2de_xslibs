@@ -3,7 +3,7 @@ from xs_converter.symbols import XsVector
 
 
 def vector(x: float | float32, y: float | float32, z: float | float32) -> XsVector:
-    return XsVector(float32(x), float32(y), float32(z))
+    return XsVector(x, y, z)
 
 
 def abs(x: float | float32) -> float32:
@@ -190,6 +190,23 @@ def xs_array_resize_string(array_id: int | int32, new_size: int | int32) -> int3
     return xs_array_resize_string_impl(int32(array_id), int32(new_size))
 
 
+def xs_array_create_vector(size: int | int32, default_value: XsVector = vector(0.0, 0.0, 0.0),
+                           unique_name: str = "") -> int32:
+    return xs_array_create_vector_impl(int32(size), default_value, unique_name)
+
+
+def xs_array_set_vector(array_id: int | int32, idx: int | int32, value: XsVector) -> int32:
+    return xs_array_set_vector_impl(int32(array_id), int32(idx), value)
+
+
+def xs_array_get_vector(array_id: int | int32, idx: int | int32) -> XsVector:
+    return xs_array_get_vector_impl(int32(array_id), int32(idx))
+
+
+def xs_array_resize_vector(array_id: int | int32, new_size: int | int32) -> int32:
+    return xs_array_resize_vector_impl(int32(array_id), int32(new_size))
+
+
 def bit_cast_to_float(number: int | int32) -> float32:
     return bit_cast_to_float_impl(int32(number))
 
@@ -200,3 +217,31 @@ def bit_cast_to_int(number: float | float32) -> int32:
 
 def xs_get_random_number() -> int32:
     return xs_get_random_number_impl()
+
+
+def xs_vector_get_x(v: XsVector) -> float32:
+    return v.x
+
+
+def xs_vector_get_y(v: XsVector) -> float32:
+    return v.y
+
+
+def xs_vector_get_z(v: XsVector) -> float32:
+    return v.z
+
+
+def xs_vector_set(x: float | float32, y: float | float32, z: float | float32) -> XsVector:
+    return XsVector(x, y, z)
+
+
+def xs_vector_set_x(v: XsVector, x: float | float32) -> XsVector:
+    return XsVector(x, v.y, v.z)
+
+
+def xs_vector_set_y(v: XsVector, y: float | float32) -> XsVector:
+    return XsVector(v.x, y, v.z)
+
+
+def xs_vector_set_z(v: XsVector, z: float | float32) -> XsVector:
+    return XsVector(v.x, v.y, z)

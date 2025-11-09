@@ -7,23 +7,27 @@ from xs_converter.symbols import XsExternConst, i32range
 
 c_float_list_success = int32(0)
 c_float_list_generic_error = int32(-1)
+c_float_list_generic_error_float = float32(-1.0)
 c_float_list_index_out_of_range_error = int32(-2)
 c_float_list_resize_failed_error = int32(-3)
 c_float_list_max_capacity_error = int32(-4)
 c_float_list_max_capacity = int32(999999999)
 c_float_list_empty_param = float32(-9999999.0)
-_int_list_last_operation_status = c_float_list_success
+c_float_list_empty_int_param = -999999999
+_float_list_last_operation_status = c_float_list_success
 
 
 def constants() -> None:
     c_float_list_success: XsExternConst[int32] = int32(0)
     c_float_list_generic_error: XsExternConst[int32] = int32(-1)
+    c_float_list_generic_error_float: XsExternConst[float32] = float32(-1.0)
     c_float_list_index_out_of_range_error: XsExternConst[int32] = int32(-2)
     c_float_list_resize_failed_error: XsExternConst[int32] = int32(-3)
     c_float_list_max_capacity_error: XsExternConst[int32] = int32(-4)
     c_float_list_max_capacity: XsExternConst[int32] = int32(999999999)
     c_float_list_empty_param: XsExternConst[float32] = float32(-9999999.0)
-    _int_list_last_operation_status: int32 = c_float_list_success
+    c_float_list_empty_int_param: XsExternConst[int32] = int32(-999999999)
+    _float_list_last_operation_status: int32 = c_float_list_success
 
 
 def xs_float_list_size(lst: int32 = int32(-1)) -> int32:
@@ -173,16 +177,16 @@ def xs_float_list_use_array_as_source(arr: int32 = int32(-1)) -> int32:
     for i in i32range(arr_size - 1, -1, -1):
         xs_array_set_float(arr, i + 1, xs_array_get_float(arr, i))
     _xs_float_list_set_size(arr, arr_size)
-    return c_float_list_success
+    return arr
 
 
 def xs_float_list_get(lst: int32 = int32(-1), idx: int32 = int32(-1)) -> float32:
-    global _int_list_last_operation_status
+    global _float_list_last_operation_status
     size: int32 = xs_float_list_size(lst)
     if idx < 0 or idx >= size:
-        _int_list_last_operation_status = c_float_list_index_out_of_range_error
-        return float32(c_float_list_generic_error)
-    _int_list_last_operation_status = c_float_list_success
+        _float_list_last_operation_status = c_float_list_index_out_of_range_error
+        return c_float_list_generic_error_float
+    _float_list_last_operation_status = c_float_list_success
     return xs_array_get_float(lst, idx + 1)
 
 
@@ -246,23 +250,23 @@ def xs_float_list_insert(lst: int32 = int32(-1), idx: int32 = int32(-1), value: 
 
 
 def xs_float_list_pop(lst: int32 = int32(-1), idx: int32 = c_float_list_max_capacity) -> float32:
-    global _int_list_last_operation_status
+    global _float_list_last_operation_status
     capacity: int32 = xs_array_get_size(lst)
     size: int32 = xs_float_list_size(lst)
     if idx == c_float_list_max_capacity:
         idx = size - 1
     elif idx < 0 or idx >= size:
-        _int_list_last_operation_status = c_float_list_index_out_of_range_error
-        return float32(c_float_list_generic_error)
+        _float_list_last_operation_status = c_float_list_index_out_of_range_error
+        return c_float_list_generic_error_float
     removed_elem: float32 = xs_array_get_float(lst, idx + 1)
     for i in i32range(idx + 2, size + 1):
         xs_array_set_float(lst, i - 1, xs_array_get_float(lst, i))
     r: int32 = _xs_float_list_shrink_int_array(lst, size, capacity)
     if r != c_float_list_success:
-        _int_list_last_operation_status = r
-        return float32(c_float_list_generic_error)
+        _float_list_last_operation_status = r
+        return c_float_list_generic_error_float
     _xs_float_list_set_size(lst, size - 1)
-    _int_list_last_operation_status = c_float_list_success
+    _float_list_last_operation_status = c_float_list_success
     return removed_elem
 
 
@@ -287,10 +291,10 @@ def xs_float_list_remove(lst: int32 = int32(-1), value: float32 = float32(-1)) -
     return found_idx - 1
 
 
-def xs_float_list_index(lst: int32 = int32(-1), value: float32 = float32(-1.0), start: int32 = int32(0), stop: int32 = c_float_list_empty_param) -> int32:
+def xs_float_list_index(lst: int32 = int32(-1), value: float32 = float32(-1.0), start: int32 = int32(0), stop: int32 = c_float_list_empty_int_param) -> int32:
     size: int32 = xs_float_list_size(lst)
 
-    if stop == c_float_list_empty_param or stop > size:
+    if stop == c_float_list_empty_int_param or stop > size:
         stop = size
     if start < 0:
         start += size
@@ -338,7 +342,7 @@ def _xs_float_list_sift_down(lst: int32 = int32(-1), start: int32 = int32(-1), e
 
 
 def xs_float_list_sort(lst: int32 = int32(-1), reverse: bool = False) -> None:
-    global _int_list_last_operation_status
+    global _float_list_last_operation_status
     size: int32 = xs_float_list_size(lst)
     for start in i32range(size // 2, 0, -1):
         _xs_float_list_sift_down(lst, start, size, reverse)
@@ -429,7 +433,7 @@ def xs_float_list_clear(lst: int32 = int32(-1)) -> int32:
         r: int32 = xs_array_resize_float(lst, 8)
         if r != 1:
             return c_float_list_resize_failed_error
-    _xs_float_list_set_size(lst, float32(0.0))
+    _xs_float_list_set_size(lst, int32(0))
     return c_float_list_success
 
 
@@ -480,43 +484,43 @@ def xs_float_list_sum(lst: int32 = int32(-1)) -> float32:
 
 
 def xs_float_list_min(lst: int32 = int32(-1)) -> float32:
-    global _int_list_last_operation_status
+    global _float_list_last_operation_status
     size: int32 = xs_float_list_size(lst)
     if size == 0:
-        _int_list_last_operation_status = c_float_list_index_out_of_range_error
-        return float32(c_float_list_generic_error)
+        _float_list_last_operation_status = c_float_list_index_out_of_range_error
+        return c_float_list_generic_error_float
     m: float32 = xs_array_get_float(lst, 1)
     if size == 1:
-        _int_list_last_operation_status = c_float_list_success
+        _float_list_last_operation_status = c_float_list_success
         return m
     for i in i32range(2, size + 1):
         v: float32 = xs_array_get_float(lst, i)
         if v < m:
             m = v
-    _int_list_last_operation_status = c_float_list_success
+    _float_list_last_operation_status = c_float_list_success
     return m
 
 
 def xs_float_list_max(lst: int32 = int32(-1)) -> float32:
-    global _int_list_last_operation_status
+    global _float_list_last_operation_status
     size: int32 = xs_float_list_size(lst)
     if size == 0:
-        _int_list_last_operation_status = c_float_list_index_out_of_range_error
-        return float32(c_float_list_generic_error)
+        _float_list_last_operation_status = c_float_list_index_out_of_range_error
+        return c_float_list_generic_error_float
     m: float32 = xs_array_get_float(lst, 1)
     if size == 1:
-        _int_list_last_operation_status = c_float_list_success
+        _float_list_last_operation_status = c_float_list_success
         return m
     for i in i32range(2, size + 1):
         v: float32 = xs_array_get_float(lst, i)
         if v > m:
             m = v
-    _int_list_last_operation_status = c_float_list_success
+    _float_list_last_operation_status = c_float_list_success
     return m
 
 
 def xs_float_list_last_error() -> int32:
-    return _int_list_last_operation_status
+    return _float_list_last_operation_status
 
 
 def test() -> None:

@@ -105,11 +105,11 @@ class IntListTest(unittest.TestCase):
     def test_xs_int_list_use_array_as_source(self):
         arr = xs_array_create_int(10, 5)
         lst = [5] * 10
-        self.assertEqual(c_int_list_success, xs_int_list_use_array_as_source(arr))
-        self.assertEqual(istr(lst), xs_int_list_to_string(arr))
-        self.assertEqual(len(lst), xs_int_list_size(arr))
+        arr_lst = xs_int_list_use_array_as_source(arr)
+        self.assertEqual(istr(lst), xs_int_list_to_string(arr_lst))
+        self.assertEqual(len(lst), xs_int_list_size(arr_lst))
         xs_array_set_int(arr, 1, 2000)
-        self.assertEqual(xs_array_get_int(arr, 1), xs_int_list_get(arr, int32(0)))
+        self.assertEqual(xs_array_get_int(arr, 1), xs_int_list_get(arr_lst, int32(0)))
 
     def test_xs_int_list_get(self):
         lst = list(i32range(-1, 100))

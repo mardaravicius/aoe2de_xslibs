@@ -208,7 +208,7 @@ int xsIntListUseArrayAsSource(int arr = -1) {
         xsArraySetInt(arr, i + 1, xsArrayGetInt(arr, i));
     }
     xsArraySetInt(arr, 0, arrSize);
-    return (cIntListSuccess);
+    return (arr);
 }
 
 int xsIntListGet(int lst = -1, int idx = -1) {
