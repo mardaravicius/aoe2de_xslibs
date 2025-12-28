@@ -4,9 +4,12 @@ import subprocess
 import unittest
 from pathlib import Path
 
+import numpy
 from numpy import uint32
 
 from xs.binary_functions import *
+
+# numpy.seterr(over='ignore')
 
 class FunctionsTest(unittest.TestCase):
 

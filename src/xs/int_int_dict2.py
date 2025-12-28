@@ -1,9 +1,12 @@
+import numpy
 from numpy import int32, float32
 
 from xs_converter.converter import PythonToXsConverter
 from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_resize_int, xs_array_get_int, \
     xs_array_get_size
 from xs_converter.symbols import XsExternConst, i32range
+
+numpy.seterr(over='ignore')
 
 c_int_int_dict_success = int32(0)
 c_int_int_dict_generic_error = int32(-1)
