@@ -29,7 +29,7 @@ class FloatListTest(unittest.TestCase):
     def test_xs_float_list_create_fail_over_max_capacity(self):
         arr = xs_float_list_create(c_float_list_max_capacity)
         self.assertEqual(c_float_list_generic_error, arr)
-        xs_array_resize_float(arr, 0)
+        xs_float_list_clear(arr)
 
     def test_xs_float_list_from_repeated_val(self):
         arr = xs_float_list_from_repeated_val(float32(5.5), int32(7))
@@ -43,7 +43,7 @@ class FloatListTest(unittest.TestCase):
     def test_xs_float_list_from_repeated_val_fail_over_max_capacity(self):
         arr = xs_float_list_from_repeated_val(float32(5.5), c_float_list_max_capacity)
         self.assertEqual(c_float_list_generic_error, arr)
-        xs_array_resize_float(arr, 0)
+        xs_float_list_clear(arr)
 
     def test_xs_float_list_from_repeated_list(self):
         lst1 = [float32(1.1), float32(2.2), float32(3.3), float32(4.4)]
@@ -123,7 +123,7 @@ class FloatListTest(unittest.TestCase):
         arr = xs_float_list_from_repeated_val(int32(1), c_float_list_max_capacity - 1)
         self.assertLessEqual(0, arr)
         self.assertEqual(c_float_list_max_capacity_error, xs_float_list_append(arr, int32(10)))
-        xs_array_resize_float(arr, 0)
+        xs_float_list_clear(arr)
 
     def test_xs_float_list_insert(self):
         lst = [float32(-1.1), float32(0.0), float32(1.1), float32(2.2), float32(3.3), float32(4.4)]
@@ -143,7 +143,7 @@ class FloatListTest(unittest.TestCase):
     def test_xs_float_list_insert_fail_over_max_capacity(self):
         arr = xs_float_list_from_repeated_val(float32(1.1), c_float_list_max_capacity - 1)
         self.assertEqual(c_float_list_max_capacity_error, xs_float_list_insert(arr, int32(100), float32(1.1)))
-        xs_array_resize_float(arr, 0)
+        xs_float_list_clear(arr)
 
     def test_xs_float_list_pop(self):
         lst = [float32(-1.1), float32(0.0), float32(1.1), float32(2.2), float32(3.3), float32(4.4)]

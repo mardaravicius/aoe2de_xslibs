@@ -29,6 +29,7 @@ class StringListTest(unittest.TestCase):
     def test_xs_string_list_create_fail_over_max_capacity(self):
         arr = xs_string_list_create(c_string_list_max_capacity)
         self.assertEqual(c_string_list_generic_error, arr)
+        xs_string_list_clear(arr)
 
     def test_xs_string_list_from_repeated_val(self):
         arr = xs_string_list_from_repeated_val("aa", int32(7))
@@ -42,6 +43,7 @@ class StringListTest(unittest.TestCase):
     def test_xs_string_list_from_repeated_val_fail_over_max_capacity(self):
         arr = xs_string_list_from_repeated_val("aa", c_string_list_max_capacity + 1)
         self.assertEqual(c_string_list_generic_error, arr)
+        xs_string_list_clear(arr)
 
     def test_xs_string_list_from_repeated_list(self):
         lst1 = ["aa", "bb", "cc", "dd"]
@@ -62,6 +64,7 @@ class StringListTest(unittest.TestCase):
     def test_xs_string_list_from_array_fail_over_max_capacity(self):
         arr = xs_array_create_string(c_string_list_max_capacity + 1, "aaa")
         self.assertEqual(c_string_list_max_capacity_error, xs_string_list_from_array(arr))
+        xs_array_resize_string(arr, 0)
 
     def test_xs_string_list_use_array_as_source(self):
         arr = xs_array_create_string(10, "bbb")
@@ -119,6 +122,7 @@ class StringListTest(unittest.TestCase):
     def test_xs_string_list_append_fail_over_max_capacity(self):
         arr = xs_string_list_from_repeated_val("aaa", c_string_list_max_capacity)
         self.assertEqual(c_string_list_max_capacity_error, xs_string_list_append(arr, "bbb"))
+        xs_string_list_clear(arr)
 
     def test_xs_string_list_insert(self):
         lst = ["aa", "bb", "cc", "dd", "ee", "ff"]
@@ -138,6 +142,7 @@ class StringListTest(unittest.TestCase):
     def test_xs_string_list_insert_fail_over_max_capacity(self):
         arr = xs_string_list_from_repeated_val("aa", c_string_list_max_capacity)
         self.assertEqual(c_string_list_max_capacity_error, xs_string_list_insert(arr, int32(100), "bb"))
+        xs_string_list_clear(arr)
 
     def test_xs_string_list_pop(self):
         lst = ["aa", "bb", "cc", "dd", "ee", "ff"]
@@ -165,6 +170,7 @@ class StringListTest(unittest.TestCase):
         arr = xs_string_list_from_repeated_val("aa", c_string_list_max_capacity)
         self.assertEqual("aa", xs_string_list_pop(arr, c_string_list_max_capacity))
         self.assertEqual(c_string_list_max_capacity - 1, xs_string_list_size(arr))
+        xs_string_list_clear(arr)
 
     def test_xs_string_list_pop_fail_with_incorrect_idx(self):
         arr = xs_string_list("aa", "bb", "cc", "dd")

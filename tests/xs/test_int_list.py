@@ -27,7 +27,7 @@ class IntListTest(unittest.TestCase):
     def test_xs_int_list_create_fail_over_max_capacity(self):
         arr = xs_int_list_create(c_int_list_max_capacity)
         self.assertEqual(c_int_list_generic_error, arr)
-        xs_array_resize_int(arr, 0)
+        xs_int_list_clear(arr)
 
     def test_xs_int_list_range(self):
         test_data = [
@@ -65,7 +65,7 @@ class IntListTest(unittest.TestCase):
     def test_xs_int_list_range_fail_over_max_capacity(self):
         arr = xs_int_list_from_range(int32(0), c_int_list_max_capacity, int32(1))
         self.assertEqual(c_int_list_generic_error, arr)
-        xs_array_resize_int(arr, 0)
+        xs_int_list_clear(arr)
 
     def test_xs_int_list_from_repeated_val(self):
         arr = xs_int_list_from_repeated_val(int32(5), int32(7))
@@ -79,7 +79,7 @@ class IntListTest(unittest.TestCase):
     def test_xs_int_list_from_repeated_val_fail_over_max_capacity(self):
         arr = xs_int_list_from_repeated_val(int32(5), c_int_list_max_capacity)
         self.assertEqual(arr, c_int_list_generic_error)
-        xs_array_resize_int(0, arr)
+        xs_int_list_clear(arr)
 
     def test_xs_int_list_from_repeated_list(self):
         lst1 = [1, 2, 3, 4]
@@ -155,7 +155,7 @@ class IntListTest(unittest.TestCase):
         arr = xs_int_list_from_repeated_val(int32(1), c_int_list_max_capacity - 1)
         self.assertLessEqual(0, arr)
         self.assertEqual(c_int_list_max_capacity_error, xs_int_list_append(arr, int32(10)))
-        xs_array_resize_int(arr, 0)
+        xs_int_list_clear(arr)
 
     def test_xs_int_list_insert(self):
         lst = [-1, 0, 1, 2, 3, 4]
@@ -175,7 +175,7 @@ class IntListTest(unittest.TestCase):
     def test_xs_int_list_insert_fail_over_max_capacity(self):
         arr = xs_int_list_from_repeated_val(int32(1), c_int_list_max_capacity - 1)
         self.assertEqual(c_int_list_max_capacity_error, xs_int_list_insert(arr, int32(100)))
-        xs_array_resize_int(arr, 0)
+        xs_int_list_clear(arr)
 
     def test_xs_int_list_pop(self):
         lst = [-1, 0, 1, 2, 3, 4]
