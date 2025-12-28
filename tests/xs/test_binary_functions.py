@@ -182,7 +182,7 @@ class FunctionsTest(unittest.TestCase):
         curr_dir = os.getcwd()
         curr_dir = curr_dir[:curr_dir.find("aoe2de_xslibs") + len("aoe2de_xslibs")]
         c_dir = Path(curr_dir) / "tests/c"
-        if os.name == 'nt':
+        if os.name == "nt":
             c_dir = str(c_dir)
             c = str(c_dir).find(":")
             c_dir = c_dir[:c-1] + c_dir[c-1:c].lower() + c_dir[c:]
@@ -193,7 +193,7 @@ class FunctionsTest(unittest.TestCase):
         else:
             cpp_path = str(c_dir / "mt.cpp")
             exec_path = str(c_dir / "mt")
-            result = subprocess.run(['g++', cpp_path, "-o", exec_path, "-O3"])
+            result = subprocess.run(["g++", cpp_path, "-o", exec_path, "-O3"])
         if result.returncode != 0:
             raise Exception(f"g++ failed with return code {result.returncode}")
         attempts = 10

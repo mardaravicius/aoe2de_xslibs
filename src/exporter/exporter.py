@@ -6,7 +6,6 @@ from xs.float_list import float_list
 from xs.int_int_dict2 import int_int_dict
 from xs.int_list import int_list
 from xs.string_list import string_list
-from xs.vector_list import vector_list
 
 
 def main(include_xs_tests: bool = False) -> None:
@@ -21,7 +20,7 @@ def main(include_xs_tests: bool = False) -> None:
         xs, name = fc(include_xs_tests)
         path = Path("..") / ".." / "xs" / (name + ".xs")
         write_xs_file(path, xs)
-        result = subprocess.run(["xs-check", f'{path.resolve()}', "--ignores", "DiscardedFn"])
+        result = subprocess.run(["xs-check", str(path.resolve()), "--ignores", "DiscardedFn"])
         if result.returncode != 0:
             raise Exception(result.returncode)
 

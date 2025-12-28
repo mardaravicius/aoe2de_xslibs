@@ -5,7 +5,7 @@ from xs_converter.converter import PythonToXsConverter
 from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_get_int, xs_get_random_number
 from xs_converter.symbols import XsConst
 
-numpy.seterr(over='ignore')
+numpy.seterr(over="ignore")
 
 _bit_operator_powers: int32 = int32(-1)
 

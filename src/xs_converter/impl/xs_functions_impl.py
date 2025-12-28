@@ -7,7 +7,7 @@ from numpy import float32, int32
 
 from xs_converter.symbols import XsVector
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 ARRAYS = []
 ARRAY_NAMES = set()
