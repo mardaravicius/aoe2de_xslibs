@@ -13,7 +13,7 @@ c_float_list_resize_failed_error = int32(-3)
 c_float_list_max_capacity_error = int32(-4)
 c_float_list_max_capacity = int32(999999999)
 c_float_list_empty_param = float32(-9999999.0)
-c_float_list_empty_int_param = -999999999
+c_float_list_empty_int_param = int32(-999999999)
 _float_list_last_operation_status = c_float_list_success
 
 

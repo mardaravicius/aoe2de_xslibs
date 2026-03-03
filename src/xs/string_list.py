@@ -11,7 +11,7 @@ c_string_list_index_out_of_range_error = int32(-2)
 c_string_list_resize_failed_error = int32(-3)
 c_string_list_max_capacity_error = int32(-4)
 c_string_list_max_capacity = int32(999999999)
-c_string_list_empty_int_param = -999999999
+c_string_list_empty_int_param = int32(-999999999)
 _string_list_last_operation_status = c_string_list_success
 
 

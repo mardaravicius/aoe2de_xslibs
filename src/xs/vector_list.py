@@ -14,7 +14,7 @@ c_vector_list_resize_failed_error = int32(-3)
 c_vector_list_max_capacity_error = int32(-4)
 c_vector_list_max_capacity = int32(999999999)
 c_vector_list_empty_param = vector(-9999999.0, -9999999.0, -9999999.0)
-c_vector_list_empty_int_param = -999999999
+c_vector_list_empty_int_param = int32(-999999999)
 _vector_list_last_operation_status = c_vector_list_success
 
 
