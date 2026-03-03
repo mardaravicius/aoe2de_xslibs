@@ -20,7 +20,7 @@ void _xsFloatListSetSize(int lst = -1, int size = 0) {
 /*
     Creates a list with provided values. The first value that equals `cFloatListEmptyParam` will stop further insertion.
     This Function can create a list with 12 values at the maximum, but further values can be added with other functions.
-    @param v1 through v11 - value at a given index of a list
+    @param v0 through v11 - value at a given index of a list
     @return created list id, or error if negative
 */
 int xsFloatList(float v0 = cFloatListEmptyParam, float v1 = cFloatListEmptyParam, float v2 = cFloatListEmptyParam, float v3 = cFloatListEmptyParam, float v4 = cFloatListEmptyParam, float v5 = cFloatListEmptyParam, float v6 = cFloatListEmptyParam, float v7 = cFloatListEmptyParam, float v8 = cFloatListEmptyParam, float v9 = cFloatListEmptyParam, float v10 = cFloatListEmptyParam, float v11 = cFloatListEmptyParam) {

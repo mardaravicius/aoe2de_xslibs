@@ -10,7 +10,7 @@ int _intListLastOperationStatus = cIntListSuccess;
 /*
     Creates a list with provided values. The first value that equals `cIntListEmptyParam` will stop further insertion.
     This Function can create a list with 12 values at the maximum, but further values can be added with other functions.
-    @param v1 through v11 - value at a given index of a list
+    @param v0 through v11 - value at a given index of a list
     @return created list id, or error if negative
 */
 int xsIntList(int v0 = cIntListEmptyParam, int v1 = cIntListEmptyParam, int v2 = cIntListEmptyParam, int v3 = cIntListEmptyParam, int v4 = cIntListEmptyParam, int v5 = cIntListEmptyParam, int v6 = cIntListEmptyParam, int v7 = cIntListEmptyParam, int v8 = cIntListEmptyParam, int v9 = cIntListEmptyParam, int v10 = cIntListEmptyParam, int v11 = cIntListEmptyParam) {

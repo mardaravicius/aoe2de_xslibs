@@ -14,7 +14,7 @@ int xsStringListSize(int lst = -1) {
 /*
     Creates a list with provided values. The first value that equals `cStringListEmptyParam` will stop further insertion.
     This Function can create a list with 12 values at the maximum, but further values can be added with other functions.
-    @param v1 through v11 - value at a given index of a list
+    @param v0 through v11 - value at a given index of a list
     @return created list id, or error if negative
 */
 int xsStringList(string v0 = "!<[empty", string v1 = "!<[empty", string v2 = "!<[empty", string v3 = "!<[empty", string v4 = "!<[empty", string v5 = "!<[empty", string v6 = "!<[empty", string v7 = "!<[empty", string v8 = "!<[empty", string v9 = "!<[empty", string v10 = "!<[empty", string v11 = "!<[empty") {
