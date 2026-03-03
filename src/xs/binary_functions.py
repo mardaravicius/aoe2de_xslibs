@@ -1,8 +1,11 @@
+import numpy
 from numpy import int32
 
 from xs_converter.converter import PythonToXsConverter
 from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_get_int, xs_get_random_number
 from xs_converter.symbols import XsConst
+
+numpy.seterr(over="ignore")
 
 _bit_operator_powers: int32 = int32(-1)
 
@@ -105,7 +108,7 @@ def xs_bit_and(a: int32 = int32(0), b: int32 = int32(0)) -> int32:
     for i in range(0, 32):
         m: int32 = xs_array_get_int(powers, 31 - i)
         if a * m < 0 and b * m < 0:
-            res += int32(1) * xs_array_get_int(powers, i)
+            res += xs_array_get_int(powers, i)
     return res
 
 
@@ -117,7 +120,7 @@ def xs_bit_xor(a: int32 = int32(0), b: int32 = int32(0)) -> int32:
         an: int32 = a * m
         bn: int32 = b * m
         if (an < 0 and bn >= 0) or (an >= 0 and bn < 0):
-            res += int32(1) * xs_array_get_int(powers, i)
+            res += xs_array_get_int(powers, i)
     return res
 
 
@@ -127,7 +130,7 @@ def xs_bit_or(a: int32 = int32(0), b: int32 = int32(0)) -> int32:
     for i in range(0, 32):
         m: int32 = xs_array_get_int(powers, 31 - i)
         if a * m < 0 or b * m < 0:
-            res += int32(1) * xs_array_get_int(powers, i)
+            res += xs_array_get_int(powers, i)
     return res
 
 

@@ -55,27 +55,27 @@ class PythonToXsConverter:
         return prefix + s
 
     def to_xs_type(self, python_type: str) -> str:
-        if python_type == 'int' or python_type == 'int32':
-            return 'int'
-        if python_type == 'float' or python_type == 'float32':
-            return 'float'
-        if python_type == 'bool':
-            return 'bool'
-        if python_type == 'str':
-            return 'string'
-        if python_type == 'XsVector':
-            return 'vector'
+        if python_type == "int" or python_type == "int32":
+            return "int"
+        if python_type == "float" or python_type == "float32":
+            return "float"
+        if python_type == "bool":
+            return "bool"
+        if python_type == "str":
+            return "string"
+        if python_type == "XsVector":
+            return "vector"
         raise ValueError(f"not convertable type: {python_type}")
 
     def to_xs_modifier(self, python_type: str) -> str:
-        if python_type == 'XsStatic':
-            return 'static'
-        if python_type == 'XsConst':
-            return 'const'
-        if python_type == 'XsExtern':
-            return 'extern'
-        if python_type == 'XsExternConst':
-            return 'extern const'
+        if python_type == "XsStatic":
+            return "static"
+        if python_type == "XsConst":
+            return "const"
+        if python_type == "XsExtern":
+            return "extern"
+        if python_type == "XsExternConst":
+            return "extern const"
         raise ValueError(f"not convertable modifier: {python_type}")
 
     def to_xs_function_type(self, expression: expr) -> str:
@@ -246,7 +246,7 @@ class PythonToXsConverter:
         if isinstance(value, str):
             return '"' + value.replace('"', '\\"') + '"'
         if isinstance(value, bool):
-            return f'{str(value).lower()}'
+            return str(value).lower()
         if isinstance(value, int):
             if value > 999_999_999:
                 if value > 2_147_483_647:
@@ -290,7 +290,7 @@ class PythonToXsConverter:
                     else:
                         xs = self.to_xs_constant(e.args[0].value, enclosed)
                 else:
-                    xs = f'0.0{self.s}+{self.s}' + self.to_xs_expression(e.args[0], vars_to_replace)
+                    xs = f"0.0{self.s}+{self.s}" + self.to_xs_expression(e.args[0], vars_to_replace)
                     if not enclosed:
                         xs = f"({xs})"
             elif function_name == "int" or function_name == "int32":
@@ -302,7 +302,7 @@ class PythonToXsConverter:
                     else:
                         xs = self.to_xs_constant(e.args[0].value, enclosed)
                 else:
-                    xs = f'0{self.s}+{self.s}' + self.to_xs_expression(e.args[0], vars_to_replace)
+                    xs = f"0{self.s}+{self.s}" + self.to_xs_expression(e.args[0], vars_to_replace)
                     if not enclosed:
                         xs = f"({xs})"
             else:
