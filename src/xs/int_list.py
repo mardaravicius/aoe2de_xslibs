@@ -167,6 +167,8 @@ def xs_int_list_from_repeated_val(value: int32 = int32(0), times: int32 = int32(
 
 
 def xs_int_list_from_repeated_list(lst: int32 = int32(-1), times: int32 = int32(0)) -> int32:
+    if times < 0:
+        return c_int_list_generic_error
     size: int32 = xs_array_get_int(lst, 0)
     new_capacity: int32 = (size * times) + 1
     if new_capacity > c_int_list_max_capacity:
@@ -244,7 +246,7 @@ def _xs_int_list_extend_int_array(lst: int32 = int32(-1), capacity: int32 = int3
 
 def _xs_int_list_shrink_int_array(lst: int32 = int32(-1), size: int32 = int32(0), capacity: int32 = int32(0)) -> int32:
     if size <= (capacity // 2):
-        r: int32 = xs_array_resize_int(lst, size)
+        r: int32 = xs_array_resize_int(lst, capacity // 2)
         if r != 1:
             return c_int_list_resize_failed_error
     return c_int_list_success
@@ -287,7 +289,7 @@ def xs_int_list_pop(lst: int32 = int32(-1), idx: int32 = c_int_list_max_capacity
     size: int32 = xs_array_get_int(lst, 0)
     if idx == c_int_list_max_capacity:
         idx = size - 1
-    elif idx < 0 or idx >= size:
+    if idx < 0 or idx >= size:
         _int_list_last_operation_status = c_int_list_index_out_of_range_error
         return c_int_list_generic_error
     removed_elem: int32 = xs_array_get_int(lst, idx + 1)
@@ -360,10 +362,11 @@ def _xs_int_list_sift_down(lst: int32 = int32(-1), start: int32 = int32(-1), end
         if child > end:
             return
         child_val: int32 = xs_array_get_int(lst, child)
-        child_val1: int32 = xs_array_get_int(lst, child + 1)
-        if child + 1 <= end and _xs_int_list_compare_elem(child_val, child_val1, reverse):
-            child += 1
-            child_val = child_val1
+        if child + 1 <= end:
+            child_val1: int32 = xs_array_get_int(lst, child + 1)
+            if _xs_int_list_compare_elem(child_val, child_val1, reverse):
+                child += 1
+                child_val = child_val1
         root_val: int32 = xs_array_get_int(lst, root)
         if _xs_int_list_compare_elem(root_val, child_val, reverse):
             xs_array_set_int(lst, root, child_val)
@@ -419,8 +422,8 @@ def xs_int_list_copy(lst: int32 = int32(-1), start: int32 = int32(0), end: int32
     new_lst: int32 = xs_array_create_int(new_size + 1)
     if new_lst < 0:
         return c_int_list_generic_error
-    for i in i32range(fr, to + 1):
-        xs_array_set_int(new_lst, i - fr, xs_array_get_int(lst, i))
+    for i in i32range(fr, to):
+        xs_array_set_int(new_lst, i - fr + 1, xs_array_get_int(lst, i + 1))
     xs_array_set_int(new_lst, 0, new_size)
     return new_lst
 
@@ -430,7 +433,7 @@ def xs_int_list_extend(source: int32 = int32(-1), lst: int32 = int32(-1)) -> int
     to_add: int32 = xs_array_get_int(lst, 0)
     capacity: int32 = xs_array_get_size(source)
     new_size: int32 = source_size + to_add
-    if new_size > capacity:
+    if new_size + 1 > capacity:
         if new_size >= c_int_list_max_capacity:
             return c_int_list_max_capacity_error
         r: int32 = xs_array_resize_int(source, new_size + 1)
@@ -447,7 +450,7 @@ def xs_int_list_extend_with_array(source: int32 = int32(-1), arr: int32 = int32(
     to_add: int32 = xs_array_get_size(arr)
     capacity: int32 = xs_array_get_size(source)
     new_size: int32 = source_size + to_add
-    if new_size > capacity:
+    if new_size + 1 > capacity:
         if new_size >= c_int_list_max_capacity or new_size < 0:
             return c_int_list_max_capacity_error
         r: int32 = xs_array_resize_int(source, new_size + 1)
@@ -460,7 +463,7 @@ def xs_int_list_extend_with_array(source: int32 = int32(-1), arr: int32 = int32(
 
 
 def xs_int_list_clear(lst: int32 = int32(-1)) -> int32:
-    capacity: int32 = xs_array_get_int(lst, 0)
+    capacity: int32 = xs_array_get_size(lst)
     if capacity > 8:
         r: int32 = xs_array_resize_int(lst, 8)
         if r != 1:

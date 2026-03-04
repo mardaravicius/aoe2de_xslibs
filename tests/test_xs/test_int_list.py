@@ -89,6 +89,17 @@ class IntListTest(unittest.TestCase):
         self.assertEqual(istr(lst2), xs_int_list_to_string(arr2))
         self.assertEqual(len(lst2), xs_int_list_size(arr2))
 
+    def test_xs_int_list_from_repeated_list_negative_times(self):
+        arr = xs_int_list(int32(1), int32(2), int32(3))
+        result = xs_int_list_from_repeated_list(arr, int32(-1))
+        self.assertEqual(c_int_list_generic_error, result)
+
+    def test_xs_int_list_from_repeated_list_zero_times(self):
+        arr = xs_int_list(int32(1), int32(2), int32(3))
+        result = xs_int_list_from_repeated_list(arr, int32(0))
+        self.assertGreaterEqual(result, 0)
+        self.assertEqual(0, xs_int_list_size(result))
+
     def test_xs_int_list_from_array(self):
         arr = xs_array_create_int(10, 5)
         lst = [5] * 10
@@ -205,6 +216,54 @@ class IntListTest(unittest.TestCase):
         self.assertEqual(c_int_list_generic_error, xs_int_list_pop(arr, int32(-1)))
         self.assertEqual(c_int_list_index_out_of_range_error, xs_int_list_last_error())
 
+    def test_xs_int_list_pop_empty_list(self):
+        arr = xs_int_list_create()
+        self.assertEqual(0, xs_int_list_size(arr))
+        result = xs_int_list_pop(arr)
+        self.assertEqual(c_int_list_generic_error, result)
+        self.assertEqual(c_int_list_index_out_of_range_error, xs_int_list_last_error())
+        self.assertEqual(0, xs_int_list_size(arr))
+
+    def test_xs_int_list_pop_until_empty_then_pop_again(self):
+        arr = xs_int_list(int32(10), int32(20))
+        self.assertEqual(20, xs_int_list_pop(arr))
+        self.assertEqual(10, xs_int_list_pop(arr))
+        self.assertEqual(0, xs_int_list_size(arr))
+        result = xs_int_list_pop(arr)
+        self.assertEqual(c_int_list_generic_error, result)
+        self.assertEqual(c_int_list_index_out_of_range_error, xs_int_list_last_error())
+        self.assertEqual(0, xs_int_list_size(arr))
+        self.assertEqual("[]", xs_int_list_to_string(arr))
+
+    def test_xs_int_list_pop_append_cycle(self):
+        arr = xs_int_list_create(int32(4))
+        lst = []
+        for i in range(20):
+            xs_int_list_append(arr, int32(i))
+            lst.append(i)
+        for _ in range(15):
+            lst.pop()
+            xs_int_list_pop(arr)
+        for i in range(100, 120):
+            xs_int_list_append(arr, int32(i))
+            lst.append(i)
+        self.assertEqual(istr(lst), xs_int_list_to_string(arr))
+        self.assertEqual(len(lst), xs_int_list_size(arr))
+
+    def test_xs_int_list_shrink_after_pop_then_append(self):
+        arr = xs_int_list_create(int32(0))
+        for i in i32range(0, 50):
+            xs_int_list_append(arr, i)
+        for _ in range(40):
+            xs_int_list_pop(arr)
+        remaining = list(range(10))
+        self.assertEqual(istr(remaining), xs_int_list_to_string(arr))
+        self.assertEqual(10, xs_int_list_size(arr))
+        xs_int_list_append(arr, int32(99))
+        remaining.append(99)
+        self.assertEqual(istr(remaining), xs_int_list_to_string(arr))
+        self.assertEqual(11, xs_int_list_size(arr))
+
     def test_xs_int_list_remove(self):
         arr = xs_int_list_from_range(int32(-1), int32(200))
         lst = list(i32range(-1, 200))
@@ -298,6 +357,24 @@ class IntListTest(unittest.TestCase):
             self.assertEqual(istr(lst), xs_int_list_to_string(arr))
             self.assertEqual(len(lst), xs_int_list_size(arr))
 
+    def test_xs_int_list_sort_single_element(self):
+        arr = xs_int_list(int32(42))
+        xs_int_list_sort(arr)
+        self.assertEqual(istr([42]), xs_int_list_to_string(arr))
+
+    def test_xs_int_list_sort_two_elements(self):
+        arr = xs_int_list(int32(5), int32(3))
+        xs_int_list_sort(arr)
+        self.assertEqual(istr([3, 5]), xs_int_list_to_string(arr))
+        arr2 = xs_int_list(int32(5), int32(3))
+        xs_int_list_sort(arr2, True)
+        self.assertEqual(istr([5, 3]), xs_int_list_to_string(arr2))
+
+    def test_xs_int_list_sort_empty(self):
+        arr = xs_int_list()
+        xs_int_list_sort(arr)
+        self.assertEqual(istr([]), xs_int_list_to_string(arr))
+
     def test_xs_int_list_to_string_test(self):
         arr = xs_int_list(int32(-1), int32(0), int32(1), int32(2), int32(3))
         self.assertEqual("[-1, 0, 1, 2, 3]", xs_int_list_to_string(arr))
@@ -356,6 +433,18 @@ class IntListTest(unittest.TestCase):
                 self.assertEqual(istr(copy_lst), xs_int_list_to_string(copy_arr))
                 self.assertEqual(len(copy_lst), xs_int_list_size(copy_arr))
 
+    def test_xs_int_list_copy_empty(self):
+        arr = xs_int_list()
+        copy = xs_int_list_copy(arr)
+        self.assertEqual(0, xs_int_list_size(copy))
+        self.assertEqual("[]", xs_int_list_to_string(copy))
+
+    def test_xs_int_list_copy_single_element(self):
+        arr = xs_int_list(int32(42))
+        copy = xs_int_list_copy(arr)
+        self.assertEqual(1, xs_int_list_size(copy))
+        self.assertEqual(istr([42]), xs_int_list_to_string(copy))
+
     def test_xs_int_list_extend(self):
         lst1 = [-1, 0, 1, 2, 3, 4]
         lst2 = [0, -10, 20, -30, 40, -50, 60, -70, 80, -90]
@@ -365,6 +454,30 @@ class IntListTest(unittest.TestCase):
         self.assertEqual(c_int_list_success, xs_int_list_extend(arr1, arr2))
         lst1.extend(lst2)
 
+        self.assertEqual(istr(lst1), xs_int_list_to_string(arr1))
+        self.assertEqual(len(lst1), xs_int_list_size(arr1))
+
+    def test_xs_int_list_extend_at_exact_capacity_boundary(self):
+        lst1 = list(range(12))
+        arr1 = xs_int_list(*[int32(x) for x in lst1])
+        self.assertEqual(13, xs_array_get_size(arr1))
+        arr2 = xs_int_list(int32(99))
+        self.assertEqual(c_int_list_success, xs_int_list_extend(arr1, arr2))
+        lst1.append(99)
+        self.assertEqual(13, xs_int_list_size(arr1))
+        self.assertEqual(istr(lst1), xs_int_list_to_string(arr1))
+
+    def test_xs_int_list_extend_fills_exactly(self):
+        lst1 = list(range(7))
+        lst2 = list(range(10, 16))
+        arr1 = xs_int_list(*[int32(x) for x in lst1])
+        arr2 = xs_int_list(*[int32(x) for x in lst2])
+        cap = xs_array_get_size(arr1)
+        needed = len(lst1) + len(lst2) + 1
+        if needed > cap:
+            pass
+        self.assertEqual(c_int_list_success, xs_int_list_extend(arr1, arr2))
+        lst1.extend(lst2)
         self.assertEqual(istr(lst1), xs_int_list_to_string(arr1))
         self.assertEqual(len(lst1), xs_int_list_size(arr1))
 
@@ -380,11 +493,39 @@ class IntListTest(unittest.TestCase):
         self.assertEqual(istr(lst1), xs_int_list_to_string(arr1))
         self.assertEqual(len(lst1), xs_int_list_size(arr1))
 
+    def test_xs_int_list_extend_with_array_at_exact_capacity_boundary(self):
+        lst1 = list(range(12))
+        arr1 = xs_int_list(*[int32(x) for x in lst1])
+        self.assertEqual(13, xs_array_get_size(arr1))
+        raw_arr = xs_array_create_int(1, 99)
+        self.assertEqual(c_int_list_success, xs_int_list_extend_with_array(arr1, raw_arr))
+        lst1.append(99)
+        self.assertEqual(13, xs_int_list_size(arr1))
+        self.assertEqual(istr(lst1), xs_int_list_to_string(arr1))
+
     def test_xs_int_list_clear(self):
         arr = xs_int_list(int32(-1), int32(0), int32(1), int32(2), int32(3), int32(4))
 
         self.assertEqual(c_int_list_success, xs_int_list_clear(arr))
         self.assertEqual("[]", xs_int_list_to_string(arr))
+        self.assertEqual(0, xs_int_list_size(arr))
+
+    def test_xs_int_list_clear_shrinks_large_capacity(self):
+        arr = xs_int_list_create(int32(100))
+        xs_int_list_append(arr, int32(1))
+        xs_int_list_append(arr, int32(2))
+        xs_int_list_append(arr, int32(3))
+        self.assertEqual(3, xs_int_list_size(arr))
+        capacity_before = xs_array_get_size(arr)
+        self.assertGreater(capacity_before, 8)
+        self.assertEqual(c_int_list_success, xs_int_list_clear(arr))
+        self.assertEqual(0, xs_int_list_size(arr))
+        capacity_after = xs_array_get_size(arr)
+        self.assertLessEqual(capacity_after, 8)
+
+    def test_xs_int_list_clear_small_list(self):
+        arr = xs_int_list(int32(1), int32(2))
+        self.assertEqual(c_int_list_success, xs_int_list_clear(arr))
         self.assertEqual(0, xs_int_list_size(arr))
 
     def test_xs_int_list_compare(self):
