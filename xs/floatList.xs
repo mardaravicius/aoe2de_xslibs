@@ -122,6 +122,9 @@ int xsFloatListFromRepeatedVal(float value = 0.0, int times = 0) {
 }
 
 int xsFloatListFromRepeatedList(int lst = -1, int times = 0) {
+    if (times < 0) {
+        return (cFloatListGenericError);
+    }
     int size = xsFloatListSize(lst);
     int newCapacity = (size * times) + 1;
     if (newCapacity > cFloatListMaxCapacity) {
@@ -208,7 +211,7 @@ int _xsFloatListExtendIntArray(int lst = -1, int capacity = 0) {
 
 int _xsFloatListShrinkIntArray(int lst = -1, int size = 0, int capacity = 0) {
     if (size <= (capacity / 2)) {
-        int r = xsArrayResizeFloat(lst, size);
+        int r = xsArrayResizeFloat(lst, capacity / 2);
         if (r != 1) {
             return (cFloatListResizeFailedError);
         }
@@ -249,7 +252,8 @@ float xsFloatListPop(int lst = -1, int idx = cFloatListMaxCapacity) {
     int size = xsFloatListSize(lst);
     if (idx == cFloatListMaxCapacity) {
         idx = size - 1;
-    } else if ((idx < 0) || (idx >= size)) {
+    }
+    if ((idx < 0) || (idx >= size)) {
         _floatListLastOperationStatus = cFloatListIndexOutOfRangeError;
         return (cFloatListGenericErrorFloat);
     }
@@ -358,10 +362,12 @@ void _xsFloatListSiftDown(int lst = -1, int start = -1, int end = -1, bool rever
             return;
         }
         float childVal = xsArrayGetFloat(lst, child);
-        float childVal1 = xsArrayGetFloat(lst, child + 1);
-        if (((child + 1) <= end) && _xsFloatListCompareElem(childVal, childVal1, reverse)) {
-            child++;
-            childVal = childVal1;
+        if ((child + 1) <= end) {
+            float childVal1 = xsArrayGetFloat(lst, child + 1);
+            if (_xsFloatListCompareElem(childVal, childVal1, reverse)) {
+                child++;
+                childVal = childVal1;
+            }
         }
         float rootVal = xsArrayGetFloat(lst, root);
         if (_xsFloatListCompareElem(rootVal, childVal, reverse)) {
@@ -388,7 +394,7 @@ void xsFloatListSort(int lst = -1, bool reverse = false) {
 }
 
 int xsFloatListClear(int lst = -1) {
-    int capacity = xsFloatListSize(lst);
+    int capacity = xsArrayGetSize(lst);
     if (capacity > 8) {
         int r = xsArrayResizeFloat(lst, 8);
         if (r != 1) {
@@ -427,8 +433,8 @@ int xsFloatListCopy(int lst = -1, int start = 0, int end = cFloatListMaxCapacity
     if (newLst < 0) {
         return (cFloatListGenericError);
     }
-    for (i = fr; <= to) {
-        xsArraySetFloat(newLst, i - fr, xsArrayGetFloat(lst, i));
+    for (i = fr; < to) {
+        xsArraySetFloat(newLst, (i - fr) + 1, xsArrayGetFloat(lst, i + 1));
     }
     _xsFloatListSetSize(newLst, newSize);
     return (newLst);
@@ -439,7 +445,7 @@ int xsFloatListExtend(int source = -1, int lst = -1) {
     int toAdd = xsFloatListSize(lst);
     int capacity = xsArrayGetSize(source);
     int newSize = sourceSize + toAdd;
-    if (newSize > capacity) {
+    if ((newSize + 1) > capacity) {
         if (newSize >= cFloatListMaxCapacity) {
             return (cFloatListMaxCapacityError);
         }
@@ -460,7 +466,7 @@ int xsFloatListExtendWithArray(int source = -1, int arr = -1) {
     int toAdd = xsArrayGetSize(arr);
     int capacity = xsArrayGetSize(source);
     int newSize = sourceSize + toAdd;
-    if (newSize > capacity) {
+    if ((newSize + 1) > capacity) {
         if ((newSize >= cFloatListMaxCapacity) || (newSize < 0)) {
             return (cFloatListMaxCapacityError);
         }

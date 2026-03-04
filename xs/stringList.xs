@@ -119,6 +119,9 @@ int xsStringListFromRepeatedVal(string value = "", int times = 0) {
 }
 
 int xsStringListFromRepeatedList(int lst = -1, int times = 0) {
+    if (times < 0) {
+        return (cStringListGenericError);
+    }
     int size = xsArrayGetInt(lst, 0);
     int newCapacity = size * times;
     if (newCapacity > cStringListMaxCapacity) {
@@ -211,7 +214,7 @@ int _xsStringListExtendStringArray(int lst = -1, int capacity = 0) {
 
 int _xsStringListShrinkStringArray(int lst = -1, int size = 0, int capacity = 0) {
     if (size <= (capacity / 2)) {
-        int r = xsArrayResizeString(lst, size);
+        int r = xsArrayResizeString(lst, capacity / 2);
         if (r != 1) {
             return (cStringListResizeFailedError);
         }
@@ -259,7 +262,8 @@ string xsStringListPop(int lst = -1, int idx = cStringListMaxCapacity) {
     int size = xsArrayGetInt(lst, 0);
     if (idx == cStringListMaxCapacity) {
         idx = size - 1;
-    } else if ((idx < 0) || (idx >= size)) {
+    }
+    if ((idx < 0) || (idx >= size)) {
         _stringListLastOperationStatus = cStringListIndexOutOfRangeError;
         return ("-1");
     }
@@ -372,10 +376,12 @@ void _xsStringListSiftDown(int lst = -1, int start = -1, int end = -1, bool reve
             return;
         }
         string childVal = xsArrayGetString(lst, child);
-        string childVal1 = xsArrayGetString(lst, child + 1);
-        if (((child + 1) <= end) && _xsStringListCompareElem(childVal, childVal1, reverse)) {
-            child++;
-            childVal = childVal1;
+        if ((child + 1) <= end) {
+            string childVal1 = xsArrayGetString(lst, child + 1);
+            if (_xsStringListCompareElem(childVal, childVal1, reverse)) {
+                child++;
+                childVal = childVal1;
+            }
         }
         string rootVal = xsArrayGetString(lst, root);
         if (_xsStringListCompareElem(rootVal, childVal, reverse)) {

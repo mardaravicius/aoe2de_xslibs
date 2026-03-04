@@ -140,6 +140,8 @@ def xs_vector_list_from_repeated_val(value: XsVector = vector(0.0, 0.0, 0.0), ti
 
 
 def xs_vector_list_from_repeated_list(lst: int32 = int32(-1), times: int32 = int32(0)) -> int32:
+    if times < 0:
+        return c_vector_list_generic_error
     size: int32 = xs_vector_list_size(lst)
     new_capacity: int32 = (size * times) + 1
     if new_capacity > c_vector_list_max_capacity:
@@ -215,7 +217,7 @@ def _xs_vector_list_extend_int_array(lst: int32 = int32(-1), capacity: int32 = i
 def _xs_vector_list_shrink_int_array(lst: int32 = int32(-1), size: int32 = int32(0),
                                      capacity: int32 = int32(0)) -> int32:
     if size <= (capacity // 2):
-        r: int32 = xs_array_resize_vector(lst, size)
+        r: int32 = xs_array_resize_vector(lst, capacity // 2)
         if r != 1:
             return c_vector_list_resize_failed_error
     return c_vector_list_success
@@ -259,7 +261,7 @@ def xs_vector_list_pop(lst: int32 = int32(-1), idx: int32 = c_vector_list_max_ca
     size: int32 = xs_vector_list_size(lst)
     if idx == c_vector_list_max_capacity:
         idx = size - 1
-    elif idx < 0 or idx >= size:
+    if idx < 0 or idx >= size:
         _vector_list_last_operation_status = c_vector_list_index_out_of_range_error
         return c_vector_list_generic_error_vector
     removed_elem: XsVector = xs_array_get_vector(lst, idx + 1)
@@ -354,8 +356,8 @@ def xs_vector_list_copy(lst: int32 = int32(-1), start: int32 = int32(0),
     new_lst: int32 = xs_array_create_vector(new_size + 1)
     if new_lst < 0:
         return c_vector_list_generic_error
-    for i in i32range(fr, to + 1):
-        xs_array_set_vector(new_lst, i - fr, xs_array_get_vector(lst, i))
+    for i in i32range(fr, to):
+        xs_array_set_vector(new_lst, i - fr + 1, xs_array_get_vector(lst, i + 1))
     _xs_vector_list_set_size(new_lst, new_size)
     return new_lst
 
@@ -365,7 +367,7 @@ def xs_vector_list_extend(source: int32 = int32(-1), lst: int32 = int32(-1)) -> 
     to_add: int32 = xs_vector_list_size(lst)
     capacity: int32 = xs_array_get_size(source)
     new_size: int32 = source_size + to_add
-    if new_size > capacity:
+    if new_size + 1 > capacity:
         if new_size >= c_vector_list_max_capacity:
             return c_vector_list_max_capacity_error
         r: int32 = xs_array_resize_vector(source, new_size + 1)
@@ -382,7 +384,7 @@ def xs_vector_list_extend_with_array(source: int32 = int32(-1), arr: int32 = int
     to_add: int32 = xs_array_get_size(arr)
     capacity: int32 = xs_array_get_size(source)
     new_size: int32 = source_size + to_add
-    if new_size > capacity:
+    if new_size + 1 > capacity:
         if new_size >= c_vector_list_max_capacity or new_size < 0:
             return c_vector_list_max_capacity_error
         r: int32 = xs_array_resize_vector(source, new_size + 1)
@@ -395,7 +397,7 @@ def xs_vector_list_extend_with_array(source: int32 = int32(-1), arr: int32 = int
 
 
 def xs_vector_list_clear(lst: int32 = int32(-1)) -> int32:
-    capacity: int32 = xs_vector_list_size(lst)
+    capacity: int32 = xs_array_get_size(lst)
     if capacity > 8:
         r: int32 = xs_array_resize_vector(lst, 8)
         if r != 1:

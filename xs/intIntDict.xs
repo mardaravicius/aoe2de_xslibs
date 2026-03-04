@@ -143,16 +143,6 @@ int _xsIntIntDictMoveToTempArray(int dct = -1, int size = 0, int capacity = 0) {
 }
 
 void _xsIntIntDictClearArrays(int dct = -1, int capacity = -1, int newCapacity = -1) {
-    int i = 1;
-    while (i < capacity) {
-        int bucketType = xsArrayGetInt(dct, i);
-        if (bucketType == 1) {
-            xsArraySetInt(dct, i, 0);
-        } else if (bucketType == 2) {
-            xsArraySetInt(dct, i + 2, 0);
-        }
-        i = i + 3;
-    }
     int j = capacity;
     while (j < newCapacity) {
         xsArraySetInt(dct, j, 0);
@@ -307,7 +297,7 @@ int xsIntIntDictRemove(int dct = -1, int key = -1) {
             } else if (storedKey == key) {
                 found = true;
                 prevValue = xsArrayGetInt(bucketArr, i + 1);
-                xsArraySetInt(bucketArr, hash + 2, bucketSize - 2);
+                xsArraySetInt(dct, hash + 2, bucketSize - 2);
                 xsArraySetInt(dct, 0, size - 1);
             }
             i = i + 2;
@@ -334,10 +324,11 @@ bool xsIntIntDictContains(int dct = -1, int key = -1) {
         return (xsArrayGetInt(dct, hash + 1) == key);
     }
     if (bucketType == 2) {
+        int bucketArr = xsArrayGetInt(dct, hash + 1);
         int bucketSize = xsArrayGetInt(dct, hash + 2);
         int j = 0;
         while (j < bucketSize) {
-            if (key == xsArrayGetInt(dct, j)) {
+            if (key == xsArrayGetInt(bucketArr, j)) {
                 return (true);
             }
             j = j + 2;
@@ -362,7 +353,7 @@ int xsIntIntDictClear(int dct = -1) {
             int bucketArr = xsArrayGetInt(dct, i + 1);
             int bucketCapacity = xsArrayGetSize(bucketArr);
             if (bucketCapacity > cIntIntDictMinBucketSize) {
-                int r1 = xsArrayResizeInt(bucketType, cIntIntDictMinBucketSize);
+                int r1 = xsArrayResizeInt(bucketArr, cIntIntDictMinBucketSize);
                 if (r1 != 1) {
                     return (cIntIntDictGenericError);
                 }

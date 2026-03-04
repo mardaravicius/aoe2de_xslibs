@@ -134,6 +134,8 @@ def xs_string_list_from_repeated_val(value: str = "", times: int32 = int32(0)) -
 
 
 def xs_string_list_from_repeated_list(lst: int32 = int32(-1), times: int32 = int32(0)) -> int32:
+    if times < 0:
+        return c_string_list_generic_error
     size: int32 = xs_array_get_int(lst, 0)
     new_capacity: int32 = (size * times)
     if new_capacity > c_string_list_max_capacity:
@@ -213,7 +215,7 @@ def _xs_string_list_extend_string_array(lst: int32 = int32(-1), capacity: int32 
 def _xs_string_list_shrink_string_array(lst: int32 = int32(-1), size: int32 = int32(0),
                                         capacity: int32 = int32(0)) -> int32:
     if size <= (capacity // 2):
-        r: int32 = xs_array_resize_string(lst, size)
+        r: int32 = xs_array_resize_string(lst, capacity // 2)
         if r != 1:
             return c_string_list_resize_failed_error
     return c_string_list_success
@@ -258,7 +260,7 @@ def xs_string_list_pop(lst: int32 = int32(-1), idx: int32 = c_string_list_max_ca
     size: int32 = xs_array_get_int(lst, 0)
     if idx == c_string_list_max_capacity:
         idx = size - 1
-    elif idx < 0 or idx >= size:
+    if idx < 0 or idx >= size:
         _string_list_last_operation_status = c_string_list_index_out_of_range_error
         return "-1"
     removed_elem: str = xs_array_get_string(str_lst, idx)
@@ -336,10 +338,11 @@ def _xs_string_list_sift_down(lst: int32 = int32(-1), start: int32 = int32(-1), 
         if child > end:
             return
         child_val: str = xs_array_get_string(lst, child)
-        child_val1: str = xs_array_get_string(lst, child + 1)
-        if child + 1 <= end and _xs_string_list_compare_elem(child_val, child_val1, reverse):
-            child += 1
-            child_val = child_val1
+        if child + 1 <= end:
+            child_val1: str = xs_array_get_string(lst, child + 1)
+            if _xs_string_list_compare_elem(child_val, child_val1, reverse):
+                child += 1
+                child_val = child_val1
         root_val: str = xs_array_get_string(lst, root)
         if _xs_string_list_compare_elem(root_val, child_val, reverse):
             xs_array_set_string(lst, root, child_val)
@@ -546,22 +549,22 @@ def xs_string_list_last_error() -> int32:
 def test() -> None:
     lst: int32 = xs_string_list_create(int32(20))
     xs_chat_data("arr: " + str(lst))
-    xs_string_list_append(lst, float32(1))
-    xs_string_list_append(lst, float32(2))
-    xs_string_list_append(lst, float32(3))
+    xs_string_list_append(lst, "1")
+    xs_string_list_append(lst, "2")
+    xs_string_list_append(lst, "3")
     xs_chat_data(xs_string_list_to_string(lst))
-    xs_chat_data("pop 1: " + str(xs_string_list_pop(lst)))
-    xs_chat_data("pop 2: " + str(xs_string_list_pop(lst)))
+    xs_chat_data("pop 1: " + xs_string_list_pop(lst))
+    xs_chat_data("pop 2: " + xs_string_list_pop(lst))
     xs_chat_data(xs_string_list_to_string(lst))
-    xs_chat_data("pop 3: " + str(xs_string_list_pop(lst)))
-    xs_chat_data("pop 4: " + str(xs_string_list_pop(lst)))
-    xs_string_list_insert(lst, int32(0), float32(1))
-    xs_string_list_insert(lst, int32(0), float32(2))
-    xs_string_list_insert(lst, int32(0), float32(3))
-    xs_string_list_insert(lst, int32(1), float32(4))
-    xs_string_list_insert(lst, int32(1), float32(5))
-    xs_string_list_insert(lst, int32(5), float32(6))
-    xs_string_list_insert(lst, int32(7), float32(7))
+    xs_chat_data("pop 3: " + xs_string_list_pop(lst))
+    xs_chat_data("pop 4: " + xs_string_list_pop(lst))
+    xs_string_list_insert(lst, int32(0), "1")
+    xs_string_list_insert(lst, int32(0), "2")
+    xs_string_list_insert(lst, int32(0), "3")
+    xs_string_list_insert(lst, int32(1), "4")
+    xs_string_list_insert(lst, int32(1), "5")
+    xs_string_list_insert(lst, int32(5), "6")
+    xs_string_list_insert(lst, int32(7), "7")
     xs_chat_data(xs_string_list_to_string(lst))
     xs_string_list_sort(lst, True)
     xs_chat_data(xs_string_list_to_string(lst))
