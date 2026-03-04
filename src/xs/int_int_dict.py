@@ -242,7 +242,7 @@ def xs_int_int_dict_remove(dct: int32 = int32(-1), key: int32 = int32(-1)) -> in
         size_threshold: int32 = (bucket_capacity - 1) // 2
         if size_threshold >= (bucket_size - 2) and bucket_capacity > c_int_int_dict_min_bucket_size:
             r: int32 = xs_array_resize_int(bucket, size_threshold + 1)
-            if r != 0:
+            if r != 1:
                 _int_int_dict_last_operation_status = c_int_int_dict_resize_failed_error
                 return c_int_int_dict_generic_error
         _int_int_dict_last_operation_status = c_int_int_dict_success
@@ -327,13 +327,13 @@ def xs_int_int_dict_copy(dct: int32 = int32(-1)) -> int32:
 
 
 def xs_int_int_dct_iterator_start() -> None:
-    global _int_int_dict_iterator_curr_idx, _int_int_dict_iterator_prev_key
+    global _int_int_dict_iterator_prev_idx, _int_int_dict_iterator_prev_key
     _int_int_dict_iterator_prev_idx = int32(0)
     _int_int_dict_iterator_prev_key = int32(-1)
 
 
 def xs_int_int_dct_iterator_has_next(dct: int32 = int32(-1)) -> bool:
-    global _int_int_dict_iterator_curr_idx
+    global _int_int_dict_iterator_prev_idx
     total_size: int32 = xs_array_get_int(dct, 0)
     return _int_int_dict_iterator_prev_idx < total_size
 
@@ -351,10 +351,11 @@ def _xs_int_int_dct_iterator_next(dct: int32 = int32(-1), return_key: bool = Tru
         i: int32 = int32(1)
         while i < dict_capacity and not found:
             bucket = xs_array_get_int(dct, i)
-            bucket_size = xs_array_get_int(bucket, 0)
-            if bucket >= 0 and bucket_size > 0:
-                found = True
-                b = i
+            if bucket >= 0:
+                bucket_size = xs_array_get_int(bucket, 0)
+                if bucket_size > 0:
+                    found = True
+                    b = i
             i += 1
     else:
         hash: int32 = _xs_int_int_dict_hash(_int_int_dict_iterator_prev_key, dict_capacity - 1)
@@ -377,7 +378,8 @@ def _xs_int_int_dct_iterator_next(dct: int32 = int32(-1), return_key: bool = Tru
             found = False
         else:
             bucket = xs_array_get_int(dct, k)
-            bucket_size = xs_array_get_int(bucket, 0)
+            if bucket >= 0:
+                bucket_size = xs_array_get_int(bucket, 0)
         if bucket >= 0:
             for l in i32range(idx, bucket_size, 2):
                 stored_key = xs_array_get_int(bucket, l)
