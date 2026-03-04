@@ -6,20 +6,37 @@ from xs.int_int_dict2 import *
 
 class IntIntDictTest(unittest.TestCase):
 
+    def _iter_dict(self, xs_dct: int32):
+        result = {}
+        first = True
+        key = int32(-1)
+        while xs_int_int_dict_has_next(xs_dct, first, key):
+            key = xs_int_int_dict_next_key(xs_dct, first, key)
+            first = False
+            val = xs_int_int_dict_get(xs_dct, key)
+            result[int(key)] = int(val)
+        return result
+
+    def _assert_dicts_equal(self, xs_dct: int32, dct: dict[int | int32, int | int32]):
+        self.assertEqual(len(dct), xs_int_int_dict_size(xs_dct))
+        for k, v in dct.items():
+            self.assertTrue(xs_int_int_dict_contains(xs_dct, int32(k)))
+            self.assertEqual(v, xs_int_int_dict_get(xs_dct, int32(k)))
+
     def test_xs_int_int_dict_put(self):
-        arr = xs_int_int_dict_create()
+        xs_dct = xs_int_int_dict_create()
         dct = {}
         for _ in i32range(100):
             k = random.randint(-100, 100)
             v = k * -1
-            arr_prev = xs_int_int_dict_put(arr, int32(k), int32(v))
+            xs_prev = xs_int_int_dict_put(xs_dct, int32(k), int32(v))
             if xs_int_int_dict_last_error() == c_int_int_dict_no_key_error:
-                arr_prev = None
-            d_prev = dct.get(k)
+                xs_prev = None
+            prev = dct.get(k)
             dct[k] = v
-            self.assertEqual(d_prev, arr_prev)
-            self.assertEqual(dct[k], xs_int_int_dict_get(arr, int32(k)))
-            self.assertEqual(len(dct), xs_int_int_dict_size(arr))
+            self.assertEqual(prev, xs_prev)
+            self.assertEqual(dct[k], xs_int_int_dict_get(xs_dct, int32(k)))
+            self.assertEqual(len(dct), xs_int_int_dict_size(xs_dct))
 
     def test_xs_int_int_dict(self):
         test_data = [
@@ -33,109 +50,461 @@ class IntIntDictTest(unittest.TestCase):
         ]
 
         for data in test_data:
-            arr = xs_int_int_dict(*data)
+            xs_dct = xs_int_int_dict(*data)
             for i in i32range(0, len(data), 2):
-                self.assertEqual(data[i + 1], xs_int_int_dict_get(arr, data[i]))
-            self.assertEqual(len(data) // 2, xs_int_int_dict_size(arr))
+                self.assertEqual(data[i + 1], xs_int_int_dict_get(xs_dct, data[i]))
+            self.assertEqual(len(data) // 2, xs_int_int_dict_size(xs_dct))
 
     def test_xs_int_int_dict_remove(self):
-        arr = xs_int_int_dict_create()
+        xs_dct = xs_int_int_dict_create()
         dct = {}
         for i in i32range(-100, 101):
-            xs_int_int_dict_put(arr, i, i * -1)
+            xs_int_int_dict_put(xs_dct, i, i * -1)
             dct[i] = i * -1
         for _ in i32range(0, 100):
             k = random.randint(-110, 111)
-            arr_prev = xs_int_int_dict_remove(arr, int32(k))
+            xs_prev = xs_int_int_dict_remove(xs_dct, int32(k))
             if xs_int_int_dict_last_error() == c_int_int_dict_no_key_error:
-                arr_prev = None
+                xs_prev = None
             if k in dct:
-                d_prev = dct.pop(k)
+                prev = dct.pop(k)
             else:
-                d_prev = None
-            self.assertEqual(d_prev, arr_prev)
-            for k in dct.keys():
-                self.assertEqual(dct[k], xs_int_int_dict_get(arr, k))
-                self.assertEqual(len(dct), xs_int_int_dict_size(arr))
+                prev = None
+            self.assertEqual(prev, xs_prev)
+            self._assert_dicts_equal(xs_dct, dct)
 
     def test_xs_int_int_dict_contains(self):
-        arr = xs_int_int_dict_create()
+        xs_dct = xs_int_int_dict_create()
         dct = {}
         for i in i32range(-100, 101):
-            xs_int_int_dict_put(arr, i, i * -1)
+            xs_int_int_dict_put(xs_dct, i, i * -1)
             dct[i] = i * -1
         for i in i32range(-120, 121):
-            self.assertEqual(i in dct, xs_int_int_dict_contains(arr, i))
+            self.assertEqual(i in dct, xs_int_int_dict_contains(xs_dct, i))
 
     def test_xs_int_int_dict_clear(self):
-        arr = xs_int_int_dict_create()
+        xs_dct = xs_int_int_dict_create()
         dct = {}
         for _ in i32range(100):
             k = random.randint(-100, 100)
             v = k * -1
-            xs_int_int_dict_put(arr, int32(k), int32(v))
+            xs_int_int_dict_put(xs_dct, int32(k), int32(v))
             dct[k] = v
 
-        xs_int_int_dict_clear(arr)
-        dct.clear()
-        self.assertEqual(len(dct), xs_int_int_dict_size(arr))
+        xs_int_int_dict_clear(xs_dct)
+        self._assert_dicts_equal(xs_dct, {})
 
+        dct = {}
         for _ in i32range(100):
             k = random.randint(-100, 100)
             v = k * -1
-            xs_int_int_dict_put(arr, int32(k), int32(v))
+            xs_int_int_dict_put(xs_dct, int32(k), int32(v))
             dct[k] = v
-            self.assertEqual(dct[k], xs_int_int_dict_get(arr, int32(k)))
-            self.assertEqual(len(dct), xs_int_int_dict_size(arr))
+        self._assert_dicts_equal(xs_dct, dct)
 
     def test_xs_int_int_dict_copy(self):
-        arr = xs_int_int_dict_create()
+        xs_dct = xs_int_int_dict_create()
         for _ in i32range(100):
             k = random.randint(-100, 100)
             v = k * -1
-            xs_int_int_dict_put(arr, int32(k), int32(v))
+            xs_int_int_dict_put(xs_dct, int32(k), int32(v))
 
-        arr_copy = xs_int_int_dict_copy(arr)
-        self.assertEqual(xs_int_int_dict_to_string(arr), xs_int_int_dict_to_string(arr_copy))
-        self.assertEqual(xs_int_int_dict_size(arr), xs_int_int_dict_size(arr_copy))
+        xs_dct_copy = xs_int_int_dict_copy(xs_dct)
+        self.assertEqual(xs_int_int_dict_to_string(xs_dct), xs_int_int_dict_to_string(xs_dct_copy))
+        self.assertEqual(xs_int_int_dict_size(xs_dct), xs_int_int_dict_size(xs_dct_copy))
 
-        xs_int_int_dict_put(arr, int32(1001), int32(-1001))
-        self.assertGreater(xs_int_int_dict_size(arr), xs_int_int_dict_size(arr_copy))
+        xs_int_int_dict_put(xs_dct, int32(1001), int32(-1001))
+        self.assertGreater(xs_int_int_dict_size(xs_dct), xs_int_int_dict_size(xs_dct_copy))
 
     def test_xs_int_int_next_key(self):
-        arr = xs_int_int_dict_create()
+        xs_dct = xs_int_int_dict_create()
         dct = {}
         for _ in i32range(100):
             v = random.randint(-100, 100)
             dct[v] = v * -1
-            xs_int_int_dict_put(arr, int32(v), int32(v * -1))
+            xs_int_int_dict_put(xs_dct, int32(v), int32(v * -1))
 
-        res = {}
-        first = True
-        key = -1
-        while xs_int_int_dict_has_next(arr, first, key):
-            key = xs_int_int_dict_next_key(arr, first, key)
-            first = False
-            val = xs_int_int_dict_get(arr, key)
-            res[key] = val
-
-        self.assertEqual(dct, res)
+        self.assertEqual(dct, self._iter_dict(xs_dct))
 
     def test_xs_int_int_dict_update(self):
-        arr1 = xs_int_int_dict_create()
-        arr2 = xs_int_int_dict_create()
+        xs_dct1 = xs_int_int_dict_create()
+        xs_dct2 = xs_int_int_dict_create()
         dct = {}
         for _ in i32range(100):
             v = random.randint(-100, 100)
             dct[v] = v * -1
-            xs_int_int_dict_put(arr1, int32(v), int32(v * -1))
+            xs_int_int_dict_put(xs_dct1, int32(v), int32(v * -1))
         for _ in i32range(100):
             v = random.randint(-100, 100)
             dct[v] = v * -1
-            xs_int_int_dict_put(arr2, int32(v), int32(v * -1))
+            xs_int_int_dict_put(xs_dct2, int32(v), int32(v * -1))
 
-        self.assertEqual(c_int_int_dict_success, xs_int_int_dict_update(arr1, arr2))
+        self.assertEqual(c_int_int_dict_success, xs_int_int_dict_update(xs_dct1, xs_dct2))
+        self._assert_dicts_equal(xs_dct1, dct)
 
-        self.assertEqual(len(dct), xs_int_int_dict_size(arr1))
-        for key in dct.keys():
-            self.assertEqual(dct[key], xs_int_int_dict_get(arr1, key))
+    def test_empty_dict_size(self):
+        xs_dct = xs_int_int_dict_create()
+        self.assertEqual(0, xs_int_int_dict_size(xs_dct))
+
+    def test_empty_dict_get_returns_default(self):
+        xs_dct = xs_int_int_dict_create()
+        k = random.randint(-100, 100)
+        dft = random.randint(1, 100)
+        self.assertEqual(-1, xs_int_int_dict_get(xs_dct, int32(k)))
+        self.assertEqual(c_int_int_dict_no_key_error, xs_int_int_dict_last_error())
+        self.assertEqual(dft, xs_int_int_dict_get(xs_dct, int32(k), int32(dft)))
+        self.assertEqual(c_int_int_dict_no_key_error, xs_int_int_dict_last_error())
+
+    def test_empty_dict_contains(self):
+        xs_dct = xs_int_int_dict_create()
+        for _ in range(5):
+            self.assertFalse(xs_int_int_dict_contains(xs_dct, int32(random.randint(-100, 100))))
+
+    def test_empty_dict_remove(self):
+        xs_dct = xs_int_int_dict_create()
+        xs_int_int_dict_remove(xs_dct, int32(random.randint(-100, 100)))
+        self.assertEqual(c_int_int_dict_no_key_error, xs_int_int_dict_last_error())
+        self.assertEqual(0, xs_int_int_dict_size(xs_dct))
+
+    def test_empty_dict_iterate(self):
+        xs_dct = xs_int_int_dict_create()
+        self.assertFalse(xs_int_int_dict_has_next(xs_dct, True, int32(-1)))
+        self.assertEqual({}, self._iter_dict(xs_dct))
+
+    def test_empty_dict_to_string(self):
+        xs_dct = xs_int_int_dict_create()
+        self.assertEqual("{}", xs_int_int_dict_to_string(xs_dct))
+
+    def test_empty_dict_clear(self):
+        xs_dct = xs_int_int_dict_create()
+        self.assertEqual(c_int_int_dict_success, xs_int_int_dict_clear(xs_dct))
+        self.assertEqual(0, xs_int_int_dict_size(xs_dct))
+
+    def test_empty_dict_copy(self):
+        xs_dct = xs_int_int_dict_create()
+        xs_dct_copy = xs_int_int_dict_copy(xs_dct)
+        self.assertTrue(xs_dct_copy >= 0)
+        self.assertEqual(0, xs_int_int_dict_size(xs_dct_copy))
+        self.assertEqual("{}", xs_int_int_dict_to_string(xs_dct_copy))
+
+    def test_single_element(self):
+        xs_dct = xs_int_int_dict_create()
+        k = random.randint(-100, 100)
+        v = random.randint(-100, 100)
+        xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+        self.assertEqual(1, xs_int_int_dict_size(xs_dct))
+        self.assertEqual(v, xs_int_int_dict_get(xs_dct, int32(k)))
+        self.assertTrue(xs_int_int_dict_contains(xs_dct, int32(k)))
+        self.assertEqual({k: v}, self._iter_dict(xs_dct))
+
+    def test_single_element_remove(self):
+        xs_dct = xs_int_int_dict_create()
+        k = random.randint(-100, 100)
+        v = random.randint(-100, 100)
+        xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+        prev = xs_int_int_dict_remove(xs_dct, int32(k))
+        self.assertEqual(c_int_int_dict_success, xs_int_int_dict_last_error())
+        self.assertEqual(v, prev)
+        self.assertEqual(0, xs_int_int_dict_size(xs_dct))
+        self.assertFalse(xs_int_int_dict_contains(xs_dct, int32(k)))
+
+    def test_key_zero(self):
+        xs_dct = xs_int_int_dict_create()
+        xs_int_int_dict_put(xs_dct, int32(0), int32(42))
+        self.assertEqual(1, xs_int_int_dict_size(xs_dct))
+        self.assertEqual(42, xs_int_int_dict_get(xs_dct, int32(0)))
+        self.assertTrue(xs_int_int_dict_contains(xs_dct, int32(0)))
+
+    def test_value_zero(self):
+        xs_dct = xs_int_int_dict_create()
+        xs_int_int_dict_put(xs_dct, int32(7), int32(0))
+        self.assertEqual(0, xs_int_int_dict_get(xs_dct, int32(7)))
+        self.assertEqual(c_int_int_dict_success, xs_int_int_dict_last_error())
+
+    def test_negative_keys(self):
+        xs_dct = xs_int_int_dict_create()
+        dct = {}
+        for k in range(-50, 0):
+            v = k * 3
+            xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+            dct[k] = v
+        self._assert_dicts_equal(xs_dct, dct)
+
+    def test_overwrite_same_key_repeatedly(self):
+        xs_dct = xs_int_int_dict_create()
+        k = random.randint(-100, 100)
+        for v in range(100):
+            prev = xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+            if v > 0:
+                self.assertEqual(c_int_int_dict_success, xs_int_int_dict_last_error())
+                self.assertEqual(v - 1, prev)
+        self.assertEqual(1, xs_int_int_dict_size(xs_dct))
+        self.assertEqual(99, xs_int_int_dict_get(xs_dct, int32(k)))
+
+    def test_get_custom_default(self):
+        xs_dct = xs_int_int_dict_create()
+        k = random.randint(-100, 100)
+        v = random.randint(-100, 100)
+        dft = random.randint(101, 200)
+        xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+        self.assertEqual(v, xs_int_int_dict_get(xs_dct, int32(k), int32(dft)))
+        self.assertEqual(dft, xs_int_int_dict_get(xs_dct, int32(k + 1000), int32(dft)))
+
+    def test_remove_all_elements_one_by_one(self):
+        xs_dct = xs_int_int_dict_create()
+        keys = list(range(50))
+        for k in keys:
+            xs_int_int_dict_put(xs_dct, int32(k), int32(k * 10))
+        random.shuffle(keys)
+        for i, k in enumerate(keys):
+            prev = xs_int_int_dict_remove(xs_dct, int32(k))
+            self.assertEqual(c_int_int_dict_success, xs_int_int_dict_last_error())
+            self.assertEqual(k * 10, prev)
+            self.assertEqual(len(keys) - i - 1, xs_int_int_dict_size(xs_dct))
+            self.assertFalse(xs_int_int_dict_contains(xs_dct, int32(k)))
+        self.assertEqual(0, xs_int_int_dict_size(xs_dct))
+
+    def test_remove_nonexistent_key(self):
+        xs_dct = xs_int_int_dict_create()
+        k = random.randint(-100, 100)
+        v = random.randint(-100, 100)
+        xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+        xs_int_int_dict_remove(xs_dct, int32(k + 1000))
+        self.assertEqual(c_int_int_dict_no_key_error, xs_int_int_dict_last_error())
+        self.assertEqual(1, xs_int_int_dict_size(xs_dct))
+        self.assertEqual(v, xs_int_int_dict_get(xs_dct, int32(k)))
+
+    def test_contains_after_remove(self):
+        xs_dct = xs_int_int_dict_create()
+        dct = {}
+        for _ in range(20):
+            k = random.randint(-100, 100)
+            dct[k] = k
+            xs_int_int_dict_put(xs_dct, int32(k), int32(k))
+        removed_key = random.choice(list(dct.keys()))
+        del dct[removed_key]
+        xs_int_int_dict_remove(xs_dct, int32(removed_key))
+        for k in dct:
+            self.assertTrue(xs_int_int_dict_contains(xs_dct, int32(k)))
+        self.assertFalse(xs_int_int_dict_contains(xs_dct, int32(removed_key)))
+
+    def test_put_after_remove_same_key(self):
+        xs_dct = xs_int_int_dict_create()
+        k = random.randint(-100, 100)
+        v1 = random.randint(-100, 100)
+        v2 = random.randint(-100, 100)
+        xs_int_int_dict_put(xs_dct, int32(k), int32(v1))
+        xs_int_int_dict_remove(xs_dct, int32(k))
+        self.assertFalse(xs_int_int_dict_contains(xs_dct, int32(k)))
+        xs_int_int_dict_put(xs_dct, int32(k), int32(v2))
+        self.assertEqual(v2, xs_int_int_dict_get(xs_dct, int32(k)))
+        self.assertEqual(1, xs_int_int_dict_size(xs_dct))
+
+    def test_many_inserts_triggers_rehash(self):
+        xs_dct = xs_int_int_dict_create()
+        dct = {}
+        for _ in range(200):
+            k = random.randint(-500, 500)
+            v = random.randint(-500, 500)
+            xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+            dct[k] = v
+        self._assert_dicts_equal(xs_dct, dct)
+
+    def test_rehash_preserves_all_entries(self):
+        xs_dct = xs_int_int_dict_create()
+        dct = {}
+        for _ in range(200):
+            k = random.randint(-500, 500)
+            v = random.randint(-500, 500)
+            xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+            dct[k] = v
+        self._assert_dicts_equal(xs_dct, dct)
+        self.assertEqual(dct, self._iter_dict(xs_dct))
+
+    def test_copy_deep_independence(self):
+        xs_dct = xs_int_int_dict_create()
+        dct = {}
+        for _ in range(20):
+            k = random.randint(-100, 100)
+            v = random.randint(-100, 100)
+            xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+            dct[k] = v
+        xs_dct_copy = xs_int_int_dict_copy(xs_dct)
+
+        new_k1 = random.randint(500, 600)
+        xs_int_int_dict_put(xs_dct, int32(new_k1), int32(1))
+        self.assertFalse(xs_int_int_dict_contains(xs_dct_copy, int32(new_k1)))
+
+        new_k2 = random.randint(700, 800)
+        xs_int_int_dict_put(xs_dct_copy, int32(new_k2), int32(2))
+        self.assertFalse(xs_int_int_dict_contains(xs_dct, int32(new_k2)))
+
+        existing_k = random.choice(list(dct.keys()))
+        new_v = random.randint(900, 999)
+        xs_int_int_dict_put(xs_dct, int32(existing_k), int32(new_v))
+        self.assertEqual(dct[existing_k], xs_int_int_dict_get(xs_dct_copy, int32(existing_k)))
+
+    def test_copy_preserves_all_entries(self):
+        xs_dct = xs_int_int_dict_create()
+        dct = {}
+        for _ in range(100):
+            k = random.randint(-100, 100)
+            v = random.randint(-100, 100)
+            xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+            dct[k] = v
+        xs_dct_copy = xs_int_int_dict_copy(xs_dct)
+        self._assert_dicts_equal(xs_dct_copy, dct)
+
+    def test_clear_then_reuse_heavily(self):
+        xs_dct = xs_int_int_dict_create()
+        for _ in range(3):
+            dct = {}
+            for _ in range(80):
+                k = random.randint(-100, 100)
+                v = random.randint(-100, 100)
+                xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+                dct[k] = v
+            self._assert_dicts_equal(xs_dct, dct)
+            xs_int_int_dict_clear(xs_dct)
+            self.assertEqual(0, xs_int_int_dict_size(xs_dct))
+
+    def test_clear_all_contains_false(self):
+        xs_dct = xs_int_int_dict_create()
+        keys = set()
+        for _ in range(50):
+            k = random.randint(-100, 100)
+            keys.add(k)
+            xs_int_int_dict_put(xs_dct, int32(k), int32(random.randint(-100, 100)))
+        xs_int_int_dict_clear(xs_dct)
+        for k in keys:
+            self.assertFalse(xs_int_int_dict_contains(xs_dct, int32(k)))
+
+    def test_update_empty_into_nonempty(self):
+        xs_dct1 = xs_int_int_dict_create()
+        dct = {}
+        for _ in range(20):
+            k = random.randint(-100, 100)
+            v = random.randint(-100, 100)
+            xs_int_int_dict_put(xs_dct1, int32(k), int32(v))
+            dct[k] = v
+        xs_dct2 = xs_int_int_dict_create()
+        self.assertEqual(c_int_int_dict_success, xs_int_int_dict_update(xs_dct1, xs_dct2))
+        self._assert_dicts_equal(xs_dct1, dct)
+
+    def test_update_nonempty_into_empty(self):
+        xs_dct1 = xs_int_int_dict_create()
+        xs_dct2 = xs_int_int_dict_create()
+        dct = {}
+        for _ in range(20):
+            k = random.randint(-100, 100)
+            v = random.randint(-100, 100)
+            xs_int_int_dict_put(xs_dct2, int32(k), int32(v))
+            dct[k] = v
+        self.assertEqual(c_int_int_dict_success, xs_int_int_dict_update(xs_dct1, xs_dct2))
+        self._assert_dicts_equal(xs_dct1, dct)
+
+    def test_update_overlapping_keys(self):
+        xs_dct1 = xs_int_int_dict_create()
+        xs_dct2 = xs_int_int_dict_create()
+        for k in range(10):
+            xs_int_int_dict_put(xs_dct1, int32(k), int32(100))
+        for k in range(5, 15):
+            xs_int_int_dict_put(xs_dct2, int32(k), int32(200))
+        self.assertEqual(c_int_int_dict_success, xs_int_int_dict_update(xs_dct1, xs_dct2))
+        expected = {k: 100 for k in range(5)}
+        expected.update({k: 200 for k in range(5, 15)})
+        self._assert_dicts_equal(xs_dct1, expected)
+
+    def test_iterate_single_element(self):
+        xs_dct = xs_int_int_dict_create()
+        k = random.randint(-100, 100)
+        v = random.randint(-100, 100)
+        xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+        self.assertEqual({k: v}, self._iter_dict(xs_dct))
+
+    def test_iterate_after_removals(self):
+        xs_dct = xs_int_int_dict_create()
+        dct = {}
+        for _ in range(50):
+            k = random.randint(-100, 100)
+            v = random.randint(-100, 100)
+            xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+            dct[k] = v
+        keys_to_remove = random.sample(list(dct.keys()), len(dct) // 3)
+        for k in keys_to_remove:
+            xs_int_int_dict_remove(xs_dct, int32(k))
+            del dct[k]
+        self.assertEqual(dct, self._iter_dict(xs_dct))
+
+    def test_large_values(self):
+        xs_dct = xs_int_int_dict_create()
+        large_pos = int32(2147483647)
+        large_neg = int32(-2147483648)
+        xs_int_int_dict_put(xs_dct, int32(1), large_pos)
+        xs_int_int_dict_put(xs_dct, int32(2), large_neg)
+        xs_int_int_dict_put(xs_dct, large_pos, int32(1))
+        xs_int_int_dict_put(xs_dct, large_neg, int32(2))
+        self.assertEqual(large_pos, xs_int_int_dict_get(xs_dct, int32(1)))
+        self.assertEqual(large_neg, xs_int_int_dict_get(xs_dct, int32(2)))
+        self.assertEqual(1, xs_int_int_dict_get(xs_dct, large_pos))
+        self.assertEqual(2, xs_int_int_dict_get(xs_dct, large_neg))
+
+    def test_to_string_single(self):
+        xs_dct = xs_int_int_dict_create()
+        k = random.randint(-100, 100)
+        v = random.randint(-100, 100)
+        xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+        s = xs_int_int_dict_to_string(xs_dct)
+        self.assertEqual(f"{{{k}: {v}}}", s)
+
+    def test_to_string_multiple(self):
+        xs_dct = xs_int_int_dict_create()
+        dct = {}
+        for _ in range(10):
+            k = random.randint(-100, 100)
+            v = random.randint(-100, 100)
+            xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+            dct[k] = v
+        s = xs_int_int_dict_to_string(xs_dct)
+        for k, v in dct.items():
+            self.assertIn(f"{k}: {v}", s)
+
+    def test_last_error_after_successful_get(self):
+        xs_dct = xs_int_int_dict_create()
+        k = random.randint(-100, 100)
+        xs_int_int_dict_put(xs_dct, int32(k), int32(random.randint(-100, 100)))
+        xs_int_int_dict_get(xs_dct, int32(k))
+        self.assertEqual(c_int_int_dict_success, xs_int_int_dict_last_error())
+
+    def test_last_error_after_failed_get(self):
+        xs_dct = xs_int_int_dict_create()
+        xs_int_int_dict_get(xs_dct, int32(random.randint(-100, 100)))
+        self.assertEqual(c_int_int_dict_no_key_error, xs_int_int_dict_last_error())
+
+    def test_last_error_after_new_put(self):
+        xs_dct = xs_int_int_dict_create()
+        xs_int_int_dict_put(xs_dct, int32(random.randint(-100, 100)), int32(random.randint(-100, 100)))
+        self.assertEqual(c_int_int_dict_no_key_error, xs_int_int_dict_last_error())
+
+    def test_last_error_after_overwrite_put(self):
+        xs_dct = xs_int_int_dict_create()
+        k = random.randint(-100, 100)
+        xs_int_int_dict_put(xs_dct, int32(k), int32(random.randint(-100, 100)))
+        xs_int_int_dict_put(xs_dct, int32(k), int32(random.randint(-100, 100)))
+        self.assertEqual(c_int_int_dict_success, xs_int_int_dict_last_error())
+
+    def test_stress_put_remove_cycle(self):
+        xs_dct = xs_int_int_dict_create()
+        dct = {}
+        for _ in range(500):
+            op = random.randint(0, 2)
+            k = random.randint(-50, 50)
+            if op <= 1:
+                v = random.randint(-1000, 1000)
+                xs_int_int_dict_put(xs_dct, int32(k), int32(v))
+                dct[k] = v
+            else:
+                xs_int_int_dict_remove(xs_dct, int32(k))
+                dct.pop(k, None)
+        self._assert_dicts_equal(xs_dct, dct)
+        self.assertEqual(dct, self._iter_dict(xs_dct))

@@ -200,13 +200,6 @@ def xs_int_int_dict_put(dct: int32 = int32(-1), key: int32 = int32(-1), val: int
 
 def _xs_int_int_dict_clear_arrays(dct: int32 = int32(-1), capacity: int32 = int32(-1),
                                   new_capacity: int32 = int32(-1)) -> None:
-    for i in i32range(1, capacity, 3):
-        bucket_type: int32 = xs_array_get_int(dct, i)
-        if bucket_type == 1:
-            xs_array_set_int(dct, i, 0)
-        elif bucket_type == 2:
-            xs_array_set_int(dct, i + 2, 0)
-
     for j in i32range(capacity, new_capacity, 3):
         xs_array_set_int(dct, j, 0)
 
@@ -306,7 +299,7 @@ def xs_int_int_dict_remove(dct: int32 = int32(-1), key: int32 = int32(-1)) -> in
             elif stored_key == key:
                 found = True
                 prev_value = xs_array_get_int(bucket_arr, i + 1)
-                xs_array_set_int(bucket_arr, hash + 2, bucket_size - 2)
+                xs_array_set_int(dct, hash + 2, bucket_size - 2)
                 xs_array_set_int(dct, 0, size - 1)
         if found:
             _int_int_dict_last_operation_status = c_int_int_dict_success
@@ -326,9 +319,10 @@ def xs_int_int_dict_contains(dct: int32 = int32(-1), key: int32 = int32(-1)) -> 
     if bucket_type == 1:
         return xs_array_get_int(dct, hash + 1) == key
     if bucket_type == 2:
+        bucket_arr: int32 = xs_array_get_int(dct, hash + 1)
         bucket_size: int32 = xs_array_get_int(dct, hash + 2)
         for j in i32range(0, bucket_size, 2):
-            if key == xs_array_get_int(dct, j):
+            if key == xs_array_get_int(bucket_arr, j):
                 return True
     return False
 
@@ -348,7 +342,7 @@ def xs_int_int_dict_clear(dct: int32 = int32(-1)) -> int32:
             bucket_arr: int32 = xs_array_get_int(dct, i + 1)
             bucket_capacity: int32 = xs_array_get_size(bucket_arr)
             if bucket_capacity > c_int_int_dict_min_bucket_size:
-                r1: int32 = xs_array_resize_int(bucket_type, c_int_int_dict_min_bucket_size)
+                r1: int32 = xs_array_resize_int(bucket_arr, c_int_int_dict_min_bucket_size)
                 if r1 != 1:
                     return c_int_int_dict_generic_error
     xs_array_set_int(dct, 0, 0)
