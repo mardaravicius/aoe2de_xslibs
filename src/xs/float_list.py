@@ -142,9 +142,11 @@ def xs_float_list_from_repeated_list(lst: int32 = int32(-1), times: int32 = int3
     if times < 0:
         return c_float_list_generic_error
     size: int32 = xs_float_list_size(lst)
+    if times > 0 and size > (c_float_list_max_capacity // times):
+        return c_float_list_max_capacity_error
     new_capacity: int32 = (size * times) + 1
     if new_capacity > c_float_list_max_capacity:
-        return c_float_list_generic_error
+        return c_float_list_max_capacity_error
     new_lst: int32 = xs_array_create_float(new_capacity)
     if new_lst < 0:
         return c_float_list_generic_error
@@ -200,7 +202,7 @@ def xs_float_list_set(lst: int32 = int32(-1), idx: int32 = int32(-1), value: flo
     return c_float_list_success
 
 
-def _xs_float_list_extend_int_array(lst: int32 = int32(-1), capacity: int32 = int32(0)) -> int32:
+def _xs_float_list_extend_float_array(lst: int32 = int32(-1), capacity: int32 = int32(0)) -> int32:
     if capacity == c_float_list_max_capacity:
         return c_float_list_max_capacity_error
     new_capacity: int32 = capacity * 2
@@ -212,7 +214,7 @@ def _xs_float_list_extend_int_array(lst: int32 = int32(-1), capacity: int32 = in
     return c_float_list_success
 
 
-def _xs_float_list_shrink_int_array(lst: int32 = int32(-1), size: int32 = int32(0), capacity: int32 = int32(0)) -> int32:
+def _xs_float_list_shrink_float_array(lst: int32 = int32(-1), size: int32 = int32(0), capacity: int32 = int32(0)) -> int32:
     if size <= (capacity // 2):
         r: int32 = xs_array_resize_float(lst, capacity // 2)
         if r != 1:
@@ -224,8 +226,8 @@ def xs_float_list_append(lst: int32 = int32(-1), value: float32 = float32(0)) ->
     capacity: int32 = xs_array_get_size(lst)
     size: int32 = xs_float_list_size(lst)
     next_idx: int32 = size + 1
-    if capacity == next_idx:
-        r: int32 = _xs_float_list_extend_int_array(lst, capacity)
+    if capacity <= next_idx:
+        r: int32 = _xs_float_list_extend_float_array(lst, capacity)
         if r != c_float_list_success:
             return r
     xs_array_set_float(lst, next_idx, value)
@@ -240,7 +242,7 @@ def xs_float_list_insert(lst: int32 = int32(-1), idx: int32 = int32(-1), value: 
         return c_float_list_index_out_of_range_error
     new_size: int32 = size + 1
     if capacity == new_size:
-        r: int32 = _xs_float_list_extend_int_array(lst, capacity)
+        r: int32 = _xs_float_list_extend_float_array(lst, capacity)
         if r != c_float_list_success:
             return r
     for i in i32range(size, idx, -1):
@@ -263,7 +265,7 @@ def xs_float_list_pop(lst: int32 = int32(-1), idx: int32 = c_float_list_max_capa
     removed_elem: float32 = xs_array_get_float(lst, idx + 1)
     for i in i32range(idx + 2, size + 1):
         xs_array_set_float(lst, i - 1, xs_array_get_float(lst, i))
-    r: int32 = _xs_float_list_shrink_int_array(lst, size, capacity)
+    r: int32 = _xs_float_list_shrink_float_array(lst, size, capacity)
     if r != c_float_list_success:
         _float_list_last_operation_status = r
         return c_float_list_generic_error_float
@@ -286,7 +288,7 @@ def xs_float_list_remove(lst: int32 = int32(-1), value: float32 = float32(-1)) -
         return c_float_list_generic_error
     for j in i32range(found_idx + 1, size + 1):
         xs_array_set_float(lst, j - 1, xs_array_get_float(lst, j))
-    r: int32 = _xs_float_list_shrink_int_array(lst, size, capacity)
+    r: int32 = _xs_float_list_shrink_float_array(lst, size, capacity)
     if r != c_float_list_success:
         return r
     _xs_float_list_set_size(lst, size - 1)
@@ -345,7 +347,6 @@ def _xs_float_list_sift_down(lst: int32 = int32(-1), start: int32 = int32(-1), e
 
 
 def xs_float_list_sort(lst: int32 = int32(-1), reverse: bool = False) -> None:
-    global _float_list_last_operation_status
     size: int32 = xs_float_list_size(lst)
     for start in i32range(size // 2, 0, -1):
         _xs_float_list_sift_down(lst, start, size, reverse)
@@ -570,8 +571,8 @@ def float_list(include_test: bool) -> tuple[str, str]:
         xs_float_list_use_array_as_source,
         xs_float_list_get,
         xs_float_list_set,
-        _xs_float_list_extend_int_array,
-        _xs_float_list_shrink_int_array,
+        _xs_float_list_extend_float_array,
+        _xs_float_list_shrink_float_array,
         xs_float_list_to_string,
         xs_float_list_append,
         xs_float_list_pop,
@@ -587,6 +588,7 @@ def float_list(include_test: bool) -> tuple[str, str]:
         xs_float_list_extend,
         xs_float_list_extend_with_array,
         xs_float_list_compare,
+        xs_float_list_reverse,
         xs_float_list_count,
         xs_float_list_sum,
         xs_float_list_min,

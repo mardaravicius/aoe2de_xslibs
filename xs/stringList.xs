@@ -123,9 +123,12 @@ int xsStringListFromRepeatedList(int lst = -1, int times = 0) {
         return (cStringListGenericError);
     }
     int size = xsArrayGetInt(lst, 0);
+    if ((times > 0) && (size > (cStringListMaxCapacity / times))) {
+        return (cStringListMaxCapacityError);
+    }
     int newCapacity = size * times;
     if (newCapacity > cStringListMaxCapacity) {
-        return (cStringListGenericError);
+        return (cStringListMaxCapacityError);
     }
     int newStrLst = xsArrayCreateString(newCapacity);
     int newLst = xsArrayCreateInt(2, newCapacity);
@@ -245,7 +248,7 @@ int xsStringListAppend(int lst = -1, string value = "") {
     int strLst = xsArrayGetInt(lst, 1);
     int capacity = xsArrayGetSize(strLst);
     int size = xsArrayGetInt(lst, 0);
-    if (capacity == size) {
+    if (capacity <= size) {
         int r = _xsStringListExtendStringArray(strLst, capacity);
         if (r != cStringListSuccess) {
             return (r);
@@ -527,6 +530,18 @@ int xsStringListCompare(int lst1 = -1, int lst2 = -1) {
         return (1);
     }
     return (0);
+}
+
+void xsStringListReverse(int lst = -1) {
+    int size = xsArrayGetInt(lst, 0);
+    int strList = xsArrayGetInt(lst, 1);
+    int mid = size / 2;
+    for (i = 0; < mid) {
+        string temp = xsArrayGetString(strList, i);
+        int backI = (size - i) - 1;
+        xsArraySetString(strList, i, xsArrayGetString(strList, backI));
+        xsArraySetString(strList, backI, temp);
+    }
 }
 
 int xsStringListCount(int lst = -1, string value = "") {

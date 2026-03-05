@@ -165,6 +165,9 @@ int xsIntListFromRepeatedList(int lst = -1, int times = 0) {
         return (cIntListGenericError);
     }
     int size = xsArrayGetInt(lst, 0);
+    if ((times > 0) && (size > (cIntListMaxCapacity / times))) {
+        return (cIntListMaxCapacityError);
+    }
     int newCapacity = (size * times) + 1;
     if (newCapacity > cIntListMaxCapacity) {
         return (cIntListGenericError);
@@ -279,7 +282,7 @@ int xsIntListAppend(int lst = -1, int value = 0) {
     int capacity = xsArrayGetSize(lst);
     int size = xsArrayGetInt(lst, 0);
     int nextIdx = size + 1;
-    if (capacity == nextIdx) {
+    if (capacity <= nextIdx) {
         int r = _xsIntListExtendIntArray(lst, capacity);
         if (r != cIntListSuccess) {
             return (r);
@@ -547,6 +550,17 @@ int xsIntListCompare(int lst1 = -1, int lst2 = -1) {
         return (1);
     }
     return (0);
+}
+
+void xsIntListReverse(int lst = -1) {
+    int size = xsArrayGetInt(lst, 0);
+    int mid = (size + 2) / 2;
+    for (i = 1; < mid) {
+        int temp = xsArrayGetInt(lst, i);
+        int backI = (size - i) + 1;
+        xsArraySetInt(lst, i, xsArrayGetInt(lst, backI));
+        xsArraySetInt(lst, backI, temp);
+    }
 }
 
 int xsIntListCount(int lst = -1, int value = -1) {

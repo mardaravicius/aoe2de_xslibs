@@ -137,9 +137,11 @@ def xs_string_list_from_repeated_list(lst: int32 = int32(-1), times: int32 = int
     if times < 0:
         return c_string_list_generic_error
     size: int32 = xs_array_get_int(lst, 0)
+    if times > 0 and size > (c_string_list_max_capacity // times):
+        return c_string_list_max_capacity_error
     new_capacity: int32 = (size * times)
     if new_capacity > c_string_list_max_capacity:
-        return c_string_list_generic_error
+        return c_string_list_max_capacity_error
     new_str_lst: int32 = xs_array_create_string(new_capacity)
     new_lst: int32 = xs_array_create_int(2, new_capacity)
     if new_str_lst < 0 or new_lst < 0:
@@ -225,7 +227,7 @@ def xs_string_list_append(lst: int32 = int32(-1), value: str = "") -> int32:
     str_lst: int32 = xs_array_get_int(lst, 1)
     capacity: int32 = xs_array_get_size(str_lst)
     size: int32 = xs_array_get_int(lst, 0)
-    if capacity == size:
+    if capacity <= size:
         r: int32 = _xs_string_list_extend_string_array(str_lst, capacity)
         if r != c_string_list_success:
             return r
@@ -353,7 +355,6 @@ def _xs_string_list_sift_down(lst: int32 = int32(-1), start: int32 = int32(-1), 
 
 
 def xs_string_list_sort(lst: int32 = int32(-1), reverse: bool = False) -> None:
-    global _string_list_last_operation_status
     size: int32 = xs_array_get_int(lst, 0)
     str_lst: int32 = xs_array_get_int(lst, 1)
     for start in i32range(size // 2 - 1, -1, -1):
@@ -606,6 +607,7 @@ def string_list(include_test: bool) -> tuple[str, str]:
         xs_string_list_extend,
         xs_string_list_extend_with_array,
         xs_string_list_compare,
+        xs_string_list_reverse,
         xs_string_list_count,
         xs_string_list_min,
         xs_string_list_max,

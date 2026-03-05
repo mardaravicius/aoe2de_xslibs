@@ -64,6 +64,11 @@ class FloatListTest(unittest.TestCase):
         self.assertGreaterEqual(result, 0)
         self.assertEqual(0, xs_float_list_size(result))
 
+    def test_xs_float_list_from_repeated_list_overflow(self):
+        xs_lst = xs_float_list(float32(1.1), float32(2.2), float32(3.3))
+        result = xs_float_list_from_repeated_list(xs_lst, c_float_list_max_capacity)
+        self.assertEqual(c_float_list_max_capacity_error, result)
+
     def test_xs_float_list_from_array(self):
         xs_arr = xs_array_create_float(10, 5.5)
         xs_lst = xs_float_list_from_array(xs_arr)

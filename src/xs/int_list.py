@@ -170,6 +170,8 @@ def xs_int_list_from_repeated_list(lst: int32 = int32(-1), times: int32 = int32(
     if times < 0:
         return c_int_list_generic_error
     size: int32 = xs_array_get_int(lst, 0)
+    if times > 0 and size > (c_int_list_max_capacity // times):
+        return c_int_list_max_capacity_error
     new_capacity: int32 = (size * times) + 1
     if new_capacity > c_int_list_max_capacity:
         return c_int_list_generic_error
@@ -256,7 +258,7 @@ def xs_int_list_append(lst: int32 = int32(-1), value: int32 = int32(0)) -> int32
     capacity: int32 = xs_array_get_size(lst)
     size: int32 = xs_array_get_int(lst, 0)
     next_idx: int32 = size + 1
-    if capacity == next_idx:
+    if capacity <= next_idx:
         r: int32 = _xs_int_list_extend_int_array(lst, capacity)
         if r != c_int_list_success:
             return r
@@ -377,7 +379,6 @@ def _xs_int_list_sift_down(lst: int32 = int32(-1), start: int32 = int32(-1), end
 
 
 def xs_int_list_sort(lst: int32 = int32(-1), reverse: bool = False) -> None:
-    global _int_list_last_operation_status
     size: int32 = xs_array_get_int(lst, 0)
     for start in i32range(size // 2, 0, -1):
         _xs_int_list_sift_down(lst, start, size, reverse)
@@ -619,6 +620,7 @@ def int_list(include_test: bool) -> tuple[str, str]:
         xs_int_list_extend,
         xs_int_list_extend_with_array,
         xs_int_list_compare,
+        xs_int_list_reverse,
         xs_int_list_count,
         xs_int_list_sum,
         xs_int_list_min,

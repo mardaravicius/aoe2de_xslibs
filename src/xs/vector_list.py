@@ -143,9 +143,11 @@ def xs_vector_list_from_repeated_list(lst: int32 = int32(-1), times: int32 = int
     if times < 0:
         return c_vector_list_generic_error
     size: int32 = xs_vector_list_size(lst)
+    if times > 0 and size > (c_vector_list_max_capacity // times):
+        return c_vector_list_max_capacity_error
     new_capacity: int32 = (size * times) + 1
     if new_capacity > c_vector_list_max_capacity:
-        return c_vector_list_generic_error
+        return c_vector_list_max_capacity_error
     new_lst: int32 = xs_array_create_vector(new_capacity)
     if new_lst < 0:
         return c_vector_list_generic_error
@@ -202,7 +204,7 @@ def xs_vector_list_set(lst: int32 = int32(-1), idx: int32 = int32(-1),
     return c_vector_list_success
 
 
-def _xs_vector_list_extend_int_array(lst: int32 = int32(-1), capacity: int32 = int32(0)) -> int32:
+def _xs_vector_list_extend_vector_array(lst: int32 = int32(-1), capacity: int32 = int32(0)) -> int32:
     if capacity == c_vector_list_max_capacity:
         return c_vector_list_max_capacity_error
     new_capacity: int32 = capacity * 2
@@ -214,8 +216,8 @@ def _xs_vector_list_extend_int_array(lst: int32 = int32(-1), capacity: int32 = i
     return c_vector_list_success
 
 
-def _xs_vector_list_shrink_int_array(lst: int32 = int32(-1), size: int32 = int32(0),
-                                     capacity: int32 = int32(0)) -> int32:
+def _xs_vector_list_shrink_vector_array(lst: int32 = int32(-1), size: int32 = int32(0),
+                                        capacity: int32 = int32(0)) -> int32:
     if size <= (capacity // 2):
         r: int32 = xs_array_resize_vector(lst, capacity // 2)
         if r != 1:
@@ -227,8 +229,8 @@ def xs_vector_list_append(lst: int32 = int32(-1), value: XsVector = vector(0.0, 
     capacity: int32 = xs_array_get_size(lst)
     size: int32 = xs_vector_list_size(lst)
     next_idx: int32 = size + 1
-    if capacity == next_idx:
-        r: int32 = _xs_vector_list_extend_int_array(lst, capacity)
+    if capacity <= next_idx:
+        r: int32 = _xs_vector_list_extend_vector_array(lst, capacity)
         if r != c_vector_list_success:
             return r
     xs_array_set_vector(lst, next_idx, value)
@@ -244,7 +246,7 @@ def xs_vector_list_insert(lst: int32 = int32(-1), idx: int32 = int32(-1),
         return c_vector_list_index_out_of_range_error
     new_size: int32 = size + 1
     if capacity == new_size:
-        r: int32 = _xs_vector_list_extend_int_array(lst, capacity)
+        r: int32 = _xs_vector_list_extend_vector_array(lst, capacity)
         if r != c_vector_list_success:
             return r
     for i in i32range(size, idx, -1):
@@ -267,7 +269,7 @@ def xs_vector_list_pop(lst: int32 = int32(-1), idx: int32 = c_vector_list_max_ca
     removed_elem: XsVector = xs_array_get_vector(lst, idx + 1)
     for i in i32range(idx + 2, size + 1):
         xs_array_set_vector(lst, i - 1, xs_array_get_vector(lst, i))
-    r: int32 = _xs_vector_list_shrink_int_array(lst, size, capacity)
+    r: int32 = _xs_vector_list_shrink_vector_array(lst, size, capacity)
     if r != c_vector_list_success:
         _vector_list_last_operation_status = r
         return c_vector_list_generic_error_vector
@@ -290,7 +292,7 @@ def xs_vector_list_remove(lst: int32 = int32(-1), value: XsVector = vector(-1.0,
         return c_vector_list_generic_error
     for j in i32range(found_idx + 1, size + 1):
         xs_array_set_vector(lst, j - 1, xs_array_get_vector(lst, j))
-    r: int32 = _xs_vector_list_shrink_int_array(lst, size, capacity)
+    r: int32 = _xs_vector_list_shrink_vector_array(lst, size, capacity)
     if r != c_vector_list_success:
         return r
     _xs_vector_list_set_size(lst, size - 1)
@@ -471,8 +473,8 @@ def vector_list(include_test: bool) -> tuple[str, str]:
         xs_vector_list_use_array_as_source,
         xs_vector_list_get,
         xs_vector_list_set,
-        _xs_vector_list_extend_int_array,
-        _xs_vector_list_shrink_int_array,
+        _xs_vector_list_extend_vector_array,
+        _xs_vector_list_shrink_vector_array,
         xs_vector_list_to_string,
         xs_vector_list_append,
         xs_vector_list_pop,
@@ -484,6 +486,7 @@ def vector_list(include_test: bool) -> tuple[str, str]:
         xs_vector_list_copy,
         xs_vector_list_extend,
         xs_vector_list_extend_with_array,
+        xs_vector_list_reverse,
         xs_vector_list_count,
         xs_vector_list_last_error,
         indent=True,

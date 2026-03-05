@@ -64,6 +64,11 @@ class StringListTest(unittest.TestCase):
         self.assertGreaterEqual(result, 0)
         self.assertEqual(0, xs_string_list_size(result))
 
+    def test_xs_string_list_from_repeated_list_overflow(self):
+        xs_lst = xs_string_list("aa", "bb", "cc")
+        result = xs_string_list_from_repeated_list(xs_lst, c_string_list_max_capacity)
+        self.assertEqual(c_string_list_max_capacity_error, result)
+
     def test_xs_string_list_from_array(self):
         xs_arr = xs_array_create_string(10, "aaa")
         xs_lst = xs_string_list_from_array(xs_arr)

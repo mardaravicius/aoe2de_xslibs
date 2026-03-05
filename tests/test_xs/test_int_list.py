@@ -100,6 +100,11 @@ class IntListTest(unittest.TestCase):
         self.assertGreaterEqual(result, 0)
         self.assertEqual(0, xs_int_list_size(result))
 
+    def test_xs_int_list_from_repeated_list_overflow(self):
+        xs_lst = xs_int_list(int32(1), int32(2), int32(3))
+        result = xs_int_list_from_repeated_list(xs_lst, c_int_list_max_capacity)
+        self.assertEqual(c_int_list_max_capacity_error, result)
+
     def test_xs_int_list_from_array(self):
         xs_arr = xs_array_create_int(10, 5)
         lst = [5] * 10
