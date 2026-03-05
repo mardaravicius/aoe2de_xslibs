@@ -246,7 +246,7 @@ def _xs_string_list_extend_string_array(lst: int32 = int32(-1), capacity: int32 
     new_capacity: int32 = capacity * 2
     if new_capacity > c_string_list_max_capacity:
         new_capacity = c_string_list_max_capacity
-    if new_capacity == 0:
+    elif new_capacity == 0:
         new_capacity = int32(8)
     r: int32 = xs_array_resize_string(lst, new_capacity)
     if r != 1:
@@ -300,7 +300,7 @@ def xs_string_list_insert(lst: int32 = int32(-1), idx: int32 = int32(-1), value:
         r: int32 = _xs_string_list_extend_string_array(str_lst, capacity)
         if r != c_string_list_success:
             return r
-    for i in i32range(new_size, idx, -1):
+    for i in i32range(size, idx, -1):
         xs_array_set_string(str_lst, i, xs_array_get_string(str_lst, i - 1))
     xs_array_set_string(str_lst, idx, value)
     xs_array_set_int(lst, 0, new_size)

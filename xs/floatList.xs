@@ -244,6 +244,8 @@ int _xsFloatListExtendFloatArray(int lst = -1, int capacity = 0) {
     int newCapacity = capacity * 2;
     if (newCapacity > cFloatListMaxCapacity) {
         newCapacity = cFloatListMaxCapacity;
+    } else if (newCapacity == 0) {
+        newCapacity = 8;
     }
     int r = xsArrayResizeFloat(lst, newCapacity);
     if (r != 1) {
@@ -346,7 +348,7 @@ int xsFloatListInsert(int lst = -1, int idx = -1, float value = 0) {
         return (cFloatListIndexOutOfRangeError);
     }
     int newSize = size + 1;
-    if (capacity == newSize) {
+    if (capacity <= newSize) {
         int r = _xsFloatListExtendFloatArray(lst, capacity);
         if (r != cFloatListSuccess) {
             return (r);

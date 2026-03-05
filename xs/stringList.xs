@@ -244,8 +244,7 @@ int _xsStringListExtendStringArray(int lst = -1, int capacity = 0) {
     int newCapacity = capacity * 2;
     if (newCapacity > cStringListMaxCapacity) {
         newCapacity = cStringListMaxCapacity;
-    }
-    if (newCapacity == 0) {
+    } else if (newCapacity == 0) {
         newCapacity = 8;
     }
     int r = xsArrayResizeString(lst, newCapacity);
@@ -363,7 +362,7 @@ int xsStringListInsert(int lst = -1, int idx = -1, string value = "") {
             return (r);
         }
     }
-    for (i = newSize; > idx) {
+    for (i = size; > idx) {
         xsArraySetString(strLst, i, xsArrayGetString(strLst, i - 1));
     }
     xsArraySetString(strLst, idx, value);

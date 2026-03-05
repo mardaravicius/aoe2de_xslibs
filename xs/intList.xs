@@ -287,6 +287,8 @@ int _xsIntListExtendIntArray(int lst = -1, int capacity = 0) {
     int newCapacity = capacity * 2;
     if (newCapacity > cIntListMaxCapacity) {
         newCapacity = cIntListMaxCapacity;
+    } else if (newCapacity == 0) {
+        newCapacity = 8;
     }
     int r = xsArrayResizeInt(lst, newCapacity);
     if (r != 1) {
@@ -389,7 +391,7 @@ int xsIntListInsert(int lst = -1, int idx = -1, int value = 0) {
         return (cIntListIndexOutOfRangeError);
     }
     int newSize = size + 1;
-    if (capacity == newSize) {
+    if (capacity <= newSize) {
         int r = _xsIntListExtendIntArray(lst, capacity);
         if (r != cIntListSuccess) {
             return (r);

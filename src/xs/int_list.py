@@ -280,6 +280,8 @@ def _xs_int_list_extend_int_array(lst: int32 = int32(-1), capacity: int32 = int3
     new_capacity: int32 = capacity * 2
     if new_capacity > c_int_list_max_capacity:
         new_capacity = c_int_list_max_capacity
+    elif new_capacity == 0:
+        new_capacity = int32(8)
     r: int32 = xs_array_resize_int(lst, new_capacity)
     if r != 1:
         return c_int_list_resize_failed_error
@@ -326,7 +328,7 @@ def xs_int_list_insert(lst: int32 = int32(-1), idx: int32 = int32(-1), value: in
     if idx < 0 or idx > size:
         return c_int_list_index_out_of_range_error
     new_size: int32 = size + 1
-    if capacity == new_size:
+    if capacity <= new_size:
         r: int32 = _xs_int_list_extend_int_array(lst, capacity)
         if r != c_int_list_success:
             return r
