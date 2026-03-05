@@ -9,6 +9,11 @@ extern const float cFloatListEmptyParam = -9999999.0;
 extern const int cFloatListEmptyIntParam = -999999999;
 int _floatListLastOperationStatus = cFloatListSuccess;
 
+/*
+    Returns the number of elements in the list.
+    @param lst - list id
+    @return list size
+*/
 int xsFloatListSize(int lst = -1) {
     return (bitCastToInt(xsArrayGetFloat(lst, 0)));
 }
@@ -21,7 +26,7 @@ void _xsFloatListSetSize(int lst = -1, int size = 0) {
     Creates a list with provided values. The first value that equals `cFloatListEmptyParam` will stop further insertion.
     This Function can create a list with 12 values at the maximum, but further values can be added with other functions.
     @param v0 through v11 - value at a given index of a list
-    @return created list id, or error if negative
+    @return created list id, or `cFloatListGenericError` on error
 */
 int xsFloatList(float v0 = cFloatListEmptyParam, float v1 = cFloatListEmptyParam, float v2 = cFloatListEmptyParam, float v3 = cFloatListEmptyParam, float v4 = cFloatListEmptyParam, float v5 = cFloatListEmptyParam, float v6 = cFloatListEmptyParam, float v7 = cFloatListEmptyParam, float v8 = cFloatListEmptyParam, float v9 = cFloatListEmptyParam, float v10 = cFloatListEmptyParam, float v11 = cFloatListEmptyParam) {
     int lst = xsArrayCreateFloat(13);
@@ -95,7 +100,7 @@ int xsFloatList(float v0 = cFloatListEmptyParam, float v1 = cFloatListEmptyParam
 /*
     Creates empty list for float values. List is a dynamic array that grows and shrinks as values are added and removed.
     @param capacity - initial list capacity
-    @return created list id, or error if negative
+    @return created list id, or `cFloatListGenericError` on error
 */
 int xsFloatListCreate(int capacity = 7) {
     if ((capacity < 0) || (capacity >= cFloatListMaxCapacity)) {
@@ -109,6 +114,12 @@ int xsFloatListCreate(int capacity = 7) {
     return (lst);
 }
 
+/*
+    Creates a list by repeating a single value.
+    @param value - value to repeat
+    @param times - number of times to repeat the value
+    @return created list id, or `cFloatListGenericError` on error
+*/
 int xsFloatListFromRepeatedVal(float value = 0.0, int times = 0) {
     if ((times < 0) || (times >= cFloatListMaxCapacity)) {
         return (cFloatListGenericError);
@@ -121,6 +132,12 @@ int xsFloatListFromRepeatedVal(float value = 0.0, int times = 0) {
     return (lst);
 }
 
+/*
+    Creates a new list by repeating all elements of the given list.
+    @param lst - source list id
+    @param times - number of times to repeat the list contents
+    @return created list id, or `cFloatListGenericError` on error
+*/
 int xsFloatListFromRepeatedList(int lst = -1, int times = 0) {
     if (times < 0) {
         return (cFloatListGenericError);
@@ -149,6 +166,11 @@ int xsFloatListFromRepeatedList(int lst = -1, int times = 0) {
     return (newLst);
 }
 
+/*
+    Creates a new list by copying elements from an XS array.
+    @param arr - source XS array id
+    @return created list id, or `cFloatListGenericError` on error
+*/
 int xsFloatListFromArray(int arr = -1) {
     int arrSize = xsArrayGetSize(arr);
     int lst = xsFloatListCreate(arrSize);
@@ -162,6 +184,11 @@ int xsFloatListFromArray(int arr = -1) {
     return (lst);
 }
 
+/*
+    Converts an existing XS array into a list in-place by shifting elements and storing the size.
+    @param arr - XS array id to convert
+    @return list id (same as arr), or `cFloatListMaxCapacityError`/`cFloatListResizeFailedError` on error
+*/
 int xsFloatListUseArrayAsSource(int arr = -1) {
     int arrSize = xsArrayGetSize(arr);
     if ((arrSize + 1) > cFloatListMaxCapacity) {
@@ -178,6 +205,12 @@ int xsFloatListUseArrayAsSource(int arr = -1) {
     return (arr);
 }
 
+/*
+    Returns the element at the given index. Sets last error on failure.
+    @param lst - list id
+    @param idx - zero-based index
+    @return value at index, or `cFloatListGenericErrorFloat` on error
+*/
 float xsFloatListGet(int lst = -1, int idx = -1) {
     int size = xsFloatListSize(lst);
     if ((idx < 0) || (idx >= size)) {
@@ -188,6 +221,13 @@ float xsFloatListGet(int lst = -1, int idx = -1) {
     return (xsArrayGetFloat(lst, idx + 1));
 }
 
+/*
+    Sets the element at the given index to a new value.
+    @param lst - list id
+    @param idx - zero-based index
+    @param value - new value to set
+    @return `cFloatListSuccess` on success, or error if negative
+*/
 int xsFloatListSet(int lst = -1, int idx = -1, float value = 0.0) {
     int size = xsFloatListSize(lst);
     if ((idx < 0) || (idx >= size)) {
@@ -222,6 +262,11 @@ int _xsFloatListShrinkFloatArray(int lst = -1, int size = 0, int capacity = 0) {
     return (cFloatListSuccess);
 }
 
+/*
+    Returns a string representation of the list in the format `[v0, v1, ...]`.
+    @param lst - list id
+    @return string representation of the list
+*/
 string xsFloatListToString(int lst = -1) {
     int size = xsFloatListSize(lst);
     string s = "[";
@@ -235,6 +280,12 @@ string xsFloatListToString(int lst = -1) {
     return (s);
 }
 
+/*
+    Appends a value to the end of the list, growing the backing array if needed.
+    @param lst - list id
+    @param value - value to append
+    @return `cFloatListSuccess` on success, or error if negative
+*/
 int xsFloatListAppend(int lst = -1, float value = 0) {
     int capacity = xsArrayGetSize(lst);
     int size = xsFloatListSize(lst);
@@ -250,6 +301,13 @@ int xsFloatListAppend(int lst = -1, float value = 0) {
     return (cFloatListSuccess);
 }
 
+/*
+    Removes and returns the element at the given index, shifting subsequent elements to the left.
+    Defaults to the last element. Sets last error on failure.
+    @param lst - list id
+    @param idx - zero-based index of element to remove (defaults to last)
+    @return removed value, or `cFloatListGenericErrorFloat` on error
+*/
 float xsFloatListPop(int lst = -1, int idx = cFloatListMaxCapacity) {
     int capacity = xsArrayGetSize(lst);
     int size = xsFloatListSize(lst);
@@ -274,6 +332,13 @@ float xsFloatListPop(int lst = -1, int idx = cFloatListMaxCapacity) {
     return (removedElem);
 }
 
+/*
+    Inserts a value at the given index, shifting subsequent elements to the right.
+    @param lst - list id
+    @param idx - zero-based index at which to insert
+    @param value - value to insert
+    @return `cFloatListSuccess` on success, or error if negative
+*/
 int xsFloatListInsert(int lst = -1, int idx = -1, float value = 0) {
     int capacity = xsArrayGetSize(lst);
     int size = xsFloatListSize(lst);
@@ -295,6 +360,12 @@ int xsFloatListInsert(int lst = -1, int idx = -1, float value = 0) {
     return (cFloatListSuccess);
 }
 
+/*
+    Removes the first occurrence of the given value from the list.
+    @param lst - list id
+    @param value - value to remove
+    @return index of the removed element, or `cFloatListGenericError` if not found
+*/
 int xsFloatListRemove(int lst = -1, float value = -1) {
     int capacity = xsArrayGetSize(lst);
     int size = xsFloatListSize(lst);
@@ -321,6 +392,14 @@ int xsFloatListRemove(int lst = -1, float value = -1) {
     return (foundIdx - 1);
 }
 
+/*
+    Returns the index of the first occurrence of the value within the optional [start, stop) range. Negative start/stop are relative to the end.
+    @param lst - list id
+    @param value - value to search for
+    @param start - start of search range (inclusive)
+    @param stop - end of search range (exclusive), defaults to list size
+    @return index of the value, or `cFloatListGenericError` if not found
+*/
 int xsFloatListIndex(int lst = -1, float value = -1.0, int start = 0, int stop = cFloatListEmptyIntParam) {
     int size = xsFloatListSize(lst);
     if ((stop == cFloatListEmptyIntParam) || (stop > size)) {
@@ -346,6 +425,12 @@ int xsFloatListIndex(int lst = -1, float value = -1.0, int start = 0, int stop =
     return (cFloatListGenericError);
 }
 
+/*
+    Checks whether the list contains the given value.
+    @param lst - list id
+    @param value - value to search for
+    @return true if the value is found, false otherwise
+*/
 bool xsFloatListContains(int lst = -1, float value = -1.0) {
     return (xsFloatListIndex(lst, value) > -1);
 }
@@ -383,6 +468,11 @@ void _xsFloatListSiftDown(int lst = -1, int start = -1, int end = -1, bool rever
     }
 }
 
+/*
+    Sorts the list in-place using heapsort.
+    @param lst - list id
+    @param reverse - if true, sorts in descending order
+*/
 void xsFloatListSort(int lst = -1, bool reverse = false) {
     int size = xsFloatListSize(lst);
     for (start = size / 2; > 0) {
@@ -396,6 +486,11 @@ void xsFloatListSort(int lst = -1, bool reverse = false) {
     }
 }
 
+/*
+    Removes all elements from the list and shrinks the backing array.
+    @param lst - list id
+    @return `cFloatListSuccess` on success, or error if negative
+*/
 int xsFloatListClear(int lst = -1) {
     int capacity = xsArrayGetSize(lst);
     if (capacity > 8) {
@@ -408,6 +503,13 @@ int xsFloatListClear(int lst = -1) {
     return (cFloatListSuccess);
 }
 
+/*
+    Returns a copy of the list, optionally sliced by [start, end). Negative start/end are relative to the end.
+    @param lst - list id
+    @param start - start of slice (inclusive)
+    @param end - end of slice (exclusive), defaults to list size
+    @return new list id, or `cFloatListGenericError` on error
+*/
 int xsFloatListCopy(int lst = -1, int start = 0, int end = cFloatListMaxCapacity) {
     int size = xsFloatListSize(lst);
     int fr = 0;
@@ -443,6 +545,12 @@ int xsFloatListCopy(int lst = -1, int start = 0, int end = cFloatListMaxCapacity
     return (newLst);
 }
 
+/*
+    Appends all elements from another list to the source list.
+    @param source - list id to extend
+    @param lst - list id whose elements are appended
+    @return `cFloatListSuccess` on success, or error if negative
+*/
 int xsFloatListExtend(int source = -1, int lst = -1) {
     int sourceSize = xsFloatListSize(source);
     int toAdd = xsFloatListSize(lst);
@@ -464,6 +572,12 @@ int xsFloatListExtend(int source = -1, int lst = -1) {
     return (cFloatListSuccess);
 }
 
+/*
+    Appends all elements from an XS array to the source list.
+    @param source - list id to extend
+    @param arr - XS array id whose elements are appended
+    @return `cFloatListSuccess` on success, or error if negative
+*/
 int xsFloatListExtendWithArray(int source = -1, int arr = -1) {
     int sourceSize = xsFloatListSize(source);
     int toAdd = xsArrayGetSize(arr);
@@ -485,6 +599,12 @@ int xsFloatListExtendWithArray(int source = -1, int arr = -1) {
     return (cFloatListSuccess);
 }
 
+/*
+    Performs lexicographic comparison of two lists.
+    @param lst1 - first list id
+    @param lst2 - second list id
+    @return -1 if lst1 < lst2, 1 if lst1 > lst2, 0 if equal
+*/
 int xsFloatListCompare(int lst1 = -1, int lst2 = -1) {
     int size1 = xsFloatListSize(lst1);
     int size2 = xsFloatListSize(lst2);
@@ -509,6 +629,10 @@ int xsFloatListCompare(int lst1 = -1, int lst2 = -1) {
     return (0);
 }
 
+/*
+    Reverses the list in-place.
+    @param lst - list id
+*/
 void xsFloatListReverse(int lst = -1) {
     int size = xsFloatListSize(lst);
     int mid = (size + 2) / 2;
@@ -520,6 +644,12 @@ void xsFloatListReverse(int lst = -1) {
     }
 }
 
+/*
+    Counts the number of occurrences of a value in the list.
+    @param lst - list id
+    @param value - value to count
+    @return number of occurrences
+*/
 int xsFloatListCount(int lst = -1, float value = -1.0) {
     int count = 0;
     int size = xsFloatListSize(lst);
@@ -531,6 +661,11 @@ int xsFloatListCount(int lst = -1, float value = -1.0) {
     return (count);
 }
 
+/*
+    Returns the sum of all elements in the list.
+    @param lst - list id
+    @return sum of elements
+*/
 float xsFloatListSum(int lst = -1) {
     float s = 0.0;
     int size = xsFloatListSize(lst);
@@ -540,6 +675,11 @@ float xsFloatListSum(int lst = -1) {
     return (s);
 }
 
+/*
+    Returns the minimum value in the list. Sets last error on failure.
+    @param lst - list id
+    @return minimum value, or `cFloatListGenericErrorFloat` on error
+*/
 float xsFloatListMin(int lst = -1) {
     int size = xsFloatListSize(lst);
     if (size == 0) {
@@ -561,6 +701,11 @@ float xsFloatListMin(int lst = -1) {
     return (m);
 }
 
+/*
+    Returns the maximum value in the list. Sets last error on failure.
+    @param lst - list id
+    @return maximum value, or `cFloatListGenericErrorFloat` on error
+*/
 float xsFloatListMax(int lst = -1) {
     int size = xsFloatListSize(lst);
     if (size == 0) {
@@ -582,6 +727,10 @@ float xsFloatListMax(int lst = -1) {
     return (m);
 }
 
+/*
+    Returns the status code of the last operation that sets it (get, pop, min, max).
+    @return `cFloatListSuccess` if the last such operation succeeded, or a negative error code
+*/
 int xsFloatListLastError() {
     return (_floatListLastOperationStatus);
 }

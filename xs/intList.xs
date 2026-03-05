@@ -11,7 +11,7 @@ int _intListLastOperationStatus = cIntListSuccess;
     Creates a list with provided values. The first value that equals `cIntListEmptyParam` will stop further insertion.
     This Function can create a list with 12 values at the maximum, but further values can be added with other functions.
     @param v0 through v11 - value at a given index of a list
-    @return created list id, or error if negative
+    @return created list id, or `cIntListGenericError` on error
 */
 int xsIntList(int v0 = cIntListEmptyParam, int v1 = cIntListEmptyParam, int v2 = cIntListEmptyParam, int v3 = cIntListEmptyParam, int v4 = cIntListEmptyParam, int v5 = cIntListEmptyParam, int v6 = cIntListEmptyParam, int v7 = cIntListEmptyParam, int v8 = cIntListEmptyParam, int v9 = cIntListEmptyParam, int v10 = cIntListEmptyParam, int v11 = cIntListEmptyParam) {
     int lst = xsArrayCreateInt(13);
@@ -85,7 +85,7 @@ int xsIntList(int v0 = cIntListEmptyParam, int v1 = cIntListEmptyParam, int v2 =
 /*
     Creates empty list for int values. List is a dynamic array that grows and shrinks as values are added and removed.
     @param capacity - initial list capacity
-    @return created list id, or error if negative
+    @return created list id, or `cIntListGenericError` on error
 */
 int xsIntListCreate(int capacity = 7) {
     if ((capacity < 0) || (capacity >= cIntListMaxCapacity)) {
@@ -101,10 +101,10 @@ int xsIntListCreate(int capacity = 7) {
 
 /*
     Creates a list from a given range.
-    @param start - Start
-    @param stop -
-    @param step -
-    @return created list id, or error if negative
+    @param start - start of range (inclusive)
+    @param stop - end of range (exclusive)
+    @param step - increment between values (positive or negative, must not be zero)
+    @return created list id, or `cIntListGenericError` on error
 */
 int xsIntListFromRange(int start = 0, int stop = 0, int step = 1) {
     if (step == 0) {
@@ -148,6 +148,12 @@ int xsIntListFromRange(int start = 0, int stop = 0, int step = 1) {
     return (lst);
 }
 
+/*
+    Creates a list by repeating a single value.
+    @param value - value to repeat
+    @param times - number of times to repeat the value
+    @return created list id, or `cIntListGenericError` on error
+*/
 int xsIntListFromRepeatedVal(int value = 0, int times = 0) {
     if ((times < 0) || (times >= cIntListMaxCapacity)) {
         return (cIntListGenericError);
@@ -160,6 +166,12 @@ int xsIntListFromRepeatedVal(int value = 0, int times = 0) {
     return (lst);
 }
 
+/*
+    Creates a new list by repeating all elements of the given list.
+    @param lst - source list id
+    @param times - number of times to repeat the list contents
+    @return created list id, or `cIntListGenericError` on error
+*/
 int xsIntListFromRepeatedList(int lst = -1, int times = 0) {
     if (times < 0) {
         return (cIntListGenericError);
@@ -188,6 +200,11 @@ int xsIntListFromRepeatedList(int lst = -1, int times = 0) {
     return (newLst);
 }
 
+/*
+    Creates a new list by copying elements from an XS array.
+    @param arr - source XS array id
+    @return created list id, or `cIntListGenericError` on error
+*/
 int xsIntListFromArray(int arr = -1) {
     int arrSize = xsArrayGetSize(arr);
     int lst = xsIntListCreate(arrSize);
@@ -201,6 +218,11 @@ int xsIntListFromArray(int arr = -1) {
     return (lst);
 }
 
+/*
+    Converts an existing XS array into a list in-place by shifting elements and storing the size.
+    @param arr - XS array id to convert
+    @return list id (same as arr), or `cIntListMaxCapacityError`/`cIntListResizeFailedError` on error
+*/
 int xsIntListUseArrayAsSource(int arr = -1) {
     int arrSize = xsArrayGetSize(arr);
     if ((arrSize + 1) > cIntListMaxCapacity) {
@@ -217,6 +239,12 @@ int xsIntListUseArrayAsSource(int arr = -1) {
     return (arr);
 }
 
+/*
+    Returns the element at the given index. Sets last error on failure.
+    @param lst - list id
+    @param idx - zero-based index
+    @return value at index, or `cIntListGenericError` on error
+*/
 int xsIntListGet(int lst = -1, int idx = -1) {
     int size = xsArrayGetInt(lst, 0);
     if ((idx < 0) || (idx >= size)) {
@@ -227,6 +255,13 @@ int xsIntListGet(int lst = -1, int idx = -1) {
     return (xsArrayGetInt(lst, idx + 1));
 }
 
+/*
+    Sets the element at the given index to a new value.
+    @param lst - list id
+    @param idx - zero-based index
+    @param value - new value to set
+    @return `cIntListSuccess` on success, or error if negative
+*/
 int xsIntListSet(int lst = -1, int idx = -1, int value = 0) {
     int size = xsArrayGetInt(lst, 0);
     if ((idx < 0) || (idx >= size)) {
@@ -236,6 +271,11 @@ int xsIntListSet(int lst = -1, int idx = -1, int value = 0) {
     return (cIntListSuccess);
 }
 
+/*
+    Returns the number of elements in the list.
+    @param lst - list id
+    @return list size
+*/
 int xsIntListSize(int lst = -1) {
     return (xsArrayGetInt(lst, 0));
 }
@@ -265,6 +305,11 @@ int _xsIntListShrinkIntArray(int lst = -1, int size = 0, int capacity = 0) {
     return (cIntListSuccess);
 }
 
+/*
+    Returns a string representation of the list in the format `[v0, v1, ...]`.
+    @param lst - list id
+    @return string representation of the list
+*/
 string xsIntListToString(int lst = -1) {
     int size = xsArrayGetInt(lst, 0);
     string s = "[";
@@ -278,6 +323,12 @@ string xsIntListToString(int lst = -1) {
     return (s);
 }
 
+/*
+    Appends a value to the end of the list, growing the backing array if needed.
+    @param lst - list id
+    @param value - value to append
+    @return `cIntListSuccess` on success, or error if negative
+*/
 int xsIntListAppend(int lst = -1, int value = 0) {
     int capacity = xsArrayGetSize(lst);
     int size = xsArrayGetInt(lst, 0);
@@ -293,6 +344,13 @@ int xsIntListAppend(int lst = -1, int value = 0) {
     return (cIntListSuccess);
 }
 
+/*
+    Removes and returns the element at the given index, shifting subsequent elements to the left.
+    Defaults to the last element. Sets last error on failure.
+    @param lst - list id
+    @param idx - zero-based index of element to remove (defaults to last)
+    @return removed value, or `cIntListGenericError` on error
+*/
 int xsIntListPop(int lst = -1, int idx = cIntListMaxCapacity) {
     int capacity = xsArrayGetSize(lst);
     int size = xsArrayGetInt(lst, 0);
@@ -317,6 +375,13 @@ int xsIntListPop(int lst = -1, int idx = cIntListMaxCapacity) {
     return (removedElem);
 }
 
+/*
+    Inserts a value at the given index, shifting subsequent elements to the right.
+    @param lst - list id
+    @param idx - zero-based index at which to insert
+    @param value - value to insert
+    @return `cIntListSuccess` on success, or error if negative
+*/
 int xsIntListInsert(int lst = -1, int idx = -1, int value = 0) {
     int capacity = xsArrayGetSize(lst);
     int size = xsArrayGetInt(lst, 0);
@@ -338,6 +403,12 @@ int xsIntListInsert(int lst = -1, int idx = -1, int value = 0) {
     return (cIntListSuccess);
 }
 
+/*
+    Removes the first occurrence of the given value from the list.
+    @param lst - list id
+    @param value - value to remove
+    @return index of the removed element, or `cIntListGenericError` if not found
+*/
 int xsIntListRemove(int lst = -1, int value = -1) {
     int capacity = xsArrayGetSize(lst);
     int size = xsArrayGetInt(lst, 0);
@@ -364,6 +435,14 @@ int xsIntListRemove(int lst = -1, int value = -1) {
     return (foundIdx - 1);
 }
 
+/*
+    Returns the index of the first occurrence of the value within the optional [start, stop) range. Negative start/stop are relative to the end.
+    @param lst - list id
+    @param value - value to search for
+    @param start - start of search range (inclusive)
+    @param stop - end of search range (exclusive), defaults to list size
+    @return index of the value, or `cIntListGenericError` if not found
+*/
 int xsIntListIndex(int lst = -1, int value = -1, int start = 0, int stop = cIntListEmptyParam) {
     int size = xsArrayGetInt(lst, 0);
     if ((stop == cIntListEmptyParam) || (stop > size)) {
@@ -389,6 +468,12 @@ int xsIntListIndex(int lst = -1, int value = -1, int start = 0, int stop = cIntL
     return (cIntListGenericError);
 }
 
+/*
+    Checks whether the list contains the given value.
+    @param lst - list id
+    @param value - value to search for
+    @return true if the value is found, false otherwise
+*/
 bool xsIntListContains(int lst = -1, int value = -1) {
     return (xsIntListIndex(lst, value) > -1);
 }
@@ -426,6 +511,11 @@ void _xsIntListSiftDown(int lst = -1, int start = -1, int end = -1, bool reverse
     }
 }
 
+/*
+    Sorts the list in-place using heapsort.
+    @param lst - list id
+    @param reverse - if true, sorts in descending order
+*/
 void xsIntListSort(int lst = -1, bool reverse = false) {
     int size = xsArrayGetInt(lst, 0);
     for (start = size / 2; > 0) {
@@ -439,6 +529,11 @@ void xsIntListSort(int lst = -1, bool reverse = false) {
     }
 }
 
+/*
+    Removes all elements from the list and shrinks the backing array.
+    @param lst - list id
+    @return `cIntListSuccess` on success, or error if negative
+*/
 int xsIntListClear(int lst = -1) {
     int capacity = xsArrayGetSize(lst);
     if (capacity > 8) {
@@ -451,6 +546,13 @@ int xsIntListClear(int lst = -1) {
     return (cIntListSuccess);
 }
 
+/*
+    Returns a copy of the list, optionally sliced by [start, end). Negative start/end are relative to the end.
+    @param lst - list id
+    @param start - start of slice (inclusive)
+    @param end - end of slice (exclusive), defaults to list size
+    @return new list id, or `cIntListGenericError` on error
+*/
 int xsIntListCopy(int lst = -1, int start = 0, int end = cIntListMaxCapacity) {
     int size = xsArrayGetInt(lst, 0);
     int fr = 0;
@@ -486,6 +588,12 @@ int xsIntListCopy(int lst = -1, int start = 0, int end = cIntListMaxCapacity) {
     return (newLst);
 }
 
+/*
+    Appends all elements from another list to the source list.
+    @param source - list id to extend
+    @param lst - list id whose elements are appended
+    @return `cIntListSuccess` on success, or error if negative
+*/
 int xsIntListExtend(int source = -1, int lst = -1) {
     int sourceSize = xsArrayGetInt(source, 0);
     int toAdd = xsArrayGetInt(lst, 0);
@@ -507,6 +615,12 @@ int xsIntListExtend(int source = -1, int lst = -1) {
     return (cIntListSuccess);
 }
 
+/*
+    Appends all elements from an XS array to the source list.
+    @param source - list id to extend
+    @param arr - XS array id whose elements are appended
+    @return `cIntListSuccess` on success, or error if negative
+*/
 int xsIntListExtendWithArray(int source = -1, int arr = -1) {
     int sourceSize = xsArrayGetInt(source, 0);
     int toAdd = xsArrayGetSize(arr);
@@ -528,6 +642,12 @@ int xsIntListExtendWithArray(int source = -1, int arr = -1) {
     return (cIntListSuccess);
 }
 
+/*
+    Performs lexicographic comparison of two lists.
+    @param lst1 - first list id
+    @param lst2 - second list id
+    @return -1 if lst1 < lst2, 1 if lst1 > lst2, 0 if equal
+*/
 int xsIntListCompare(int lst1 = -1, int lst2 = -1) {
     int size1 = xsArrayGetInt(lst1, 0);
     int size2 = xsArrayGetInt(lst2, 0);
@@ -552,6 +672,10 @@ int xsIntListCompare(int lst1 = -1, int lst2 = -1) {
     return (0);
 }
 
+/*
+    Reverses the list in-place.
+    @param lst - list id
+*/
 void xsIntListReverse(int lst = -1) {
     int size = xsArrayGetInt(lst, 0);
     int mid = (size + 2) / 2;
@@ -563,6 +687,12 @@ void xsIntListReverse(int lst = -1) {
     }
 }
 
+/*
+    Counts the number of occurrences of a value in the list.
+    @param lst - list id
+    @param value - value to count
+    @return number of occurrences
+*/
 int xsIntListCount(int lst = -1, int value = -1) {
     int count = 0;
     int size = xsArrayGetInt(lst, 0);
@@ -574,6 +704,11 @@ int xsIntListCount(int lst = -1, int value = -1) {
     return (count);
 }
 
+/*
+    Returns the sum of all elements in the list.
+    @param lst - list id
+    @return sum of elements
+*/
 int xsIntListSum(int lst = -1) {
     int s = 0;
     int size = xsArrayGetInt(lst, 0);
@@ -583,6 +718,11 @@ int xsIntListSum(int lst = -1) {
     return (s);
 }
 
+/*
+    Returns the minimum value in the list. Sets last error on failure.
+    @param lst - list id
+    @return minimum value, or `cIntListGenericError` on error
+*/
 int xsIntListMin(int lst = -1) {
     int size = xsArrayGetInt(lst, 0);
     if (size == 0) {
@@ -604,6 +744,11 @@ int xsIntListMin(int lst = -1) {
     return (m);
 }
 
+/*
+    Returns the maximum value in the list. Sets last error on failure.
+    @param lst - list id
+    @return maximum value, or `cIntListGenericError` on error
+*/
 int xsIntListMax(int lst = -1) {
     int size = xsArrayGetInt(lst, 0);
     if (size == 0) {
@@ -625,6 +770,10 @@ int xsIntListMax(int lst = -1) {
     return (m);
 }
 
+/*
+    Returns the status code of the last operation that sets it (get, pop, min, max).
+    @return `cIntListSuccess` if the last such operation succeeded, or a negative error code
+*/
 int xsIntListLastError() {
     return (_intListLastOperationStatus);
 }

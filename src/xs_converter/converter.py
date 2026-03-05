@@ -1,5 +1,6 @@
 import ast
 import inspect
+import re
 from ast import FunctionDef, Constant, Name, expr, arg, Expr, AnnAssign, Call, Assign, BinOp, Add, Sub, Mod, Mult, Div, \
     operator, If, Compare, Eq, Gt, GtE, Lt, LtE, NotEq, cmpop, For, While, AugAssign, Match, MatchValue, MatchAs, \
     Return, Pass, Subscript, stmt, Attribute, keyword, With, Tuple, UnaryOp, USub, JoinedStr, FormattedValue, Global, \
@@ -445,6 +446,8 @@ class PythonToXsConverter:
         if doc is not None:
             self.doc_strings.add(doc.replace("\n", "").replace(" ", ""))
         if doc is not None and len(self.i) > 0:
+            doc = re.sub(r'`([a-zA-Z_][a-zA-Z0-9_]*)`',
+                         lambda m: '`' + self.to_camel_case(m.group(1)) + '`', doc)
             doc = doc.replace(":param", "@param")
             doc = doc.replace(":return:", "@return")
             doc = doc.replace(":", " -")

@@ -7,15 +7,20 @@ extern const int cStringListMaxCapacity = 999999999;
 extern const int cStringListEmptyIntParam = -999999999;
 int _stringListLastOperationStatus = cStringListSuccess;
 
+/*
+    Returns the number of elements in the list.
+    @param lst - list id
+    @return list size
+*/
 int xsStringListSize(int lst = -1) {
     return (xsArrayGetInt(lst, 0));
 }
 
 /*
-    Creates a list with provided values. The first value that equals `cStringListEmptyParam` will stop further insertion.
+    Creates a list with provided values. The first value that equals the default sentinel will stop further insertion.
     This Function can create a list with 12 values at the maximum, but further values can be added with other functions.
     @param v0 through v11 - value at a given index of a list
-    @return created list id, or error if negative
+    @return created list id, or `cStringListGenericError` on error
 */
 int xsStringList(string v0 = "!<[empty", string v1 = "!<[empty", string v2 = "!<[empty", string v3 = "!<[empty", string v4 = "!<[empty", string v5 = "!<[empty", string v6 = "!<[empty", string v7 = "!<[empty", string v8 = "!<[empty", string v9 = "!<[empty", string v10 = "!<[empty", string v11 = "!<[empty") {
     int strLst = xsArrayCreateString(12);
@@ -90,7 +95,7 @@ int xsStringList(string v0 = "!<[empty", string v1 = "!<[empty", string v2 = "!<
 /*
     Creates empty list for string values. List is a dynamic array that grows and shrinks as values are added and removed.
     @param capacity - initial list capacity
-    @return created list id, or error if negative
+    @return created list id, or `cStringListGenericError` on error
 */
 int xsStringListCreate(int capacity = 7) {
     if ((capacity < 0) || (capacity >= cStringListMaxCapacity)) {
@@ -105,6 +110,12 @@ int xsStringListCreate(int capacity = 7) {
     return (lst);
 }
 
+/*
+    Creates a list by repeating a single value.
+    @param value - value to repeat
+    @param times - number of times to repeat the value
+    @return created list id, or `cStringListGenericError` on error
+*/
 int xsStringListFromRepeatedVal(string value = "", int times = 0) {
     if ((times < 0) || (times > cStringListMaxCapacity)) {
         return (cStringListGenericError);
@@ -118,6 +129,12 @@ int xsStringListFromRepeatedVal(string value = "", int times = 0) {
     return (lst);
 }
 
+/*
+    Creates a new list by repeating all elements of the given list.
+    @param lst - source list id
+    @param times - number of times to repeat the list contents
+    @return created list id, or `cStringListGenericError` on error
+*/
 int xsStringListFromRepeatedList(int lst = -1, int times = 0) {
     if (times < 0) {
         return (cStringListGenericError);
@@ -148,6 +165,11 @@ int xsStringListFromRepeatedList(int lst = -1, int times = 0) {
     return (newLst);
 }
 
+/*
+    Creates a new list by copying elements from an XS array.
+    @param arr - source XS array id
+    @return created list id, or `cStringListGenericError` on error
+*/
 int xsStringListFromArray(int arr = -1) {
     int arrSize = xsArrayGetSize(arr);
     if (arrSize > cStringListMaxCapacity) {
@@ -165,6 +187,11 @@ int xsStringListFromArray(int arr = -1) {
     return (lst);
 }
 
+/*
+    Wraps an existing XS string array as a list without copying elements.
+    @param arr - XS string array id to use as backing storage
+    @return list id, or `cStringListMaxCapacityError`/`cStringListGenericError` on error
+*/
 int xsStringListUseArrayAsSource(int arr = -1) {
     int arrSize = xsArrayGetSize(arr);
     if (arrSize > cStringListMaxCapacity) {
@@ -178,6 +205,12 @@ int xsStringListUseArrayAsSource(int arr = -1) {
     return (lst);
 }
 
+/*
+    Returns the element at the given index. Sets last error on failure.
+    @param lst - list id
+    @param idx - zero-based index
+    @return value at index, or "-1" on error
+*/
 string xsStringListGet(int lst = -1, int idx = -1) {
     int size = xsStringListSize(lst);
     if ((idx < 0) || (idx >= size)) {
@@ -188,6 +221,13 @@ string xsStringListGet(int lst = -1, int idx = -1) {
     return (xsArrayGetString(xsArrayGetInt(lst, 1), idx));
 }
 
+/*
+    Sets the element at the given index to a new value.
+    @param lst - list id
+    @param idx - zero-based index
+    @param value - new value to set
+    @return `cStringListSuccess` on success, or error if negative
+*/
 int xsStringListSet(int lst = -1, int idx = -1, string value = "") {
     int size = xsArrayGetInt(lst, 0);
     if ((idx < 0) || (idx >= size)) {
@@ -225,6 +265,11 @@ int _xsStringListShrinkStringArray(int lst = -1, int size = 0, int capacity = 0)
     return (cStringListSuccess);
 }
 
+/*
+    Returns a string representation of the list in the format `["v0", "v1", ...]`.
+    @param lst - list id
+    @return string representation of the list
+*/
 string xsStringListToString(int lst = -1) {
     int size = xsArrayGetInt(lst, 0);
     int strLst = xsArrayGetInt(lst, 1);
@@ -244,6 +289,12 @@ string xsStringListToString(int lst = -1) {
     return (s);
 }
 
+/*
+    Appends a value to the end of the list, growing the backing array if needed.
+    @param lst - list id
+    @param value - value to append
+    @return `cStringListSuccess` on success, or error if negative
+*/
 int xsStringListAppend(int lst = -1, string value = "") {
     int strLst = xsArrayGetInt(lst, 1);
     int capacity = xsArrayGetSize(strLst);
@@ -259,6 +310,13 @@ int xsStringListAppend(int lst = -1, string value = "") {
     return (cStringListSuccess);
 }
 
+/*
+    Removes and returns the element at the given index, shifting subsequent elements to the left.
+    Defaults to the last element. Sets last error on failure.
+    @param lst - list id
+    @param idx - zero-based index of element to remove (defaults to last)
+    @return removed value, or "-1" on error
+*/
 string xsStringListPop(int lst = -1, int idx = cStringListMaxCapacity) {
     int strLst = xsArrayGetInt(lst, 1);
     int capacity = xsArrayGetSize(strLst);
@@ -284,6 +342,13 @@ string xsStringListPop(int lst = -1, int idx = cStringListMaxCapacity) {
     return (removedElem);
 }
 
+/*
+    Inserts a value at the given index, shifting subsequent elements to the right.
+    @param lst - list id
+    @param idx - zero-based index at which to insert
+    @param value - value to insert
+    @return `cStringListSuccess` on success, or error if negative
+*/
 int xsStringListInsert(int lst = -1, int idx = -1, string value = "") {
     int size = xsArrayGetInt(lst, 0);
     if ((idx < 0) || (idx > size)) {
@@ -306,6 +371,12 @@ int xsStringListInsert(int lst = -1, int idx = -1, string value = "") {
     return (cStringListSuccess);
 }
 
+/*
+    Removes the first occurrence of the given value from the list.
+    @param lst - list id
+    @param value - value to remove
+    @return index of the removed element, or `cStringListGenericError` if not found
+*/
 int xsStringListRemove(int lst = -1, string value = "") {
     int strLst = xsArrayGetInt(lst, 1);
     int size = xsArrayGetInt(lst, 0);
@@ -334,6 +405,14 @@ int xsStringListRemove(int lst = -1, string value = "") {
     return (foundIdx);
 }
 
+/*
+    Returns the index of the first occurrence of the value within the optional [start, stop) range. Negative start/stop are relative to the end.
+    @param lst - list id
+    @param value - value to search for
+    @param start - start of search range (inclusive)
+    @param stop - end of search range (exclusive), defaults to list size
+    @return index of the value, or `cStringListGenericError` if not found
+*/
 int xsStringListIndex(int lst = -1, string value = "", int start = 0, int stop = cStringListEmptyIntParam) {
     int size = xsArrayGetInt(lst, 0);
     int strLst = xsArrayGetInt(lst, 1);
@@ -360,6 +439,12 @@ int xsStringListIndex(int lst = -1, string value = "", int start = 0, int stop =
     return (cStringListGenericError);
 }
 
+/*
+    Checks whether the list contains the given value.
+    @param lst - list id
+    @param value - value to search for
+    @return true if the value is found, false otherwise
+*/
 bool xsStringListContains(int lst = -1, string value = "") {
     return (xsStringListIndex(lst, value) > -1);
 }
@@ -397,6 +482,11 @@ void _xsStringListSiftDown(int lst = -1, int start = -1, int end = -1, bool reve
     }
 }
 
+/*
+    Sorts the list in-place using heapsort.
+    @param lst - list id
+    @param reverse - if true, sorts in descending order
+*/
 void xsStringListSort(int lst = -1, bool reverse = false) {
     int size = xsArrayGetInt(lst, 0);
     int strLst = xsArrayGetInt(lst, 1);
@@ -411,6 +501,11 @@ void xsStringListSort(int lst = -1, bool reverse = false) {
     }
 }
 
+/*
+    Removes all elements from the list and shrinks the backing array.
+    @param lst - list id
+    @return `cStringListSuccess` on success, or error if negative
+*/
 int xsStringListClear(int lst = -1) {
     int strList = xsArrayGetInt(lst, 1);
     int capacity = xsArrayGetSize(strList);
@@ -424,6 +519,13 @@ int xsStringListClear(int lst = -1) {
     return (cStringListSuccess);
 }
 
+/*
+    Returns a copy of the list, optionally sliced by [start, end). Negative start/end are relative to the end.
+    @param lst - list id
+    @param start - start of slice (inclusive)
+    @param end - end of slice (exclusive), defaults to list size
+    @return new list id, or `cStringListGenericError` on error
+*/
 int xsStringListCopy(int lst = -1, int start = 0, int end = cStringListMaxCapacity) {
     int size = xsArrayGetInt(lst, 0);
     int fr = 0;
@@ -461,6 +563,12 @@ int xsStringListCopy(int lst = -1, int start = 0, int end = cStringListMaxCapaci
     return (newLst);
 }
 
+/*
+    Appends all elements from another list to the source list.
+    @param source - list id to extend
+    @param lst - list id whose elements are appended
+    @return `cStringListSuccess` on success, or error if negative
+*/
 int xsStringListExtend(int source = -1, int lst = -1) {
     int sourceSize = xsArrayGetInt(source, 0);
     int toAdd = xsArrayGetInt(lst, 0);
@@ -484,6 +592,12 @@ int xsStringListExtend(int source = -1, int lst = -1) {
     return (cStringListSuccess);
 }
 
+/*
+    Appends all elements from an XS array to the source list.
+    @param source - list id to extend
+    @param arr - XS array id whose elements are appended
+    @return `cStringListSuccess` on success, or error if negative
+*/
 int xsStringListExtendWithArray(int source = -1, int arr = -1) {
     int sourceSize = xsArrayGetInt(source, 0);
     int toAdd = xsArrayGetSize(arr);
@@ -506,6 +620,12 @@ int xsStringListExtendWithArray(int source = -1, int arr = -1) {
     return (cStringListSuccess);
 }
 
+/*
+    Performs lexicographic comparison of two lists.
+    @param lst1 - first list id
+    @param lst2 - second list id
+    @return -1 if lst1 < lst2, 1 if lst1 > lst2, 0 if equal
+*/
 int xsStringListCompare(int lst1 = -1, int lst2 = -1) {
     int size1 = xsArrayGetInt(lst1, 0);
     int size2 = xsArrayGetInt(lst2, 0);
@@ -532,6 +652,10 @@ int xsStringListCompare(int lst1 = -1, int lst2 = -1) {
     return (0);
 }
 
+/*
+    Reverses the list in-place.
+    @param lst - list id
+*/
 void xsStringListReverse(int lst = -1) {
     int size = xsArrayGetInt(lst, 0);
     int strList = xsArrayGetInt(lst, 1);
@@ -544,6 +668,12 @@ void xsStringListReverse(int lst = -1) {
     }
 }
 
+/*
+    Counts the number of occurrences of a value in the list.
+    @param lst - list id
+    @param value - value to count
+    @return number of occurrences
+*/
 int xsStringListCount(int lst = -1, string value = "") {
     int count = 0;
     int size = xsArrayGetInt(lst, 0);
@@ -556,6 +686,11 @@ int xsStringListCount(int lst = -1, string value = "") {
     return (count);
 }
 
+/*
+    Returns the minimum value in the list (lexicographic). Sets last error on failure.
+    @param lst - list id
+    @return minimum value, or "-1" on error
+*/
 string xsStringListMin(int lst = -1) {
     int size = xsArrayGetInt(lst, 0);
     if (size == 0) {
@@ -578,6 +713,11 @@ string xsStringListMin(int lst = -1) {
     return (m);
 }
 
+/*
+    Returns the maximum value in the list (lexicographic). Sets last error on failure.
+    @param lst - list id
+    @return maximum value, or "-1" on error
+*/
 string xsStringListMax(int lst = -1) {
     int size = xsArrayGetInt(lst, 0);
     if (size == 0) {
@@ -600,6 +740,10 @@ string xsStringListMax(int lst = -1) {
     return (m);
 }
 
+/*
+    Returns the status code of the last operation that sets it (get, pop, min, max).
+    @return `cStringListSuccess` if the last such operation succeeded, or a negative error code
+*/
 int xsStringListLastError() {
     return (_stringListLastOperationStatus);
 }

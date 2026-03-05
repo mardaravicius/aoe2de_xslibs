@@ -32,6 +32,11 @@ def constants() -> None:
 
 
 def xs_vector_list_size(lst: int32 = int32(-1)) -> int32:
+    """
+    Returns the number of elements in the list.
+    :param lst: list id
+    :return: list size
+    """
     return bit_cast_to_int(xs_vector_get_x(xs_array_get_vector(lst, 0)))
 
 
@@ -41,9 +46,9 @@ def _xs_vector_list_set_size(lst: int32 = int32(-1), size: int32 = int32(0)) -> 
 
 def xs_vector_list_create(capacity: int32 = int32(7)) -> int32:
     """
-    Creates empty list for float values. List is a dynamic array that grows and shrinks as values are added and removed.
+    Creates empty list for vector values. List is a dynamic array that grows and shrinks as values are added and removed.
     :param capacity: initial list capacity
-    :return: created list id, or error if negative
+    :return: created list id, or `c_vector_list_generic_error` on error
     """
     if capacity < 0 or capacity >= c_vector_list_max_capacity:
         return c_vector_list_generic_error
@@ -69,10 +74,10 @@ def xs_vector_list(
         v11: XsVector = c_vector_list_empty_param,
 ) -> int32:
     """
-    Creates a list with provided values. The first value that equals `cFloatListEmptyParam` will stop further insertion.
+    Creates a list with provided values. The first value that equals `c_vector_list_empty_param` will stop further insertion.
     This Function can create a list with 12 values at the maximum, but further values can be added with other functions.
     :param v0 through v11: value at a given index of a list
-    :return: created list id, or error if negative
+    :return: created list id, or `c_vector_list_generic_error` on error
     """
     lst: int32 = xs_array_create_vector(13)
     if lst < 0:
@@ -130,6 +135,12 @@ def xs_vector_list(
 
 
 def xs_vector_list_from_repeated_val(value: XsVector = vector(0.0, 0.0, 0.0), times: int32 = int32(0)) -> int32:
+    """
+    Creates a list by repeating a single value.
+    :param value: value to repeat
+    :param times: number of times to repeat the value
+    :return: created list id, or `c_vector_list_generic_error` on error
+    """
     if times < 0 or times >= c_vector_list_max_capacity:
         return c_vector_list_generic_error
     lst: int32 = xs_array_create_vector(times + 1, value)
@@ -140,6 +151,12 @@ def xs_vector_list_from_repeated_val(value: XsVector = vector(0.0, 0.0, 0.0), ti
 
 
 def xs_vector_list_from_repeated_list(lst: int32 = int32(-1), times: int32 = int32(0)) -> int32:
+    """
+    Creates a new list by repeating all elements of the given list.
+    :param lst: source list id
+    :param times: number of times to repeat the list contents
+    :return: created list id, or `c_vector_list_generic_error` on error
+    """
     if times < 0:
         return c_vector_list_generic_error
     size: int32 = xs_vector_list_size(lst)
@@ -162,6 +179,11 @@ def xs_vector_list_from_repeated_list(lst: int32 = int32(-1), times: int32 = int
 
 
 def xs_vector_list_from_array(arr: int32 = int32(-1)) -> int32:
+    """
+    Creates a new list by copying elements from an XS array.
+    :param arr: source XS array id
+    :return: created list id, or `c_vector_list_generic_error` on error
+    """
     arr_size: int32 = xs_array_get_size(arr)
     lst: int32 = xs_vector_list_create(arr_size)
     if lst < 0:
@@ -173,6 +195,11 @@ def xs_vector_list_from_array(arr: int32 = int32(-1)) -> int32:
 
 
 def xs_vector_list_use_array_as_source(arr: int32 = int32(-1)) -> int32:
+    """
+    Converts an existing XS array into a list in-place by shifting elements and storing the size.
+    :param arr: XS array id to convert
+    :return: list id (same as arr), or `c_vector_list_max_capacity_error`/`c_vector_list_resize_failed_error` on error
+    """
     arr_size: int32 = xs_array_get_size(arr)
     if arr_size + 1 > c_vector_list_max_capacity:
         return c_vector_list_max_capacity_error
@@ -186,6 +213,12 @@ def xs_vector_list_use_array_as_source(arr: int32 = int32(-1)) -> int32:
 
 
 def xs_vector_list_get(lst: int32 = int32(-1), idx: int32 = int32(-1)) -> XsVector:
+    """
+    Returns the element at the given index. Sets last error on failure.
+    :param lst: list id
+    :param idx: zero-based index
+    :return: value at index, or `c_vector_list_generic_error_vector` on error
+    """
     global _vector_list_last_operation_status
     size: int32 = xs_vector_list_size(lst)
     if idx < 0 or idx >= size:
@@ -197,6 +230,13 @@ def xs_vector_list_get(lst: int32 = int32(-1), idx: int32 = int32(-1)) -> XsVect
 
 def xs_vector_list_set(lst: int32 = int32(-1), idx: int32 = int32(-1),
                        value: XsVector = vector(0.0, 0.0, 0.0)) -> int32:
+    """
+    Sets the element at the given index to a new value.
+    :param lst: list id
+    :param idx: zero-based index
+    :param value: new value to set
+    :return: `c_vector_list_success` on success, or error if negative
+    """
     size: int32 = xs_vector_list_size(lst)
     if idx < 0 or idx >= size:
         return c_vector_list_index_out_of_range_error
@@ -226,6 +266,12 @@ def _xs_vector_list_shrink_vector_array(lst: int32 = int32(-1), size: int32 = in
 
 
 def xs_vector_list_append(lst: int32 = int32(-1), value: XsVector = vector(0.0, 0.0, 0.0)) -> int32:
+    """
+    Appends a value to the end of the list, growing the backing array if needed.
+    :param lst: list id
+    :param value: value to append
+    :return: `c_vector_list_success` on success, or error if negative
+    """
     capacity: int32 = xs_array_get_size(lst)
     size: int32 = xs_vector_list_size(lst)
     next_idx: int32 = size + 1
@@ -240,6 +286,13 @@ def xs_vector_list_append(lst: int32 = int32(-1), value: XsVector = vector(0.0, 
 
 def xs_vector_list_insert(lst: int32 = int32(-1), idx: int32 = int32(-1),
                           value: XsVector = vector(0.0, 0.0, 0.0)) -> int32:
+    """
+    Inserts a value at the given index, shifting subsequent elements to the right.
+    :param lst: list id
+    :param idx: zero-based index at which to insert
+    :param value: value to insert
+    :return: `c_vector_list_success` on success, or error if negative
+    """
     capacity: int32 = xs_array_get_size(lst)
     size: int32 = xs_vector_list_size(lst)
     if idx < 0 or idx > size:
@@ -258,6 +311,13 @@ def xs_vector_list_insert(lst: int32 = int32(-1), idx: int32 = int32(-1),
 
 
 def xs_vector_list_pop(lst: int32 = int32(-1), idx: int32 = c_vector_list_max_capacity) -> XsVector:
+    """
+    Removes and returns the element at the given index, shifting subsequent elements to the left.
+    Defaults to the last element. Sets last error on failure.
+    :param lst: list id
+    :param idx: zero-based index of element to remove (defaults to last)
+    :return: removed value, or `c_vector_list_generic_error_vector` on error
+    """
     global _vector_list_last_operation_status
     capacity: int32 = xs_array_get_size(lst)
     size: int32 = xs_vector_list_size(lst)
@@ -279,6 +339,12 @@ def xs_vector_list_pop(lst: int32 = int32(-1), idx: int32 = c_vector_list_max_ca
 
 
 def xs_vector_list_remove(lst: int32 = int32(-1), value: XsVector = vector(-1.0, -1.0, -1.0)) -> int32:
+    """
+    Removes the first occurrence of the given value from the list.
+    :param lst: list id
+    :param value: value to remove
+    :return: index of the removed element, or `c_vector_list_generic_error` if not found
+    """
     capacity: int32 = xs_array_get_size(lst)
     size: int32 = xs_vector_list_size(lst)
     found_idx: int32 = int32(-1)
@@ -301,6 +367,14 @@ def xs_vector_list_remove(lst: int32 = int32(-1), value: XsVector = vector(-1.0,
 
 def xs_vector_list_index(lst: int32 = int32(-1), value: XsVector = vector(-1.0, -1.0, -1.0), start: int32 = int32(0),
                          stop: int32 = c_vector_list_empty_int_param) -> int32:
+    """
+    Returns the index of the first occurrence of the value within the optional [start, stop) range. Negative start/stop are relative to the end.
+    :param lst: list id
+    :param value: value to search for
+    :param start: start of search range (inclusive)
+    :param stop: end of search range (exclusive), defaults to list size
+    :return: index of the value, or `c_vector_list_generic_error` if not found
+    """
     size: int32 = xs_vector_list_size(lst)
 
     if stop == c_vector_list_empty_int_param or stop > size:
@@ -321,10 +395,21 @@ def xs_vector_list_index(lst: int32 = int32(-1), value: XsVector = vector(-1.0, 
 
 
 def xs_vector_list_contains(lst: int32 = int32(-1), value: XsVector = vector(-1.0, -1.0, -1.0)) -> bool:
+    """
+    Checks whether the list contains the given value.
+    :param lst: list id
+    :param value: value to search for
+    :return: true if the value is found, false otherwise
+    """
     return xs_vector_list_index(lst, value) > -1
 
 
 def xs_vector_list_to_string(lst: int32 = int32(-1)) -> str:
+    """
+    Returns a string representation of the list in the format `[v0, v1, ...]`.
+    :param lst: list id
+    :return: string representation of the list
+    """
     size: int32 = xs_vector_list_size(lst)
     s: str = "["
     for i in i32range(1, size + 1):
@@ -337,6 +422,13 @@ def xs_vector_list_to_string(lst: int32 = int32(-1)) -> str:
 
 def xs_vector_list_copy(lst: int32 = int32(-1), start: int32 = int32(0),
                         end: int32 = c_vector_list_max_capacity) -> int32:
+    """
+    Returns a copy of the list, optionally sliced by [start, end). Negative start/end are relative to the end.
+    :param lst: list id
+    :param start: start of slice (inclusive)
+    :param end: end of slice (exclusive), defaults to list size
+    :return: new list id, or `c_vector_list_generic_error` on error
+    """
     size: int32 = xs_vector_list_size(lst)
     fr: int32 = int32(0)
     if start < 0:
@@ -365,6 +457,12 @@ def xs_vector_list_copy(lst: int32 = int32(-1), start: int32 = int32(0),
 
 
 def xs_vector_list_extend(source: int32 = int32(-1), lst: int32 = int32(-1)) -> int32:
+    """
+    Appends all elements from another list to the source list.
+    :param source: list id to extend
+    :param lst: list id whose elements are appended
+    :return: `c_vector_list_success` on success, or error if negative
+    """
     source_size: int32 = xs_vector_list_size(source)
     to_add: int32 = xs_vector_list_size(lst)
     capacity: int32 = xs_array_get_size(source)
@@ -382,6 +480,12 @@ def xs_vector_list_extend(source: int32 = int32(-1), lst: int32 = int32(-1)) -> 
 
 
 def xs_vector_list_extend_with_array(source: int32 = int32(-1), arr: int32 = int32(-1)) -> int32:
+    """
+    Appends all elements from an XS array to the source list.
+    :param source: list id to extend
+    :param arr: XS array id whose elements are appended
+    :return: `c_vector_list_success` on success, or error if negative
+    """
     source_size: int32 = xs_vector_list_size(source)
     to_add: int32 = xs_array_get_size(arr)
     capacity: int32 = xs_array_get_size(source)
@@ -399,6 +503,11 @@ def xs_vector_list_extend_with_array(source: int32 = int32(-1), arr: int32 = int
 
 
 def xs_vector_list_clear(lst: int32 = int32(-1)) -> int32:
+    """
+    Removes all elements from the list and shrinks the backing array.
+    :param lst: list id
+    :return: `c_vector_list_success` on success, or error if negative
+    """
     capacity: int32 = xs_array_get_size(lst)
     if capacity > 8:
         r: int32 = xs_array_resize_vector(lst, 8)
@@ -409,6 +518,10 @@ def xs_vector_list_clear(lst: int32 = int32(-1)) -> int32:
 
 
 def xs_vector_list_reverse(lst: int32 = int32(-1)) -> None:
+    """
+    Reverses the list in-place.
+    :param lst: list id
+    """
     size: int32 = xs_vector_list_size(lst)
     mid: int32 = (size + 2) // 2
     for i in i32range(1, mid):
@@ -419,6 +532,12 @@ def xs_vector_list_reverse(lst: int32 = int32(-1)) -> None:
 
 
 def xs_vector_list_count(lst: int32 = int32(-1), value: XsVector = vector(-1.0, -1.0, -1.0)) -> int32:
+    """
+    Counts the number of occurrences of a value in the list.
+    :param lst: list id
+    :param value: value to count
+    :return: number of occurrences
+    """
     count: int32 = int32(0)
     size: int32 = xs_vector_list_size(lst)
     for i in i32range(1, size + 1):
@@ -428,6 +547,10 @@ def xs_vector_list_count(lst: int32 = int32(-1), value: XsVector = vector(-1.0, 
 
 
 def xs_vector_list_last_error() -> int32:
+    """
+    Returns the status code of the last operation that sets it (get, pop).
+    :return: `c_vector_list_success` if the last such operation succeeded, or a negative error code
+    """
     return _vector_list_last_operation_status
 
 
