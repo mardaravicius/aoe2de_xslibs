@@ -188,6 +188,16 @@ class PythonToXsConverter:
             xs += f"{self.sp}={self.sp}{self._to_xs_expression(default, ctx)}"
         return xs
 
+    def _parse_cast_call(self, node) -> Optional[tuple[str, expr]]:
+        if (isinstance(node, Call)
+                and isinstance(node.func, Name)
+                and node.func.id == "cast"
+                and len(node.args) == 2
+                and isinstance(node.args[0], Name)
+                and node.args[0].id in self._ARRAY_CREATE_MAP):
+            return node.args[0].id, node.args[1]
+        return None
+
     def _infer_array_element_type(self, node) -> str:
         if isinstance(node, Call) and isinstance(node.func, Name):
             func_name = node.func.id
@@ -195,6 +205,9 @@ class PythonToXsConverter:
                 return func_name
             if func_name == "vector":
                 return "XsVector"
+        cast_info = self._parse_cast_call(node)
+        if cast_info is not None:
+            return cast_info[0]
         value = self._unpack_constant(node)
         if value is not None:
             if isinstance(value, bool):
@@ -400,7 +413,7 @@ class PythonToXsConverter:
                 return ctx.replacements[e.id]
             return self._to_camel_case(e.id)
         if isinstance(e, Call):
-            if e.func.id in self._macro_functions:
+            if isinstance(e.func, Name) and e.func.id in self._macro_functions:
                 return self._to_xs_constant(self._eval_macro_function(e), enclosed)
             return self._to_xs_call(e, ctx, enclosed)
         if isinstance(e, BinOp) and isinstance(e.op, Mult) and isinstance(e.left, List):
@@ -436,12 +449,11 @@ class PythonToXsConverter:
             return self._to_xs_expression(e.value, ctx)
         if isinstance(e, BoolOp):
             op_xs = self._to_xs_binary_op(e.op)
-            left_xs = self._to_xs_expression(e.values[0], ctx)
-            right_xs = self._to_xs_expression(e.values[1], ctx)
-            return self._wrap_parens(f"{left_xs}{self.sp}{op_xs}{self.sp}{right_xs}", enclosed)
+            parts = [self._to_xs_expression(v, ctx) for v in e.values]
+            return self._wrap_parens(f"{self.sp}{op_xs}{self.sp}".join(parts), enclosed)
         if isinstance(e, List):
             return self._to_xs_list_literal_expr(e, ctx)
-        raise ValueError(f"Unsupported expression: {expr}")
+        raise ValueError(f"Unsupported expression: {e}")
 
     def _to_xs_constant(self, value, enclosed: bool = False):
         if isinstance(value, str):
@@ -477,6 +489,9 @@ class PythonToXsConverter:
         if (isinstance(node, Call) and isinstance(node.func, Name)
                 and node.func.id in self._NUMERIC_CAST_ZEROS and len(node.args) == 1):
             return self._unpack_constant(node.args[0])
+        cast_info = self._parse_cast_call(node)
+        if cast_info is not None:
+            return self._unpack_constant(cast_info[1])
         return None
 
     def _to_xs_numeric_cast(self, zero: str, arg, ctx: XsContext, enclosed: bool) -> str:
@@ -496,6 +511,10 @@ class PythonToXsConverter:
         if function_name == "len":
             arg_xs = self._to_xs_expression(e.args[0], ctx, enclosed=True)
             return f"xsArrayGetSize({arg_xs})"
+        if function_name == "cast":
+            if len(e.args) != 2:
+                raise ValueError("cast() requires exactly 2 arguments")
+            return self._to_xs_expression(e.args[1], ctx, enclosed=enclosed)
         zero = self._NUMERIC_CAST_ZEROS.get(function_name)
         if zero is not None:
             return self._to_xs_numeric_cast(zero, e.args[0], ctx, enclosed)
@@ -650,7 +669,7 @@ class PythonToXsConverter:
             "priority": None,
         }
         for kw in rule_decorator.keywords:
-            if isinstance(kw, keyword) and (kw.value, Constant):
+            if isinstance(kw, keyword) and isinstance(kw.value, Constant):
                 rule_settings[kw.arg] = kw.value.value
             else:
                 raise ValueError(f"not a keyword: {kw}")
@@ -662,7 +681,7 @@ class PythonToXsConverter:
         else:
             modifiers.append("inactive")
         if rule_settings.get("high_frequency"):
-            if "min_interval" in rule_settings or "max_interval" in rule_settings:
+            if rule_settings.get("min_interval") is not None or rule_settings.get("max_interval") is not None:
                 raise ValueError("can not use both high_frequency and min/max_interval")
             modifiers.append("highFrequency")
         if rule_settings.get("run_immediately"):
@@ -750,7 +769,7 @@ class PythonToXsConverter:
         if isinstance(e.items[0].optional_vars, Name):
             names = [e.items[0].optional_vars.id]
         elif isinstance(e.items[0].optional_vars, Tuple):
-            names = [n.id for n in e.items[0].optional_vars.dims if isinstance(n, Name)]
+            names = [n.id for n in e.items[0].optional_vars.elts if isinstance(n, Name)]
         else:
             raise ValueError("only unpacked single or deconstructer tuple are allowed")
         iterable_value = self._eval_macro_function(e.items[0].context_expr)

@@ -18,7 +18,7 @@ from xs_converter.functions import (
 from xs_converter.macro import macro_pass_value, macro_repeat_with_iterable
 from xs_converter.symbols import XsConst, XsStatic, XsExtern, XsExternConst, XsVector, xs_rule
 from numpy import int32, float32
-from typing import List
+from typing import List, cast
 
 
 def _parse_dedented(fn):
@@ -1291,10 +1291,11 @@ class TestXsRule(unittest.TestCase):
         def fast_rule() -> None:
             pass
 
-        # high_frequency=True always raises because the converter's rule_settings
-        # dict always contains min_interval/max_interval keys (even when None).
-        with self.assertRaises(ValueError):
-            _convert(fast_rule, root_flags=[False])
+        expected = (
+            "rule fastRule active highFrequency {\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(fast_rule, root_flags=[False]))
 
     def test_run_immediately_rule(self):
         @xs_rule(active=True, run_immediately=True)
@@ -2663,6 +2664,280 @@ class TestListLiteralInExpression(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             _convert(f)
+
+
+class TestCastInArrays(unittest.TestCase):
+
+    def test_cast_int_in_repeat_array(self):
+        def f() -> None:
+            a: int = 5
+            arr: list[int] = [cast(int, a)] * 10
+
+        expected = (
+            "void f() {\n"
+            "    int a = 5;\n"
+            "    int arr = xsArrayCreateInt(10, a);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_float_in_repeat_array(self):
+        def f() -> None:
+            a: float = 1.5
+            arr: list[float] = [cast(float, a)] * 5
+
+        expected = (
+            "void f() {\n"
+            "    float a = 1.5;\n"
+            "    int arr = xsArrayCreateFloat(5, a);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_bool_in_repeat_array(self):
+        def f() -> None:
+            a: bool = True
+            arr: list[bool] = [cast(bool, a)] * 3
+
+        expected = (
+            "void f() {\n"
+            "    bool a = true;\n"
+            "    int arr = xsArrayCreateBool(3, a);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_str_in_repeat_array(self):
+        def f() -> None:
+            a: str = "hi"
+            arr: list[str] = [cast(str, a)] * 4
+
+        expected = (
+            "void f() {\n"
+            '    string a = "hi";\n'
+            "    int arr = xsArrayCreateString(4, a);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_int_in_array_set(self):
+        def f() -> None:
+            arr: list[int] = [0] * 10
+            x: int = 42
+            arr[0] = cast(int, x)
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(10);\n"
+            "    int x = 42;\n"
+            "    xsArraySetInt(arr, 0, x);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_float_in_array_set(self):
+        def f() -> None:
+            arr: list[float] = [0.0] * 10
+            x: float = 1.5
+            arr[0] = cast(float, x)
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateFloat(10);\n"
+            "    float x = 1.5;\n"
+            "    xsArraySetFloat(arr, 0, x);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_bool_in_array_set(self):
+        def f() -> None:
+            arr: list[bool] = [False] * 10
+            x: bool = True
+            arr[0] = cast(bool, x)
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateBool(10);\n"
+            "    bool x = true;\n"
+            "    xsArraySetBool(arr, 0, x);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_str_in_array_set(self):
+        def f() -> None:
+            arr: list[str] = [""] * 10
+            x: str = "hello"
+            arr[0] = cast(str, x)
+
+        expected = (
+            "void f() {\n"
+            '    int arr = xsArrayCreateString(10);\n'
+            '    string x = "hello";\n'
+            "    xsArraySetString(arr, 0, x);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_int_in_list_literal(self):
+        def f() -> None:
+            a: int = 10
+            b: int = 20
+            arr = [cast(int, a), cast(int, b)]
+
+        expected = (
+            "void f() {\n"
+            "    int a = 10;\n"
+            "    int b = 20;\n"
+            "    int arr = xsArrayCreateInt(2);\n"
+            "    xsArraySetInt(arr, 0, a);\n"
+            "    xsArraySetInt(arr, 1, b);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_float_in_list_literal(self):
+        def f() -> None:
+            a: float = 1.0
+            b: float = 2.5
+            arr = [cast(float, a), cast(float, b)]
+
+        expected = (
+            "void f() {\n"
+            "    float a = 1.0;\n"
+            "    float b = 2.5;\n"
+            "    int arr = xsArrayCreateFloat(2);\n"
+            "    xsArraySetFloat(arr, 0, a);\n"
+            "    xsArraySetFloat(arr, 1, b);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_mixed_with_constants_in_list(self):
+        def f() -> None:
+            a: int = 10
+            arr = [cast(int, a), 20, 30]
+
+        expected = (
+            "void f() {\n"
+            "    int a = 10;\n"
+            "    int arr = xsArrayCreateInt(3);\n"
+            "    xsArraySetInt(arr, 0, a);\n"
+            "    xsArraySetInt(arr, 1, 20);\n"
+            "    xsArraySetInt(arr, 2, 30);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_constant_zero_default_omitted(self):
+        def f() -> None:
+            arr: list[int] = [cast(int, 0)] * 10
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(10);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_constant_nonzero_default(self):
+        def f() -> None:
+            arr: list[int] = [cast(int, 5)] * 10
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(10, 5);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_in_annotated_list_literal(self):
+        def f() -> None:
+            a: float = 1.0
+            b: float = 2.0
+            arr: list[float] = [cast(float, a), cast(float, b)]
+
+        expected = (
+            "void f() {\n"
+            "    float a = 1.0;\n"
+            "    float b = 2.0;\n"
+            "    int arr = xsArrayCreateFloat(2);\n"
+            "    xsArraySetFloat(arr, 0, a);\n"
+            "    xsArraySetFloat(arr, 1, b);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_no_indent(self):
+        def f() -> None:
+            x: int = 5
+            arr: list[int] = [cast(int, x)] * 3
+
+        self.assertEqual(
+            "void f(){int x=5;int arr=xsArrayCreateInt(3,x);}",
+            _convert(f, indent=False),
+        )
+
+    def test_cast_expression_in_array_set(self):
+        def f() -> None:
+            arr: list[int] = [0] * 10
+            x: int = 5
+            arr[0] = cast(int, x + 1)
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(10);\n"
+            "    int x = 5;\n"
+            "    xsArraySetInt(arr, 0, x + 1);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_in_list_literal_with_expression(self):
+        def f() -> None:
+            a: int = 10
+            arr = [cast(int, a + 1), cast(int, a + 2)]
+
+        expected = (
+            "void f() {\n"
+            "    int a = 10;\n"
+            "    int arr = xsArrayCreateInt(2);\n"
+            "    xsArraySetInt(arr, 0, a + 1);\n"
+            "    xsArraySetInt(arr, 1, a + 2);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_int32_in_list_literal(self):
+        def f() -> None:
+            a: int = 10
+            arr = [cast(int32, a), 20]
+
+        expected = (
+            "void f() {\n"
+            "    int a = 10;\n"
+            "    int arr = xsArrayCreateInt(2);\n"
+            "    xsArraySetInt(arr, 0, a);\n"
+            "    xsArraySetInt(arr, 1, 20);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_float32_in_list_literal(self):
+        def f() -> None:
+            a: float = 1.0
+            arr = [cast(float32, a), 2.0]
+
+        expected = (
+            "void f() {\n"
+            "    float a = 1.0;\n"
+            "    int arr = xsArrayCreateFloat(2);\n"
+            "    xsArraySetFloat(arr, 0, a);\n"
+            "    xsArraySetFloat(arr, 1, 2.0);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
 
 
 if __name__ == "__main__":
