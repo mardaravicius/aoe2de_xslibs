@@ -6,7 +6,7 @@ from ast import FunctionDef, Constant, Name, expr, arg, Expr, AnnAssign, Call, A
     Return, Pass, Subscript, stmt, Attribute, keyword, With, Tuple, UnaryOp, USub, JoinedStr, FormattedValue, Global, \
     BoolOp, Or, And, Not, FloorDiv
 from dataclasses import dataclass, field
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from xs_converter.macro import macro_pass_value, macro_repeat_with_iterable
 
@@ -222,8 +222,9 @@ class PythonToXsConverter:
             right_xs = self._to_xs_expression(e.right, ctx)
             return self._wrap_parens(f"{left_xs}{self.sp}{op_xs}{self.sp}{right_xs}", enclosed)
         if isinstance(e, UnaryOp):
-            if isinstance(e.op, USub) and isinstance(e.operand, Constant):
-                return self._to_xs_constant(e.operand.value * -1, enclosed)
+            value = self._unpack_constant(e)
+            if value is not None:
+                return self._to_xs_constant(value, enclosed)
             if isinstance(e.op, Not):
                 return self._wrap_parens(
                     f"{self._to_xs_expression(e.operand, ctx)}{self.sp}=={self.sp}false", enclosed)
@@ -273,16 +274,17 @@ class PythonToXsConverter:
             return f"{value}"
         raise ValueError(f"Unsupported variable type: {value}")
 
-    def _is_literal_constant(self, node) -> bool:
-        return ((isinstance(node, UnaryOp) and isinstance(node.op, USub)
-                 and isinstance(node.operand, Constant))
-                or isinstance(node, Constant))
+    def _unpack_constant(self, node: expr) -> Optional[Any]:
+        if isinstance(node, Constant):
+            return node.value
+        if isinstance(node, UnaryOp) and isinstance(node.op, USub) and isinstance(node.operand, Constant):
+            return -node.operand.value
+        return None
 
     def _to_xs_numeric_cast(self, zero: str, arg, ctx: XsContext, enclosed: bool) -> str:
-        if self._is_literal_constant(arg):
-            if isinstance(arg, UnaryOp):
-                return self._to_xs_expression(arg, ctx, enclosed=enclosed)
-            return self._to_xs_constant(arg.value, enclosed)
+        value = self._unpack_constant(arg)
+        if value is not None:
+            return self._to_xs_constant(value, enclosed)
         xs = f"{zero}{self.sp}+{self.sp}{self._to_xs_expression(arg, ctx)}"
         return self._wrap_parens(xs, enclosed)
 
@@ -327,47 +329,50 @@ class PythonToXsConverter:
         if not isinstance(e.target, Name):
             raise ValueError("loop target must be a new variable")
 
-        xs_loop_var = self._to_camel_case(e.target.id)
-        args = e.iter.args
+        loop_var = self._to_camel_case(e.target.id)
+        start_node, end_node, step = self._parse_range_args(e.iter.args)
 
-        if 2 >= len(args) > 0 or (len(args) == 3 and self._unpack_int_constant(args[2]) in {1, -1}):
-            if len(args) == 1:
-                from_xs = "0"
-                to_xs = self._to_xs_for_bound(args[0], ctx, True, True)
-            else:
-                from_xs = self._to_xs_expression(args[0], ctx, enclosed=True)
-                positive = self._unpack_int_constant(args[2]) != -1 if len(args) == 3 else True
-                to_xs = self._to_xs_for_bound(args[1], ctx, positive, True)
-            header = f"for{self.sp}({xs_loop_var}{self.sp}={self.sp}{from_xs};{self.sp}{to_xs})"
+        if step == 1 or step == -1:
+            positive = step > 0
+            start_xs = "0" if start_node is None else self._to_xs_expression(start_node, ctx, enclosed=True)
+            bound_xs = self._to_xs_for_bound(end_node, ctx, positive, True)
+            header = f"for{self.sp}({loop_var}{self.sp}={self.sp}{start_xs};{self.sp}{bound_xs})"
             return self._block(ctx.depth, header, self._to_xs_body(e.body, ctx))
 
-        if len(args) != 3:
-            raise ValueError("for loops are only supported over range expressions")
-
-        xs = self._stmt(ctx.depth, f"int {xs_loop_var}{self.sp}={self.sp}{self._to_xs_expression(args[0], ctx, enclosed=True)}")
-        increment_val = self._unpack_int_constant(args[2])
-        if increment_val is None or isinstance(increment_val, float):
-            raise ValueError("loop increment value must be a constant")
-        if increment_val == 0:
-            raise ValueError("last range arg can't be 0")
-        if increment_val > 0:
-            increment_xs = f"{self.sp}={self.sp}{xs_loop_var}{self.sp}+{self.sp}{self._to_xs_constant(increment_val)}"
+        xs = self._stmt(ctx.depth, f"int {loop_var}{self.sp}={self.sp}{self._to_xs_expression(start_node, ctx, enclosed=True)}")
+        if isinstance(step, int):
+            positive = step > 0
+            op = "+" if positive else "-"
+            step_xs = self._to_xs_constant(abs(step))
         else:
-            increment_xs = f"{self.sp}={self.sp}{xs_loop_var}{self.sp}-{self.sp}{self._to_xs_constant(abs(increment_val))}"
-
-        to_xs = self._to_xs_for_bound(args[1], ctx, increment_val >= 0, False)
+            positive = True
+            op = "+"
+            step_xs = self._to_xs_expression(step, ctx)
+        bound_xs = self._to_xs_for_bound(end_node, ctx, positive, False)
         body_xs = self._to_xs_body(e.body, ctx)
-        body_xs += self._stmt(ctx.depth + 1, f"{xs_loop_var}{increment_xs}")
-        xs += self._block(ctx.depth, f"while{self.sp}({xs_loop_var}{self.sp}{to_xs})", body_xs)
+        body_xs += self._stmt(ctx.depth + 1, f"{loop_var}{self.sp}={self.sp}{loop_var}{self.sp}{op}{self.sp}{step_xs}")
+        xs += self._block(ctx.depth, f"while{self.sp}({loop_var}{self.sp}{bound_xs})", body_xs)
         return xs
 
-    def _unpack_int_constant(self, expr) -> Optional[int]:
-        if isinstance(expr, UnaryOp) and isinstance(expr.op, USub) and isinstance(
-            expr.operand, Constant) and isinstance(expr.operand.value, int):
-            return expr.operand.value * -1
-        if isinstance(expr, Constant) and isinstance(expr.value, int):
-            return expr.value
-        return None
+    def _parse_range_args(self, args: list[expr]) -> tuple[Optional[expr], expr, int | expr]:
+        if len(args) == 1:
+            return None, args[0], 1
+        if len(args) == 2:
+            return args[0], args[1], 1
+        if len(args) == 3:
+            step = self._unpack_int_constant(args[2])
+            if step is None:
+                return args[0], args[1], args[2]
+            if step == 0:
+                raise ValueError("loop step cannot be 0")
+            return args[0], args[1], step
+        raise ValueError("range() takes 1 to 3 arguments")
+
+    def _unpack_int_constant(self, expr: expr) -> Optional[int]:
+        value = self._unpack_constant(expr)
+        if not isinstance(value, int):
+            return None
+        return value
 
     def _to_xs_while(self, e: While, ctx: XsContext) -> str:
         header = f"while{self.sp}({self._to_xs_expression(e.test, ctx, enclosed=True)})"

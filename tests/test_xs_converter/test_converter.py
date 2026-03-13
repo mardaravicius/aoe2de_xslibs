@@ -1030,6 +1030,56 @@ class TestForLoops(unittest.TestCase):
         )
         self.assertEqual(expected, _convert(f))
 
+    def test_range_for_only_expressions(self):
+        def f() -> None:
+            a: int = 1
+            b: int = 2
+            c: int = 3
+            d: int = 4
+            for i in range(a + b, c + d):
+                xs_chat_data("hi")
+
+        expected = (
+            "void f() {\n"
+            "    int a = 1;\n"
+            "    int b = 2;\n"
+            "    int c = 3;\n"
+            "    int d = 4;\n"
+            "    for (i = a + b; < c + d) {\n"
+            '        xsChatData("hi");\n'
+            "    }\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_range_all_expressions(self):
+        def f() -> None:
+            a: int = 1
+            b: int = 2
+            c: int = 3
+            d: int = 4
+            e: int = 5
+            f: int = 6
+            for i in range(a + b, c + d, e + f):
+                xs_chat_data("hi")
+
+        expected = (
+            "void f() {\n"
+            "    int a = 1;\n"
+            "    int b = 2;\n"
+            "    int c = 3;\n"
+            "    int d = 4;\n"
+            "    int e = 5;\n"
+            "    int f = 6;\n"
+            "    int i = a + b;\n"
+            "    while (i < (c + d)) {\n"
+            '        xsChatData("hi");\n'
+            "        i = i + (e + f);\n"
+            "    }\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
 
 class TestWhileLoop(unittest.TestCase):
 
