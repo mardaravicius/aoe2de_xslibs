@@ -179,4 +179,4 @@ def bit_cast_to_int_impl(number: float32) -> int32:
 
 
 def xs_get_random_number_impl() -> int32:
-    return int32(random.randint(0, 32766))
+    return int32(random.randint(0, 32767))

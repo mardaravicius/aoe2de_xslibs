@@ -135,7 +135,7 @@ void xsMtSeed(int seed = 0) {
 
 int xsMtRandom() {
     if (_mtSeedSet == false) {
-        xsMtSeed((xsGetRandomNumber() * 65536) + xsGetRandomNumber());
+        xsMtSeed(((xsGetRandomNumber() * 32768) + xsGetRandomNumber()) + xsBitShiftLeft(xsGetRandomNumber(), 30));
     }
     int k = _mtStateIndex;
     int j = k - (_cMtN - 1);

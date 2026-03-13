@@ -160,7 +160,7 @@ def xs_mt_random() -> int32:
     global _mt_state_index, _mt_state_index
 
     if not _mt_seed_set:
-        xs_mt_seed(xs_get_random_number() * 65536 + xs_get_random_number())
+        xs_mt_seed(xs_get_random_number() * int32(32768) + xs_get_random_number() + xs_bit_shift_left(xs_get_random_number(), int32(30)))
 
     k: int32 = _mt_state_index
 
