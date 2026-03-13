@@ -238,10 +238,15 @@ int xsFloatListSet(int lst = -1, int idx = -1, float value = 0.0) {
 }
 
 int _xsFloatListExtendFloatArray(int lst = -1, int capacity = 0) {
-    if (capacity == cFloatListMaxCapacity) {
+    if (capacity >= cFloatListMaxCapacity) {
         return (cFloatListMaxCapacityError);
     }
-    int newCapacity = capacity * 2;
+    int newCapacity = 0;
+    if (capacity > (cFloatListMaxCapacity / 2)) {
+        newCapacity = cFloatListMaxCapacity;
+    } else {
+        newCapacity = capacity * 2;
+    }
     if (newCapacity > cFloatListMaxCapacity) {
         newCapacity = cFloatListMaxCapacity;
     } else if (newCapacity == 0) {
@@ -324,12 +329,12 @@ float xsFloatListPop(int lst = -1, int idx = cFloatListMaxCapacity) {
     for (i = idx + 2; <= size) {
         xsArraySetFloat(lst, i - 1, xsArrayGetFloat(lst, i));
     }
+    _xsFloatListSetSize(lst, size - 1);
     int r = _xsFloatListShrinkFloatArray(lst, size, capacity);
     if (r != cFloatListSuccess) {
         _floatListLastOperationStatus = r;
         return (cFloatListGenericErrorFloat);
     }
-    _xsFloatListSetSize(lst, size - 1);
     _floatListLastOperationStatus = cFloatListSuccess;
     return (removedElem);
 }
@@ -386,11 +391,11 @@ int xsFloatListRemove(int lst = -1, float value = -1) {
     for (j = foundIdx + 1; <= size) {
         xsArraySetFloat(lst, j - 1, xsArrayGetFloat(lst, j));
     }
+    _xsFloatListSetSize(lst, size - 1);
     int r = _xsFloatListShrinkFloatArray(lst, size, capacity);
     if (r != cFloatListSuccess) {
         return (r);
     }
-    _xsFloatListSetSize(lst, size - 1);
     return (foundIdx - 1);
 }
 

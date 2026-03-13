@@ -275,9 +275,13 @@ def xs_int_list_size(lst: int32 = int32(-1)) -> int32:
 
 
 def _xs_int_list_extend_int_array(lst: int32 = int32(-1), capacity: int32 = int32(0)) -> int32:
-    if capacity == c_int_list_max_capacity:
+    if capacity >= c_int_list_max_capacity:
         return c_int_list_max_capacity_error
-    new_capacity: int32 = capacity * 2
+    new_capacity: int32 = int32(0)
+    if capacity > c_int_list_max_capacity // 2:
+        new_capacity = c_int_list_max_capacity
+    else:
+        new_capacity = capacity * 2
     if new_capacity > c_int_list_max_capacity:
         new_capacity = c_int_list_max_capacity
     elif new_capacity == 0:
@@ -359,11 +363,11 @@ def xs_int_list_pop(lst: int32 = int32(-1), idx: int32 = c_int_list_max_capacity
     removed_elem: int32 = xs_array_get_int(lst, idx + 1)
     for i in i32range(idx + 2, size + 1):
         xs_array_set_int(lst, i - 1, xs_array_get_int(lst, i))
+    xs_array_set_int(lst, 0, size - 1)
     r: int32 = _xs_int_list_shrink_int_array(lst, size, capacity)
     if r != c_int_list_success:
         _int_list_last_operation_status = r
         return c_int_list_generic_error
-    xs_array_set_int(lst, 0, size - 1)
     _int_list_last_operation_status = c_int_list_success
     return removed_elem
 
@@ -388,10 +392,10 @@ def xs_int_list_remove(lst: int32 = int32(-1), value: int32 = int32(-1)) -> int3
         return c_int_list_generic_error
     for j in i32range(found_idx + 1, size + 1):
         xs_array_set_int(lst, j - 1, xs_array_get_int(lst, j))
+    xs_array_set_int(lst, 0, size - 1)
     r: int32 = _xs_int_list_shrink_int_array(lst, size, capacity)
     if r != c_int_list_success:
         return r
-    xs_array_set_int(lst, 0, size - 1)
     return found_idx - 1
 
 

@@ -243,9 +243,13 @@ def xs_float_list_set(lst: int32 = int32(-1), idx: int32 = int32(-1), value: flo
 
 
 def _xs_float_list_extend_float_array(lst: int32 = int32(-1), capacity: int32 = int32(0)) -> int32:
-    if capacity == c_float_list_max_capacity:
+    if capacity >= c_float_list_max_capacity:
         return c_float_list_max_capacity_error
-    new_capacity: int32 = capacity * 2
+    new_capacity: int32 = int32(0)
+    if capacity > c_float_list_max_capacity // 2:
+        new_capacity = c_float_list_max_capacity
+    else:
+        new_capacity = capacity * 2
     if new_capacity > c_float_list_max_capacity:
         new_capacity = c_float_list_max_capacity
     elif new_capacity == 0:
@@ -327,11 +331,11 @@ def xs_float_list_pop(lst: int32 = int32(-1), idx: int32 = c_float_list_max_capa
     removed_elem: float32 = xs_array_get_float(lst, idx + 1)
     for i in i32range(idx + 2, size + 1):
         xs_array_set_float(lst, i - 1, xs_array_get_float(lst, i))
+    _xs_float_list_set_size(lst, size - 1)
     r: int32 = _xs_float_list_shrink_float_array(lst, size, capacity)
     if r != c_float_list_success:
         _float_list_last_operation_status = r
         return c_float_list_generic_error_float
-    _xs_float_list_set_size(lst, size - 1)
     _float_list_last_operation_status = c_float_list_success
     return removed_elem
 
@@ -356,10 +360,10 @@ def xs_float_list_remove(lst: int32 = int32(-1), value: float32 = float32(-1)) -
         return c_float_list_generic_error
     for j in i32range(found_idx + 1, size + 1):
         xs_array_set_float(lst, j - 1, xs_array_get_float(lst, j))
+    _xs_float_list_set_size(lst, size - 1)
     r: int32 = _xs_float_list_shrink_float_array(lst, size, capacity)
     if r != c_float_list_success:
         return r
-    _xs_float_list_set_size(lst, size - 1)
     return found_idx - 1
 
 

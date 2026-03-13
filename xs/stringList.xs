@@ -238,10 +238,15 @@ int xsStringListSet(int lst = -1, int idx = -1, string value = "") {
 }
 
 int _xsStringListExtendStringArray(int lst = -1, int capacity = 0) {
-    if (capacity == cStringListMaxCapacity) {
+    if (capacity >= cStringListMaxCapacity) {
         return (cStringListMaxCapacityError);
     }
-    int newCapacity = capacity * 2;
+    int newCapacity = 0;
+    if (capacity > (cStringListMaxCapacity / 2)) {
+        newCapacity = cStringListMaxCapacity;
+    } else {
+        newCapacity = capacity * 2;
+    }
     if (newCapacity > cStringListMaxCapacity) {
         newCapacity = cStringListMaxCapacity;
     } else if (newCapacity == 0) {
@@ -331,12 +336,12 @@ string xsStringListPop(int lst = -1, int idx = cStringListMaxCapacity) {
     for (i = idx; < size - 1) {
         xsArraySetString(strLst, i, xsArrayGetString(strLst, i + 1));
     }
+    xsArraySetInt(lst, 0, size - 1);
     int r = _xsStringListShrinkStringArray(strLst, size, capacity);
     if (r != cStringListSuccess) {
         _stringListLastOperationStatus = r;
         return ("-1");
     }
-    xsArraySetInt(lst, 0, size - 1);
     _stringListLastOperationStatus = cStringListSuccess;
     return (removedElem);
 }
@@ -395,12 +400,12 @@ int xsStringListRemove(int lst = -1, string value = "") {
     for (j = foundIdx; < newSize) {
         xsArraySetString(strLst, j, xsArrayGetString(strLst, j + 1));
     }
+    xsArraySetInt(lst, 0, newSize);
     int capacity = xsArrayGetSize(strLst);
     int r = _xsStringListShrinkStringArray(strLst, size, capacity);
     if (r != cStringListSuccess) {
         return (r);
     }
-    xsArraySetInt(lst, 0, newSize);
     return (foundIdx);
 }
 

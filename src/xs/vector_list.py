@@ -291,9 +291,13 @@ def xs_vector_list_set(lst: int32 = int32(-1), idx: int32 = int32(-1),
 
 
 def _xs_vector_list_extend_vector_array(lst: int32 = int32(-1), capacity: int32 = int32(0)) -> int32:
-    if capacity == c_vector_list_max_capacity:
+    if capacity >= c_vector_list_max_capacity:
         return c_vector_list_max_capacity_error
-    new_capacity: int32 = capacity * 2
+    new_capacity: int32 = int32(0)
+    if capacity > c_vector_list_max_capacity // 2:
+        new_capacity = c_vector_list_max_capacity
+    else:
+        new_capacity = capacity * 2
     if new_capacity > c_vector_list_max_capacity:
         new_capacity = c_vector_list_max_capacity
     elif new_capacity == 0:
@@ -377,11 +381,11 @@ def xs_vector_list_pop(lst: int32 = int32(-1), idx: int32 = c_vector_list_max_ca
     removed_elem: XsVector = _xs_vector_list_arr_get(lst, idx + 1)
     for i in i32range(idx + 2, size + 1):
         _xs_vector_list_arr_set(lst, i - 1, _xs_vector_list_arr_get(lst, i))
+    _xs_vector_list_set_size(lst, size - 1)
     r: int32 = _xs_vector_list_shrink_vector_array(lst, size, capacity)
     if r != c_vector_list_success:
         _vector_list_last_operation_status = r
         return c_vector_list_generic_error_vector
-    _xs_vector_list_set_size(lst, size - 1)
     _vector_list_last_operation_status = c_vector_list_success
     return removed_elem
 
@@ -406,10 +410,10 @@ def xs_vector_list_remove(lst: int32 = int32(-1), value: XsVector = vector(-1.0,
         return c_vector_list_generic_error
     for j in i32range(found_idx + 1, size + 1):
         _xs_vector_list_arr_set(lst, j - 1, _xs_vector_list_arr_get(lst, j))
+    _xs_vector_list_set_size(lst, size - 1)
     r: int32 = _xs_vector_list_shrink_vector_array(lst, size, capacity)
     if r != c_vector_list_success:
         return r
-    _xs_vector_list_set_size(lst, size - 1)
     return found_idx - 1
 
 

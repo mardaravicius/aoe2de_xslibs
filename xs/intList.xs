@@ -281,10 +281,15 @@ int xsIntListSize(int lst = -1) {
 }
 
 int _xsIntListExtendIntArray(int lst = -1, int capacity = 0) {
-    if (capacity == cIntListMaxCapacity) {
+    if (capacity >= cIntListMaxCapacity) {
         return (cIntListMaxCapacityError);
     }
-    int newCapacity = capacity * 2;
+    int newCapacity = 0;
+    if (capacity > (cIntListMaxCapacity / 2)) {
+        newCapacity = cIntListMaxCapacity;
+    } else {
+        newCapacity = capacity * 2;
+    }
     if (newCapacity > cIntListMaxCapacity) {
         newCapacity = cIntListMaxCapacity;
     } else if (newCapacity == 0) {
@@ -367,12 +372,12 @@ int xsIntListPop(int lst = -1, int idx = cIntListMaxCapacity) {
     for (i = idx + 2; <= size) {
         xsArraySetInt(lst, i - 1, xsArrayGetInt(lst, i));
     }
+    xsArraySetInt(lst, 0, size - 1);
     int r = _xsIntListShrinkIntArray(lst, size, capacity);
     if (r != cIntListSuccess) {
         _intListLastOperationStatus = r;
         return (cIntListGenericError);
     }
-    xsArraySetInt(lst, 0, size - 1);
     _intListLastOperationStatus = cIntListSuccess;
     return (removedElem);
 }
@@ -429,11 +434,11 @@ int xsIntListRemove(int lst = -1, int value = -1) {
     for (j = foundIdx + 1; <= size) {
         xsArraySetInt(lst, j - 1, xsArrayGetInt(lst, j));
     }
+    xsArraySetInt(lst, 0, size - 1);
     int r = _xsIntListShrinkIntArray(lst, size, capacity);
     if (r != cIntListSuccess) {
         return (r);
     }
-    xsArraySetInt(lst, 0, size - 1);
     return (foundIdx - 1);
 }
 

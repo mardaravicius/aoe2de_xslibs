@@ -134,6 +134,8 @@ def xs_string_list_from_repeated_val(value: str = "", times: int32 = int32(0)) -
     :param times: number of times to repeat the value
     :return: created list id, or `c_string_list_generic_error` on error
     """
+    # Uses > (not >=) because the string array is 0-indexed and has no metadata slot,
+    # so max_capacity elements fit exactly unlike int/float lists which reserve index 0.
     if times < 0 or times > c_string_list_max_capacity:
         return c_string_list_generic_error
     lst: int32 = xs_array_create_int(2, times)
@@ -241,9 +243,13 @@ def xs_string_list_set(lst: int32 = int32(-1), idx: int32 = int32(-1), value: st
 
 
 def _xs_string_list_extend_string_array(lst: int32 = int32(-1), capacity: int32 = int32(0)) -> int32:
-    if capacity == c_string_list_max_capacity:
+    if capacity >= c_string_list_max_capacity:
         return c_string_list_max_capacity_error
-    new_capacity: int32 = capacity * 2
+    new_capacity: int32 = int32(0)
+    if capacity > c_string_list_max_capacity // 2:
+        new_capacity = c_string_list_max_capacity
+    else:
+        new_capacity = capacity * 2
     if new_capacity > c_string_list_max_capacity:
         new_capacity = c_string_list_max_capacity
     elif new_capacity == 0:
@@ -328,11 +334,11 @@ def xs_string_list_pop(lst: int32 = int32(-1), idx: int32 = c_string_list_max_ca
     removed_elem: str = xs_array_get_string(str_lst, idx)
     for i in i32range(idx, size - 1):
         xs_array_set_string(str_lst, i, xs_array_get_string(str_lst, i + 1))
+    xs_array_set_int(lst, 0, size - 1)
     r: int32 = _xs_string_list_shrink_string_array(str_lst, size, capacity)
     if r != c_string_list_success:
         _string_list_last_operation_status = r
         return "-1"
-    xs_array_set_int(lst, 0, size - 1)
     _string_list_last_operation_status = c_string_list_success
     return removed_elem
 
@@ -358,11 +364,11 @@ def xs_string_list_remove(lst: int32 = int32(-1), value: str = "") -> int32:
     new_size: int32 = size - 1
     for j in i32range(found_idx, new_size):
         xs_array_set_string(str_lst, j, xs_array_get_string(str_lst, j + 1))
+    xs_array_set_int(lst, 0, new_size)
     capacity: int32 = xs_array_get_size(str_lst)
     r: int32 = _xs_string_list_shrink_string_array(str_lst, size, capacity)
     if r != c_string_list_success:
         return r
-    xs_array_set_int(lst, 0, new_size)
     return found_idx
 
 

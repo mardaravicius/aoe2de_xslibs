@@ -258,10 +258,15 @@ int xsVectorListSet(int lst = -1, int idx = -1, vector value = vector(0.0, 0.0, 
 }
 
 int _xsVectorListExtendVectorArray(int lst = -1, int capacity = 0) {
-    if (capacity == cVectorListMaxCapacity) {
+    if (capacity >= cVectorListMaxCapacity) {
         return (cVectorListMaxCapacityError);
     }
-    int newCapacity = capacity * 2;
+    int newCapacity = 0;
+    if (capacity > (cVectorListMaxCapacity / 2)) {
+        newCapacity = cVectorListMaxCapacity;
+    } else {
+        newCapacity = capacity * 2;
+    }
     if (newCapacity > cVectorListMaxCapacity) {
         newCapacity = cVectorListMaxCapacity;
     } else if (newCapacity == 0) {
@@ -344,12 +349,12 @@ vector xsVectorListPop(int lst = -1, int idx = cVectorListMaxCapacity) {
     for (i = idx + 2; <= size) {
         _xsVectorListArrSet(lst, i - 1, _xsVectorListArrGet(lst, i));
     }
+    _xsVectorListSetSize(lst, size - 1);
     int r = _xsVectorListShrinkVectorArray(lst, size, capacity);
     if (r != cVectorListSuccess) {
         _vectorListLastOperationStatus = r;
         return (cVectorListGenericErrorVector);
     }
-    _xsVectorListSetSize(lst, size - 1);
     _vectorListLastOperationStatus = cVectorListSuccess;
     return (removedElem);
 }
@@ -406,11 +411,11 @@ int xsVectorListRemove(int lst = -1, vector value = vector(-1.0, -1.0, -1.0)) {
     for (j = foundIdx + 1; <= size) {
         _xsVectorListArrSet(lst, j - 1, _xsVectorListArrGet(lst, j));
     }
+    _xsVectorListSetSize(lst, size - 1);
     int r = _xsVectorListShrinkVectorArray(lst, size, capacity);
     if (r != cVectorListSuccess) {
         return (r);
     }
-    _xsVectorListSetSize(lst, size - 1);
     return (foundIdx - 1);
 }
 
