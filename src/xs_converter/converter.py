@@ -82,6 +82,16 @@ class PythonToXsConverter:
         "XsVector": "xsArrayCreateVector",
     }
 
+    _ARRAY_SET_MAP = {
+        "int": "xsArraySetInt",
+        "int32": "xsArraySetInt",
+        "float": "xsArraySetFloat",
+        "float32": "xsArraySetFloat",
+        "bool": "xsArraySetBool",
+        "str": "xsArraySetString",
+        "XsVector": "xsArraySetVector",
+    }
+
     _ARRAY_ZERO_XS: dict[str, str] = {
         "int": "0",
         "int32": "0",
@@ -252,6 +262,18 @@ class PythonToXsConverter:
             raise ValueError("assignment needs to be a variable")
         value_xs = self._to_xs_expression(a.value, ctx, enclosed=True)
         return self._stmt(ctx.depth, f"{name}{self.sp}={self.sp}{value_xs}")
+
+    def _to_xs_array_set(self, target: Subscript, value, ctx: XsContext) -> str:
+        if not isinstance(target.value, Name):
+            raise ValueError("array assignment target must be a variable name")
+        array_name = self._to_camel_case(target.value.id)
+        index_xs = self._to_xs_expression(target.slice, ctx, enclosed=True)
+        element_type = self._infer_array_element_type(value)
+        set_func = self._ARRAY_SET_MAP.get(element_type)
+        if set_func is None:
+            raise ValueError(f"unsupported array element type for set: {element_type}")
+        value_xs = self._to_xs_expression(value, ctx, enclosed=True)
+        return self._stmt(ctx.depth, f"{set_func}({array_name},{self.sp}{index_xs},{self.sp}{value_xs})")
 
     def _to_xs_variable_aug_assignment(self, a: AugAssign, ctx: XsContext) -> str:
         if isinstance(a.target, Name):
@@ -571,6 +593,8 @@ class PythonToXsConverter:
         for e in body:
             if isinstance(e, AnnAssign):
                 xs += self._to_xs_variable_definition(e, inner)
+            elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Subscript):
+                xs += self._to_xs_array_set(e.targets[0], e.value, inner)
             elif isinstance(e, Assign):
                 xs += self._to_xs_variable_assignment(e, inner)
             elif isinstance(e, AugAssign):
