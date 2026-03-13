@@ -401,6 +401,9 @@ class PythonToXsConverter:
         if function_name == "str":
             xs = f'""{self.sp}+{self.sp}' + self._to_xs_expression(e.args[0], ctx)
             return self._wrap_parens(xs, enclosed)
+        if function_name == "len":
+            arg_xs = self._to_xs_expression(e.args[0], ctx, enclosed=True)
+            return f"xsArrayGetSize({arg_xs})"
         zero = self._NUMERIC_CAST_ZEROS.get(function_name)
         if zero is not None:
             return self._to_xs_numeric_cast(zero, e.args[0], ctx, enclosed)

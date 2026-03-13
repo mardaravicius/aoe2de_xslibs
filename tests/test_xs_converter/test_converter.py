@@ -839,6 +839,59 @@ class TestFunctionCalls(unittest.TestCase):
         )
         self.assertEqual(expected, _convert(f))
 
+    def test_len_call(self):
+        def f() -> None:
+            arr: list[int] = [0] * 10
+            n: int = len(arr)
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(10);\n"
+            "    int n = xsArrayGetSize(arr);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_len_in_expression(self):
+        def f() -> None:
+            arr: list[int] = [0] * 10
+            n: int = len(arr) - 1
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(10);\n"
+            "    int n = xsArrayGetSize(arr) - 1;\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_len_in_condition(self):
+        def f() -> None:
+            arr: list[int] = [0] * 5
+            i: int = 0
+            if i < len(arr):
+                pass
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(5);\n"
+            "    int i = 0;\n"
+            "    if (i < xsArrayGetSize(arr)) {\n"
+            "    }\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_len_no_indent(self):
+        def f() -> None:
+            arr: list[int] = [0] * 10
+            n: int = len(arr)
+
+        self.assertEqual(
+            "void f(){int arr=xsArrayCreateInt(10);int n=xsArrayGetSize(arr);}",
+            _convert(f, indent=False),
+        )
+
 
 class TestIfElse(unittest.TestCase):
 
