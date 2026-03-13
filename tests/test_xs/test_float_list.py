@@ -2,6 +2,7 @@ import random
 import unittest
 from random import randint
 
+import xs.float_list as _fl
 from xs.float_list import *
 from xs_converter.symbols import f32range
 
@@ -78,9 +79,12 @@ class FloatListTest(unittest.TestCase):
         self.assertEqual(len(lst), xs_float_list_size(xs_lst))
 
     def test_xs_float_list_from_array_fail_over_max_capacity(self):
-        xs_arr = xs_array_create_float(c_float_list_max_capacity, 5.5)
+        orig = _fl.c_float_list_max_capacity
+        _fl.c_float_list_max_capacity = int32(1000)
+        xs_arr = xs_array_create_float(_fl.c_float_list_max_capacity, 5.5)
         self.assertEqual(c_float_list_generic_error, xs_float_list_from_array(xs_arr))
         xs_array_resize_float(xs_arr, 0)
+        _fl.c_float_list_max_capacity = orig
 
     def test_xs_float_list_use_array_as_source(self):
         xs_arr = xs_array_create_float(10, 5.5)
@@ -136,10 +140,13 @@ class FloatListTest(unittest.TestCase):
         self.assertEqual(fstr(lst), xs_float_list_to_string(xs_lst))
 
     def test_xs_float_list_append_fail_over_max_capacity(self):
-        xs_lst = xs_float_list_from_repeated_val(int32(1), c_float_list_max_capacity - 1)
+        orig = _fl.c_float_list_max_capacity
+        _fl.c_float_list_max_capacity = int32(1000)
+        xs_lst = xs_float_list_from_repeated_val(float32(1.0), _fl.c_float_list_max_capacity - 1)
         self.assertLessEqual(0, xs_lst)
-        self.assertEqual(c_float_list_max_capacity_error, xs_float_list_append(xs_lst, int32(10)))
+        self.assertEqual(c_float_list_max_capacity_error, xs_float_list_append(xs_lst, float32(10.0)))
         xs_float_list_clear(xs_lst)
+        _fl.c_float_list_max_capacity = orig
 
     def test_xs_float_list_insert(self):
         lst = [float32(-1.1), float32(0.0), float32(1.1), float32(2.2), float32(3.3), float32(4.4)]
@@ -157,9 +164,12 @@ class FloatListTest(unittest.TestCase):
         self.assertEqual(c_float_list_index_out_of_range_error, xs_float_list_insert(xs_lst, int32(4), float32(1.1)))
 
     def test_xs_float_list_insert_fail_over_max_capacity(self):
-        xs_lst = xs_float_list_from_repeated_val(float32(1.1), c_float_list_max_capacity - 1)
+        orig = _fl.c_float_list_max_capacity
+        _fl.c_float_list_max_capacity = int32(1000)
+        xs_lst = xs_float_list_from_repeated_val(float32(1.1), _fl.c_float_list_max_capacity - 1)
         self.assertEqual(c_float_list_max_capacity_error, xs_float_list_insert(xs_lst, int32(100), float32(1.1)))
         xs_float_list_clear(xs_lst)
+        _fl.c_float_list_max_capacity = orig
 
     def test_xs_float_list_pop(self):
         lst = [float32(-1.1), float32(0.0), float32(1.1), float32(2.2), float32(3.3), float32(4.4)]

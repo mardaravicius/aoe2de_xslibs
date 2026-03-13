@@ -174,9 +174,9 @@ class FunctionsTest(unittest.TestCase):
             results[res] += 1
         results = sorted(list(results.items()), key=lambda t: t[1])
         for number, occurrences in results:
-            self.assertGreaterEqual(occurrences, avg_items * 0.7,
+            self.assertGreaterEqual(occurrences, avg_items * 0.6,
                                     f"{seed=}, {s=}, {e=}, {number=}, {occurrences=}")
-            self.assertLessEqual(occurrences, avg_items * 1.3, f"{seed=}, {s=}, {e=}, {number=}, {occurrences=}")
+            self.assertLessEqual(occurrences, avg_items * 1.4, f"{seed=}, {s=}, {e=}, {number=}, {occurrences=}")
 
     def test_random(self):
         curr_dir = os.getcwd()

@@ -204,7 +204,9 @@ def xs_array_get_vector(array_id: int | int32, idx: int | int32) -> XsVector:
 
 
 def xs_array_resize_vector(array_id: int | int32, new_size: int | int32) -> int32:
-    return xs_array_resize_vector_impl(int32(array_id), int32(new_size))
+    # bugged
+    return int32(-1)
+    #return xs_array_resize_vector_impl(int32(array_id), int32(new_size))
 
 
 def bit_cast_to_float(number: int | int32) -> float32:

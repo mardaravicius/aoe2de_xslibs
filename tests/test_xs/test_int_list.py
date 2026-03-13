@@ -1,6 +1,7 @@
 import unittest
 from random import randint
 
+import xs.int_list as _il
 from xs.int_list import *
 
 
@@ -114,9 +115,12 @@ class IntListTest(unittest.TestCase):
         self.assertEqual(len(lst), xs_int_list_size(xs_lst))
 
     def test_xs_int_list_from_array_fail_over_max_capacity(self):
-        xs_arr = xs_array_create_int(c_int_list_max_capacity, 5)
+        orig = _il.c_int_list_max_capacity
+        _il.c_int_list_max_capacity = int32(1000)
+        xs_arr = xs_array_create_int(_il.c_int_list_max_capacity, 5)
         self.assertEqual(c_int_list_generic_error, xs_int_list_from_array(xs_arr))
         xs_array_resize_int(xs_arr, 0)
+        _il.c_int_list_max_capacity = orig
 
     def test_xs_int_list_use_array_as_source(self):
         xs_arr = xs_array_create_int(10, 5)
@@ -168,10 +172,13 @@ class IntListTest(unittest.TestCase):
         self.assertEqual(istr(lst), xs_int_list_to_string(xs_lst))
 
     def test_xs_int_list_append_fail_over_max_capacity(self):
-        xs_lst = xs_int_list_from_repeated_val(int32(1), c_int_list_max_capacity - 1)
+        orig = _il.c_int_list_max_capacity
+        _il.c_int_list_max_capacity = int32(1000)
+        xs_lst = xs_int_list_from_repeated_val(int32(1), _il.c_int_list_max_capacity - 1)
         self.assertLessEqual(0, xs_lst)
         self.assertEqual(c_int_list_max_capacity_error, xs_int_list_append(xs_lst, int32(10)))
         xs_int_list_clear(xs_lst)
+        _il.c_int_list_max_capacity = orig
 
     def test_xs_int_list_insert(self):
         lst = [-1, 0, 1, 2, 3, 4]
@@ -189,9 +196,12 @@ class IntListTest(unittest.TestCase):
         self.assertEqual(c_int_list_index_out_of_range_error, xs_int_list_insert(xs_lst, int32(4)))
 
     def test_xs_int_list_insert_fail_over_max_capacity(self):
-        xs_lst = xs_int_list_from_repeated_val(int32(1), c_int_list_max_capacity - 1)
+        orig = _il.c_int_list_max_capacity
+        _il.c_int_list_max_capacity = int32(1000)
+        xs_lst = xs_int_list_from_repeated_val(int32(1), _il.c_int_list_max_capacity - 1)
         self.assertEqual(c_int_list_max_capacity_error, xs_int_list_insert(xs_lst, int32(100)))
         xs_int_list_clear(xs_lst)
+        _il.c_int_list_max_capacity = orig
 
     def test_xs_int_list_pop(self):
         lst = [-1, 0, 1, 2, 3, 4]

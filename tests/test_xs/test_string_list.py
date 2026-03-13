@@ -2,6 +2,7 @@ import random
 import unittest
 from random import randint
 
+import xs.string_list as _sl
 from xs.string_list import *
 from xs_converter.functions import xs_array_create_string, xs_array_set_string, xs_array_get_string, xs_array_get_int
 
@@ -78,9 +79,12 @@ class StringListTest(unittest.TestCase):
         self.assertEqual(len(lst), xs_string_list_size(xs_lst))
 
     def test_xs_string_list_from_array_fail_over_max_capacity(self):
-        xs_arr = xs_array_create_string(c_string_list_max_capacity + 1, "aaa")
+        orig = _sl.c_string_list_max_capacity
+        _sl.c_string_list_max_capacity = int32(1000)
+        xs_arr = xs_array_create_string(_sl.c_string_list_max_capacity + 1, "aaa")
         self.assertEqual(c_string_list_max_capacity_error, xs_string_list_from_array(xs_arr))
         xs_array_resize_string(xs_arr, 0)
+        _sl.c_string_list_max_capacity = orig
 
     def test_xs_string_list_use_array_as_source(self):
         xs_arr = xs_array_create_string(10, "bbb")
@@ -136,9 +140,12 @@ class StringListTest(unittest.TestCase):
         self.assertEqual(to_str(lst), xs_string_list_to_string(xs_lst))
 
     def test_xs_string_list_append_fail_over_max_capacity(self):
-        xs_lst = xs_string_list_from_repeated_val("aaa", c_string_list_max_capacity)
+        orig = _sl.c_string_list_max_capacity
+        _sl.c_string_list_max_capacity = int32(1000)
+        xs_lst = xs_string_list_from_repeated_val("aaa", _sl.c_string_list_max_capacity)
         self.assertEqual(c_string_list_max_capacity_error, xs_string_list_append(xs_lst, "bbb"))
         xs_string_list_clear(xs_lst)
+        _sl.c_string_list_max_capacity = orig
 
     def test_xs_string_list_insert(self):
         lst = ["aa", "bb", "cc", "dd", "ee", "ff"]
@@ -156,9 +163,12 @@ class StringListTest(unittest.TestCase):
         self.assertEqual(c_string_list_index_out_of_range_error, xs_string_list_insert(xs_lst, int32(4), "ee"))
 
     def test_xs_string_list_insert_fail_over_max_capacity(self):
-        xs_lst = xs_string_list_from_repeated_val("aa", c_string_list_max_capacity)
+        orig = _sl.c_string_list_max_capacity
+        _sl.c_string_list_max_capacity = int32(1000)
+        xs_lst = xs_string_list_from_repeated_val("aa", _sl.c_string_list_max_capacity)
         self.assertEqual(c_string_list_max_capacity_error, xs_string_list_insert(xs_lst, int32(100), "bb"))
         xs_string_list_clear(xs_lst)
+        _sl.c_string_list_max_capacity = orig
 
     def test_xs_string_list_pop(self):
         lst = ["aa", "bb", "cc", "dd", "ee", "ff"]
@@ -183,10 +193,13 @@ class StringListTest(unittest.TestCase):
         self.assertEqual(len(lst), xs_string_list_size(xs_lst))
 
     def test_xs_string_list_pop_at_max(self):
-        xs_lst = xs_string_list_from_repeated_val("aa", c_string_list_max_capacity)
-        self.assertEqual("aa", xs_string_list_pop(xs_lst, c_string_list_max_capacity))
-        self.assertEqual(c_string_list_max_capacity - 1, xs_string_list_size(xs_lst))
+        orig = _sl.c_string_list_max_capacity
+        _sl.c_string_list_max_capacity = int32(1000)
+        xs_lst = xs_string_list_from_repeated_val("aa", _sl.c_string_list_max_capacity)
+        self.assertEqual("aa", xs_string_list_pop(xs_lst, _sl.c_string_list_max_capacity))
+        self.assertEqual(_sl.c_string_list_max_capacity - 1, xs_string_list_size(xs_lst))
         xs_string_list_clear(xs_lst)
+        _sl.c_string_list_max_capacity = orig
 
     def test_xs_string_list_pop_fail_with_incorrect_idx(self):
         xs_lst = xs_string_list("aa", "bb", "cc", "dd")
