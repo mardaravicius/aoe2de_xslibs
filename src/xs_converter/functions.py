@@ -134,11 +134,7 @@ def xs_trigger_variable(variable_id: int | int32) -> int:
     pass
 
 
-def xs_array_get_size(array_id: int | int32) -> int32:
-    """
-
-    :rtype: int32
-    """
+def xs_array_get_size(array_id: int | int32 | list) -> int32:
     return xs_array_get_size_impl(int32(array_id))
 
 
@@ -146,48 +142,48 @@ def xs_array_create_int(size: int | int32, default_value: int | int32 = 0, uniqu
     return xs_array_create_int_impl(int32(size), int32(default_value), unique_name)
 
 
-def xs_array_set_int(array_id: int | int32, idx: int | int32, value: int | int32) -> int32:
-    return xs_array_set_int_impl(int32(array_id), int32(idx), int32(value))
+def xs_array_set_int(array_id: int | int32 | list[int] | list[int32], idx: int | int32, value: int | int32) -> int32:
+    return xs_array_set_int_impl(array_id, int32(idx), int32(value))
 
 
-def xs_array_get_int(array_id: int | int32, idx: int | int32) -> int32:
-    return xs_array_get_int_impl(int32(array_id), int32(idx))
+def xs_array_get_int(array_id: int | int32 | list[int] | list[int32], idx: int | int32) -> int32:
+    return xs_array_get_int_impl(array_id, int32(idx))
 
 
-def xs_array_resize_int(array_id: int | int32, new_size: int | int32) -> int32:
-    return xs_array_resize_int_impl(int32(array_id), int32(new_size))
+def xs_array_resize_int(array_id: int | int32 | list[int] | list[int32], new_size: int | int32) -> int32:
+    return xs_array_resize_int_impl(array_id, int32(new_size))
 
 
 def xs_array_create_float(size: int | int32, default_value: float | float32 = 0.0, unique_name: str = "") -> int32:
     return xs_array_create_float_impl(int32(size), float32(default_value), unique_name)
 
 
-def xs_array_set_float(array_id: int | int32, idx: int | int32, value: float | float32) -> int32:
-    return xs_array_set_float_impl(int32(array_id), int32(idx), float32(value))
+def xs_array_set_float(array_id: int | int32 | list[float] | list[float32], idx: int | int32, value: float | float32) -> int32:
+    return xs_array_set_float_impl(array_id, int32(idx), float32(value))
 
 
-def xs_array_get_float(array_id: int | int32, idx: int | int32) -> float32:
-    return xs_array_get_float_impl(int32(array_id), int32(idx))
+def xs_array_get_float(array_id: int | int32 | list[float] | list[float32], idx: int | int32) -> float32:
+    return xs_array_get_float_impl(array_id, int32(idx))
 
 
-def xs_array_resize_float(array_id: int | int32, new_size: int | int32) -> int32:
-    return xs_array_resize_float_impl(int32(array_id), int32(new_size))
+def xs_array_resize_float(array_id: int | int32 | list[float] | list[float32], new_size: int | int32) -> int32:
+    return xs_array_resize_float_impl(array_id, int32(new_size))
 
 
 def xs_array_create_string(size: int | int32, default_value: str = "", unique_name: str = "") -> int32:
     return xs_array_create_string_impl(int32(size), default_value, unique_name)
 
 
-def xs_array_set_string(array_id: int | int32, idx: int | int32, value: str) -> int32:
-    return xs_array_set_string_impl(int32(array_id), int32(idx), value)
+def xs_array_set_string(array_id: int | int32 | list[str], idx: int | int32, value: str) -> int32:
+    return xs_array_set_string_impl(array_id, int32(idx), value)
 
 
-def xs_array_get_string(array_id: int | int32, idx: int | int32) -> str:
-    return xs_array_get_string_impl(int32(array_id), int32(idx))
+def xs_array_get_string(array_id: int | int32 | list[str], idx: int | int32) -> str:
+    return xs_array_get_string_impl(array_id, int32(idx))
 
 
-def xs_array_resize_string(array_id: int | int32, new_size: int | int32) -> int32:
-    return xs_array_resize_string_impl(int32(array_id), int32(new_size))
+def xs_array_resize_string(array_id: int | int32 | list[str], new_size: int | int32) -> int32:
+    return xs_array_resize_string_impl(array_id, int32(new_size))
 
 
 def xs_array_create_vector(size: int | int32, default_value: XsVector = vector(0.0, 0.0, 0.0),
@@ -195,18 +191,18 @@ def xs_array_create_vector(size: int | int32, default_value: XsVector = vector(0
     return xs_array_create_vector_impl(int32(size), default_value, unique_name)
 
 
-def xs_array_set_vector(array_id: int | int32, idx: int | int32, value: XsVector) -> int32:
-    return xs_array_set_vector_impl(int32(array_id), int32(idx), value)
+def xs_array_set_vector(array_id: int | int32 | list[XsVector], idx: int | int32, value: XsVector) -> int32:
+    return xs_array_set_vector_impl(array_id, int32(idx), value)
 
 
-def xs_array_get_vector(array_id: int | int32, idx: int | int32) -> XsVector:
-    return xs_array_get_vector_impl(int32(array_id), int32(idx))
+def xs_array_get_vector(array_id: int | int32 | list[XsVector], idx: int | int32) -> XsVector:
+    return xs_array_get_vector_impl(array_id, int32(idx))
 
 
-def xs_array_resize_vector(array_id: int | int32, new_size: int | int32) -> int32:
+def xs_array_resize_vector(array_id: int | int32 | list[XsVector], new_size: int | int32) -> int32:
     # bugged
     return int32(-1)
-    #return xs_array_resize_vector_impl(int32(array_id), int32(new_size))
+    #return xs_array_resize_vector_impl(array_id, int32(new_size))
 
 
 def bit_cast_to_float(number: int | int32) -> float32:

@@ -27,74 +27,85 @@ def pow_impl(x: float32, y: float32) -> float32:
     return numpy.pow(x, y)
 
 
-def xs_array_get_size_impl(array_id: int32) -> int32:
+def xs_array_get_size_impl(array_id: int32 | list) -> int32:
+    if isinstance(array_id, list):
+        return int32(len(array_id))
     if array_id < 0 or array_id >= len(ARRAYS):
         return int32(-1)
     return int32(len(ARRAYS[array_id].array))
 
 
+def _coerce_array_id(array_id, native_type=None, extended_type=None):
+    if isinstance(array_id, int):
+        return int32(array_id)
+    if native_type is not None and isinstance(array_id, list) and len(array_id) > 0 and isinstance(array_id[0], native_type):
+        for i, v in enumerate(array_id):
+            array_id[i] = extended_type(v)
+    return array_id
+
+
 def xs_array_create_int_impl(size: int32, default_value: int32, unique_name: str) -> int32:
-    return xs_array_create_impl(size, default_value, unique_name, type(int32))
+    return xs_array_create_impl(size, default_value, unique_name, int32)
 
 
-def xs_array_set_int_impl(array_id: int32, idx: int32, value: int32) -> int32:
-    return xs_array_set_impl(array_id, idx, value, type(int32))
+def xs_array_set_int_impl(array_id: int | int32 | list[int] | list[int32], idx: int32, value: int32) -> int32:
+    return xs_array_set_impl(_coerce_array_id(array_id, int, int32), idx, value, int32)
 
 
-def xs_array_get_int_impl(array_id: int32, idx: int32) -> int32:
-    return xs_array_get_impl(array_id, idx, type(int32))
+def xs_array_get_int_impl(array_id: int | int32 | list[int] | list[int32], idx: int32) -> int32:
+    return xs_array_get_impl(_coerce_array_id(array_id, int, int32), idx, int32)
 
 
-def xs_array_resize_int_impl(array_id: int32, new_size: int32) -> int32:
-    return xs_array_resize_impl(array_id, new_size, type(int32))
+def xs_array_resize_int_impl(array_id: int | int32 | list[int] | list[int32], new_size: int32) -> int32:
+    return xs_array_resize_impl(_coerce_array_id(array_id, int, int32), new_size, int32)
 
 
 def xs_array_create_float_impl(size: int32, default_value: float32, unique_name: str) -> int32:
-    return xs_array_create_impl(size, default_value, unique_name, type(float32))
+    return xs_array_create_impl(size, default_value, unique_name, float32)
 
 
-def xs_array_set_float_impl(array_id: int32, idx: int32, value: float32) -> int32:
-    return xs_array_set_impl(array_id, idx, value, type(float32))
+def xs_array_set_float_impl(array_id: int | int32 | list[float] | list[float32], idx: int32, value: float32) -> int32:
+    return xs_array_set_impl(_coerce_array_id(array_id, float, float32), idx, value, float32)
 
 
-def xs_array_get_float_impl(array_id: int32, idx: int32) -> float32:
-    return xs_array_get_impl(array_id, idx, type(float32))
+def xs_array_get_float_impl(array_id: int | int32 | list[float] | list[float32], idx: int32) -> float32:
+    return xs_array_get_impl(_coerce_array_id(array_id, float, float32), idx, float32)
 
 
-def xs_array_resize_float_impl(array_id: int32, new_size: int32) -> int32:
-    return xs_array_resize_impl(array_id, new_size, type(float32))
+def xs_array_resize_float_impl(array_id: int | int32 | list[float] | list[float32], new_size: int32) -> int32:
+    return xs_array_resize_impl(_coerce_array_id(array_id, float, float32), new_size, float32)
 
 
 def xs_array_create_string_impl(size: int32, default_value: str, unique_name: str) -> int32:
-    return xs_array_create_impl(size, default_value, unique_name, type(str))
+    return xs_array_create_impl(size, default_value, unique_name, str)
 
 
-def xs_array_set_string_impl(array_id: int32, idx: int32, value: str) -> int32:
-    return xs_array_set_impl(array_id, idx, value, type(str))
+def xs_array_set_string_impl(array_id: int | int32 | list[str], idx: int32, value: str) -> int32:
+    return xs_array_set_impl(_coerce_array_id(array_id), idx, value, str)
 
 
-def xs_array_get_string_impl(array_id: int32, idx: int32) -> str:
-    return xs_array_get_impl(array_id, idx, type(str))
+def xs_array_get_string_impl(array_id: int | int32 | list[str], idx: int32) -> str:
+    return xs_array_get_impl(_coerce_array_id(array_id), idx, str)
 
 
-def xs_array_resize_string_impl(array_id: int32, new_size: int32) -> int32:
-    return xs_array_resize_impl(array_id, new_size, type(str))
+def xs_array_resize_string_impl(array_id: int | int32 | list[str], new_size: int32) -> int32:
+    return xs_array_resize_impl(_coerce_array_id(array_id), new_size, str)
 
 
 def xs_array_create_vector_impl(size: int32, default_value: XsVector, unique_name: str) -> int32:
-    return xs_array_create_impl(size, default_value, unique_name, type(XsVector))
+    return xs_array_create_impl(size, default_value, unique_name, XsVector)
 
 
-def xs_array_set_vector_impl(array_id: int32, idx: int32, value: XsVector) -> int32:
-    return xs_array_set_impl(array_id, idx, value, type(XsVector))
+def xs_array_set_vector_impl(array_id: int | int32 | list[XsVector], idx: int32, value: XsVector) -> int32:
+    return xs_array_set_impl(_coerce_array_id(array_id), idx, value, XsVector)
 
 
-def xs_array_get_vector_impl(array_id: int32, idx: int32) -> XsVector:
-    return xs_array_get_impl(array_id, idx, type(XsVector))
+def xs_array_get_vector_impl(array_id: int | int32 | list[XsVector], idx: int32) -> XsVector:
+    return xs_array_get_impl(_coerce_array_id(array_id), idx, XsVector)
 
 
-def xs_array_resize_vector_impl(array_id: int32, new_size: int32) -> int32:
-    return xs_array_resize_impl(array_id, new_size, type(XsVector))
+def xs_array_resize_vector_impl(array_id: int | int32 | list[XsVector], new_size: int32) -> int32:
+    return xs_array_resize_impl(_coerce_array_id(array_id), new_size, XsVector)
 
 
 def xs_array_create_impl(size: int32, default_value: T, unique_name: str, t: type[T]) -> int32:
@@ -110,57 +121,79 @@ def xs_array_create_impl(size: int32, default_value: T, unique_name: str, t: typ
     return int32(len(ARRAYS) - 1)
 
 
-def xs_array_set_impl(array_id: int32, idx: int32, value: T, t: type[T]) -> int32:
-    if array_id < 0 or array_id >= len(ARRAYS):
+def xs_array_set_impl(array_id: int32 | list[int32], idx: int32, value: T, t: type[T]) -> int32:
+    if isinstance(array_id, list):
+        array = array_id
+        if len(array) == 0:
+            raise TypeError(f"array: {array_id} as array id is empty")
+        array_type = type(array[0])
+    else:
+        if array_id < 0 or array_id >= len(ARRAYS):
+            return int32(0)
+        xs_array = ARRAYS[array_id]
+        array = xs_array.array
+        array_type = xs_array.arr_type
+    if array_type != t or idx < 0 or idx >= len(array):
         return int32(0)
-    xs_array = ARRAYS[array_id]
-    if xs_array.arr_type != t or idx < 0 or idx >= len(xs_array.array):
-        return int32(0)
-    xs_array.array[idx] = value
+    array[idx] = value
     return int32(1)
 
 
-def xs_array_get_impl(array_id: int32, idx: int32, t: type[T]) -> T:
-    if array_id < 0 or array_id >= len(ARRAYS):
+def xs_array_get_impl(array_id: int32 | list[int32], idx: int32, t: type[T]) -> T:
+    if isinstance(array_id, list):
+        if idx < len(array_id):
+            val = array_id[idx]
+            val_type = type(val)
+            if val_type == t:
+                return val
+    elif 0 <= array_id < len(ARRAYS):
+        xs_array = ARRAYS[array_id]
+        if xs_array.arr_type == t:
+            return xs_array.array[idx]
+
+    if t == int32:
         return int32(-1)
-    xs_array = ARRAYS[array_id]
-    if xs_array.arr_type != t or idx < 0 or idx >= len(xs_array.array):
-        if t == type(int):
-            return int32(-1)
-        if t == type(float):
-            return float32(-1.0)
-        if t == type(str):
-            return "-1"
-        if t == type(XsVector):
-            return XsVector(-1.0, -1.0, -1.0)
-        return None
-
-    return xs_array.array[idx]
+    if t == float32:
+        return float32(-1.0)
+    if t == str:
+        return "-1"
+    if t == XsVector:
+        return XsVector(-1.0, -1.0, -1.0)
+    raise TypeError(f"Unknown type for xs array: {t}")
 
 
-def xs_array_resize_impl(array_id: int32, new_size: int32, t: type[T]) -> int32:
-    if array_id < 0 or array_id >= len(ARRAYS) or new_size < 0:
+def xs_array_resize_impl(array_id: int32 | list[int32], new_size: int32, t: type[T]) -> int32:
+    if isinstance(array_id, list):
+        array = array_id
+        if len(array) == 0:
+            raise TypeError(f"array: {array_id} as array id is empty")
+        array_type = type(array[0])
+    else:
+        if array_id < 0 or array_id >= len(ARRAYS):
+            return int32(0)
+        xs_array = ARRAYS[array_id]
+        array = xs_array.array
+        array_type = xs_array.arr_type
+
+    if array_type != t or new_size < 0:
         return int32(0)
-    xs_array = ARRAYS[array_id]
-    if xs_array.arr_type != t:
-        return int32(0)
-    size = len(xs_array.array)
+    size = len(array)
     if new_size == size:
         return int32(1)
     if new_size > size:
-        if t == type(int):
+        if t == int32:
             value = [int32(-1337)]
-        elif t == type(float):
+        elif t == float32:
             value = [float32(-13.37)]
-        elif t == type(str):
+        elif t == str:
             value = ["<default string>"]
-        elif t == type(XsVector):
+        elif t == XsVector:
             value = [XsVector(-13.37, -13.37, -13.37)]
         else:
-            value = [None]
-        xs_array.array.extend(value * (new_size - size))
+            raise TypeError(f"Unknown type for xs array: {t}")
+        array.extend(value * (new_size - size))
     else:
-        xs_array.array = xs_array.array[:new_size - size]
+        del array[new_size:size]
     return int32(1)
 
 
