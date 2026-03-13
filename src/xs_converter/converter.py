@@ -133,6 +133,8 @@ class PythonToXsConverter:
             self.indent = ""
         self._vars = vars
         self._doc_strings = set()
+        self._pending_stmts: list[str] = []
+        self._temp_counter = 0
 
     def _wrap_parens(self, xs: str, enclosed: bool) -> str:
         if enclosed:
@@ -237,6 +239,70 @@ class PythonToXsConverter:
         return default_node, value.right
 
     _ARRAY_LIST_NAMES = {"list", "List"}
+
+    def _flush_pending(self) -> str:
+        if not self._pending_stmts:
+            return ""
+        result = "".join(self._pending_stmts)
+        self._pending_stmts.clear()
+        return result
+
+    def _next_temp_name(self) -> str:
+        name = f"temp{self._temp_counter:08x}"
+        self._temp_counter += 1
+        return name
+
+    def _annotation_element_type(self, annotation) -> Optional[str]:
+        if (isinstance(annotation, Subscript)
+                and isinstance(annotation.value, Name)
+                and annotation.value.id in self._ARRAY_LIST_NAMES
+                and isinstance(annotation.slice, Name)
+                and annotation.slice.id in self._ARRAY_CREATE_MAP):
+            return annotation.slice.id
+        return None
+
+    def _infer_list_literal_type(self, elements: list[expr]) -> str:
+        inferred = set()
+        for elt in elements:
+            try:
+                t = self._infer_array_element_type(elt)
+                inferred.add(t)
+            except ValueError:
+                continue
+        if not inferred:
+            raise ValueError(
+                "cannot infer array type from list literal: "
+                "at least one element must be a constant or typed cast"
+            )
+        create_funcs = {self._ARRAY_CREATE_MAP[t] for t in inferred}
+        if len(create_funcs) > 1:
+            raise ValueError("mixed constant types in list literal are not supported")
+        return sorted(inferred)[0]
+
+    def _to_xs_list_literal_stmts(self, var_name: str, elements: list[expr],
+                                   element_type: str, ctx: XsContext) -> str:
+        create_func = self._ARRAY_CREATE_MAP[element_type]
+        set_func = self._ARRAY_SET_MAP[element_type]
+        saved_pending = self._pending_stmts
+        self._pending_stmts = []
+        xs = self._stmt(ctx.depth, f"int {var_name}{self.sp}={self.sp}{create_func}({len(elements)})")
+        for i, elt in enumerate(elements):
+            value_xs = self._to_xs_expression(elt, ctx, enclosed=True)
+            xs += self._flush_pending()
+            xs += self._stmt(ctx.depth, f"{set_func}({var_name},{self.sp}{i},{self.sp}{value_xs})")
+        self._pending_stmts = saved_pending
+        return xs
+
+    def _to_xs_list_literal_expr(self, list_node: List, ctx: XsContext) -> str:
+        elements = list_node.elts
+        if not elements:
+            raise ValueError("cannot create array from empty list literal")
+        element_type = self._infer_list_literal_type(elements)
+        temp_name = self._next_temp_name()
+        self._pending_stmts.append(
+            self._to_xs_list_literal_stmts(temp_name, elements, element_type, ctx)
+        )
+        return temp_name
 
     def _to_xs_variable_definition(self, a: AnnAssign, ctx: XsContext) -> str:
         if isinstance(a.annotation, Name):
@@ -374,7 +440,7 @@ class PythonToXsConverter:
             right_xs = self._to_xs_expression(e.values[1], ctx)
             return self._wrap_parens(f"{left_xs}{self.sp}{op_xs}{self.sp}{right_xs}", enclosed)
         if isinstance(e, List):
-            raise ValueError("cannot create array from list literal - use [default] * size syntax")
+            return self._to_xs_list_literal_expr(e, ctx)
         raise ValueError(f"Unsupported expression: {expr}")
 
     def _to_xs_constant(self, value, enclosed: bool = False):
@@ -620,32 +686,45 @@ class PythonToXsConverter:
         xs = ""
         inner = ctx.indented()
         for e in body:
-            if isinstance(e, AnnAssign):
-                xs += self._to_xs_variable_definition(e, inner)
+            if isinstance(e, AnnAssign) and isinstance(e.value, List):
+                if not isinstance(e.target, Name):
+                    raise ValueError("assignment must have a variable name")
+                element_type = self._annotation_element_type(e.annotation)
+                if element_type is None:
+                    element_type = self._infer_list_literal_type(e.value.elts)
+                stmt_xs = self._to_xs_list_literal_stmts(
+                    self._to_camel_case(e.target.id), e.value.elts, element_type, inner)
+            elif isinstance(e, AnnAssign):
+                stmt_xs = self._to_xs_variable_definition(e, inner)
             elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Subscript):
-                xs += self._to_xs_array_set(e.targets[0], e.value, inner)
+                stmt_xs = self._to_xs_array_set(e.targets[0], e.value, inner)
+            elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Name) and isinstance(e.value, List):
+                element_type = self._infer_list_literal_type(e.value.elts)
+                stmt_xs = self._to_xs_list_literal_stmts(
+                    self._to_camel_case(e.targets[0].id), e.value.elts, element_type, inner)
             elif isinstance(e, Assign):
-                xs += self._to_xs_variable_assignment(e, inner)
+                stmt_xs = self._to_xs_variable_assignment(e, inner)
             elif isinstance(e, AugAssign):
-                xs += self._to_xs_variable_aug_assignment(e, inner)
+                stmt_xs = self._to_xs_variable_aug_assignment(e, inner)
             elif isinstance(e, Expr):
-                xs += self._to_xs_expression_top(e, inner)
+                stmt_xs = self._to_xs_expression_top(e, inner)
             elif isinstance(e, If):
-                xs += self._to_xs_if(e, inner)
+                stmt_xs = self._to_xs_if(e, inner)
             elif isinstance(e, For):
-                xs += self._to_xs_for(e, inner)
+                stmt_xs = self._to_xs_for(e, inner)
             elif isinstance(e, While):
-                xs += self._to_xs_while(e, inner)
+                stmt_xs = self._to_xs_while(e, inner)
             elif isinstance(e, Match):
-                xs += self._to_xs_match(e, inner)
+                stmt_xs = self._to_xs_match(e, inner)
             elif isinstance(e, With):
-                xs += self._to_xs_macro_with(e, ctx)
+                stmt_xs = self._to_xs_macro_with(e, ctx)
             elif isinstance(e, Return):
-                xs += self._to_xs_return(e, inner)
+                stmt_xs = self._to_xs_return(e, inner)
             elif isinstance(e, (Pass, Global)):
-                pass
+                stmt_xs = ""
             else:
                 raise ValueError(e)
+            xs += self._flush_pending() + stmt_xs
         return xs
 
     def _to_xs_return(self, e: Return, ctx: XsContext) -> str:

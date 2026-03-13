@@ -1842,12 +1842,16 @@ class TestArrayDefinitions(unittest.TestCase):
         )
         self.assertEqual(expected, _convert(f))
 
-    def test_empty_list_raises(self):
+    def test_empty_annotated_list(self):
         def f() -> None:
             arr: list[int] = []
 
-        with self.assertRaises(ValueError):
-            _convert(f)
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(0);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
 
     def test_array_creation_in_expression(self):
         def f() -> None:
@@ -2262,6 +2266,403 @@ class TestArrayGet(unittest.TestCase):
             "void f(){int arr=xsArrayCreateInt(10);int v=xsArrayGetInt(arr,0);}",
             _convert(f, indent=False),
         )
+
+
+class TestListLiteralInitialization(unittest.TestCase):
+
+    def test_int_list(self):
+        def f() -> None:
+            arr = [1, 2, 3]
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(3);\n"
+            "    xsArraySetInt(arr, 0, 1);\n"
+            "    xsArraySetInt(arr, 1, 2);\n"
+            "    xsArraySetInt(arr, 2, 3);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_float_list(self):
+        def f() -> None:
+            arr = [1.0, 2.5]
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateFloat(2);\n"
+            "    xsArraySetFloat(arr, 0, 1.0);\n"
+            "    xsArraySetFloat(arr, 1, 2.5);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_bool_list(self):
+        def f() -> None:
+            arr = [True, False, True]
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateBool(3);\n"
+            "    xsArraySetBool(arr, 0, true);\n"
+            "    xsArraySetBool(arr, 1, false);\n"
+            "    xsArraySetBool(arr, 2, true);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_string_list(self):
+        def f() -> None:
+            arr = ["hello", "world"]
+
+        expected = (
+            "void f() {\n"
+            '    int arr = xsArrayCreateString(2);\n'
+            '    xsArraySetString(arr, 0, "hello");\n'
+            '    xsArraySetString(arr, 1, "world");\n'
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_vector_list(self):
+        def f() -> None:
+            arr = [vector(1.0, 2.0, 3.0), vector(4.0, 5.0, 6.0)]
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateVector(2);\n"
+            "    xsArraySetVector(arr, 0, vector(1.0, 2.0, 3.0));\n"
+            "    xsArraySetVector(arr, 1, vector(4.0, 5.0, 6.0));\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_variables_with_constant_type_hint(self):
+        def f() -> None:
+            a: int = 10
+            b: int = 20
+            arr = [a, b, 3]
+
+        expected = (
+            "void f() {\n"
+            "    int a = 10;\n"
+            "    int b = 20;\n"
+            "    int arr = xsArrayCreateInt(3);\n"
+            "    xsArraySetInt(arr, 0, a);\n"
+            "    xsArraySetInt(arr, 1, b);\n"
+            "    xsArraySetInt(arr, 2, 3);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_int32_cast_infers_type(self):
+        def f() -> None:
+            x: int = 5
+            arr = [int32(1), x]
+
+        expected = (
+            "void f() {\n"
+            "    int x = 5;\n"
+            "    int arr = xsArrayCreateInt(2);\n"
+            "    xsArraySetInt(arr, 0, 1);\n"
+            "    xsArraySetInt(arr, 1, x);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_float32_cast_infers_type(self):
+        def f() -> None:
+            x: float = 5.0
+            arr = [float32(1.0), x]
+
+        expected = (
+            "void f() {\n"
+            "    float x = 5.0;\n"
+            "    int arr = xsArrayCreateFloat(2);\n"
+            "    xsArraySetFloat(arr, 0, 1.0);\n"
+            "    xsArraySetFloat(arr, 1, x);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_single_element(self):
+        def f() -> None:
+            arr = [42]
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(1);\n"
+            "    xsArraySetInt(arr, 0, 42);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_negative_constants(self):
+        def f() -> None:
+            arr = [-1, -2, -3]
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(3);\n"
+            "    xsArraySetInt(arr, 0, -1);\n"
+            "    xsArraySetInt(arr, 1, -2);\n"
+            "    xsArraySetInt(arr, 2, -3);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_camel_case_name(self):
+        def f() -> None:
+            my_arr = [1, 2]
+
+        expected = (
+            "void f() {\n"
+            "    int myArr = xsArrayCreateInt(2);\n"
+            "    xsArraySetInt(myArr, 0, 1);\n"
+            "    xsArraySetInt(myArr, 1, 2);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_annotated_list(self):
+        def f() -> None:
+            arr: list[int] = [1, 2, 3]
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(3);\n"
+            "    xsArraySetInt(arr, 0, 1);\n"
+            "    xsArraySetInt(arr, 1, 2);\n"
+            "    xsArraySetInt(arr, 2, 3);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_all_variables_raises_without_annotation(self):
+        def f() -> None:
+            a: int = 1
+            b: int = 2
+            arr = [a, b]
+
+        with self.assertRaises(ValueError):
+            _convert(f)
+
+    def test_all_variables_with_annotation(self):
+        def f() -> None:
+            a: int = 1
+            b: int = 2
+            c: int = 3
+            arr: list[int] = [a, b, c]
+
+        expected = (
+            "void f() {\n"
+            "    int a = 1;\n"
+            "    int b = 2;\n"
+            "    int c = 3;\n"
+            "    int arr = xsArrayCreateInt(3);\n"
+            "    xsArraySetInt(arr, 0, a);\n"
+            "    xsArraySetInt(arr, 1, b);\n"
+            "    xsArraySetInt(arr, 2, c);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_empty_annotated_int_list(self):
+        def f() -> None:
+            arr: list[int] = []
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(0);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_empty_annotated_float_list(self):
+        def f() -> None:
+            arr: list[float] = []
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateFloat(0);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_empty_annotated_string_list(self):
+        def f() -> None:
+            arr: list[str] = []
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateString(0);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_empty_annotated_bool_list(self):
+        def f() -> None:
+            arr: list[bool] = []
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateBool(0);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_empty_annotated_uppercase_list(self):
+        def f() -> None:
+            arr: List[int] = []
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(0);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_annotated_variables_float(self):
+        def f() -> None:
+            a: float = 1.0
+            arr: list[float] = [a]
+
+        expected = (
+            "void f() {\n"
+            "    float a = 1.0;\n"
+            "    int arr = xsArrayCreateFloat(1);\n"
+            "    xsArraySetFloat(arr, 0, a);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_mixed_constant_types_raises(self):
+        def f() -> None:
+            arr = [1, 2.0]
+
+        with self.assertRaises(ValueError):
+            _convert(f)
+
+    def test_mixed_int_bool_raises(self):
+        def f() -> None:
+            arr = [1, True]
+
+        with self.assertRaises(ValueError):
+            _convert(f)
+
+    def test_empty_list_raises(self):
+        def f() -> None:
+            arr = []
+
+        with self.assertRaises(ValueError):
+            _convert(f)
+
+    def test_no_indent(self):
+        def f() -> None:
+            arr = [1, 2, 3]
+
+        self.assertEqual(
+            "void f(){int arr=xsArrayCreateInt(3);xsArraySetInt(arr,0,1);xsArraySetInt(arr,1,2);xsArraySetInt(arr,2,3);}",
+            _convert(f, indent=False),
+        )
+
+    def test_inside_if_block(self):
+        def f() -> None:
+            if True:
+                arr = [1, 2]
+
+        expected = (
+            "void f() {\n"
+            "    if (true) {\n"
+            "        int arr = xsArrayCreateInt(2);\n"
+            "        xsArraySetInt(arr, 0, 1);\n"
+            "        xsArraySetInt(arr, 1, 2);\n"
+            "    }\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+
+class TestListLiteralInExpression(unittest.TestCase):
+
+    def test_list_in_function_call(self):
+        def f() -> None:
+            xs_array_get_int([1, 2, 3], 0)
+
+        expected = (
+            "void f() {\n"
+            "    int temp00000000 = xsArrayCreateInt(3);\n"
+            "    xsArraySetInt(temp00000000, 0, 1);\n"
+            "    xsArraySetInt(temp00000000, 1, 2);\n"
+            "    xsArraySetInt(temp00000000, 2, 3);\n"
+            "    xsArrayGetInt(temp00000000, 0);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_two_lists_in_call(self):
+        def f() -> None:
+            xs_set_player_attribute([1, 2], [3, 4])
+
+        expected = (
+            "void f() {\n"
+            "    int temp00000000 = xsArrayCreateInt(2);\n"
+            "    xsArraySetInt(temp00000000, 0, 1);\n"
+            "    xsArraySetInt(temp00000000, 1, 2);\n"
+            "    int temp00000001 = xsArrayCreateInt(2);\n"
+            "    xsArraySetInt(temp00000001, 0, 3);\n"
+            "    xsArraySetInt(temp00000001, 1, 4);\n"
+            "    xsSetPlayerAttribute(temp00000000, temp00000001);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_list_in_expression_no_indent(self):
+        def f() -> None:
+            xs_array_get_int([1, 2], 0)
+
+        self.assertEqual(
+            "void f(){int temp00000000=xsArrayCreateInt(2);xsArraySetInt(temp00000000,0,1);xsArraySetInt(temp00000000,1,2);xsArrayGetInt(temp00000000,0);}",
+            _convert(f, indent=False),
+        )
+
+    def test_list_in_expression_inside_if(self):
+        def f() -> None:
+            if True:
+                xs_array_get_int([10, 20], 0)
+
+        expected = (
+            "void f() {\n"
+            "    if (true) {\n"
+            "        int temp00000000 = xsArrayCreateInt(2);\n"
+            "        xsArraySetInt(temp00000000, 0, 10);\n"
+            "        xsArraySetInt(temp00000000, 1, 20);\n"
+            "        xsArrayGetInt(temp00000000, 0);\n"
+            "    }\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_float_list_in_expression(self):
+        def f() -> None:
+            xs_chat_data([1.5, 2.5])
+
+        expected = (
+            "void f() {\n"
+            "    int temp00000000 = xsArrayCreateFloat(2);\n"
+            "    xsArraySetFloat(temp00000000, 0, 1.5);\n"
+            "    xsArraySetFloat(temp00000000, 1, 2.5);\n"
+            "    xsChatData(temp00000000);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_empty_list_in_expression_raises(self):
+        def f() -> None:
+            xs_chat_data([])
+
+        with self.assertRaises(ValueError):
+            _convert(f)
 
 
 if __name__ == "__main__":
