@@ -92,6 +92,16 @@ class PythonToXsConverter:
         "XsVector": "xsArraySetVector",
     }
 
+    _ARRAY_GET_MAP = {
+        "int": "xsArrayGetInt",
+        "int32": "xsArrayGetInt",
+        "float": "xsArrayGetFloat",
+        "float32": "xsArrayGetFloat",
+        "bool": "xsArrayGetBool",
+        "str": "xsArrayGetString",
+        "XsVector": "xsArrayGetVector",
+    }
+
     _ARRAY_ZERO_XS: dict[str, str] = {
         "int": "0",
         "int32": "0",
@@ -231,8 +241,10 @@ class PythonToXsConverter:
     def _to_xs_variable_definition(self, a: AnnAssign, ctx: XsContext) -> str:
         if isinstance(a.annotation, Name):
             modifier = ""
-            type = self._to_xs_type(a.annotation.id)
+            python_type = a.annotation.id
+            type = self._to_xs_type(python_type)
         elif isinstance(a.annotation, Subscript) and isinstance(a.annotation.value, Name):
+            python_type = None
             if a.annotation.value.id in self._ARRAY_LIST_NAMES:
                 modifier = ""
                 type = "int"
@@ -249,8 +261,22 @@ class PythonToXsConverter:
             name = self._to_camel_case(a.target.id)
         else:
             raise ValueError("assignment must have a variable name")
-        value_xs = self._to_xs_expression(a.value, ctx, enclosed=True)
+
+        if isinstance(a.value, Subscript) and python_type is not None:
+            value_xs = self._to_xs_array_get(a.value, python_type, ctx)
+        else:
+            value_xs = self._to_xs_expression(a.value, ctx, enclosed=True)
         return self._stmt(ctx.depth, f"{modifier}{type} {name}{self.sp}={self.sp}{value_xs}")
+
+    def _to_xs_array_get(self, subscript: Subscript, element_type: str, ctx: XsContext) -> str:
+        if not isinstance(subscript.value, Name):
+            raise ValueError("array get target must be a variable name")
+        get_func = self._ARRAY_GET_MAP.get(element_type)
+        if get_func is None:
+            raise ValueError(f"unsupported array element type for get: {element_type}")
+        array_name = self._to_camel_case(subscript.value.id)
+        index_xs = self._to_xs_expression(subscript.slice, ctx, enclosed=True)
+        return f"{get_func}({array_name},{self.sp}{index_xs})"
 
     def _to_xs_variable_assignment(self, a: Assign, ctx: XsContext) -> str:
         if len(a.targets) != 1:
