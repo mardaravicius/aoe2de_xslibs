@@ -13,10 +13,12 @@ from xs_converter.functions import (
     xs_effect_amount,
     xs_get_player_civilization,
     xs_chat_data,
+    xs_array_get_int,
 )
 from xs_converter.macro import macro_pass_value, macro_repeat_with_iterable
 from xs_converter.symbols import XsConst, XsStatic, XsExtern, XsExternConst, XsVector, xs_rule
 from numpy import int32, float32
+from typing import List
 
 
 def _parse_dedented(fn):
@@ -1605,6 +1607,266 @@ class TestInt32Float32(unittest.TestCase):
             "}\n"
         )
         self.assertEqual(expected, _convert(f))
+
+
+class TestArrayDefinitions(unittest.TestCase):
+
+    def test_int_array_nonzero_default(self):
+        def f() -> None:
+            arr: list[int] = [1] * 10
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(10, 1);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_int_array_zero_default_omitted(self):
+        def f() -> None:
+            arr: list[int] = [0] * 10
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(10);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_int_array_negative_default(self):
+        def f() -> None:
+            arr: list[int] = [-1] * 5
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(5, -1);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_int32_array(self):
+        def f() -> None:
+            arr: list[int32] = [5] * 20
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(20, 5);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_list_uppercase_int(self):
+        def f() -> None:
+            arr: List[int] = [1] * 10
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(10, 1);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_list_uppercase_int32(self):
+        def f() -> None:
+            arr: List[int32] = [3] * 5
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(5, 3);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_float_array_nonzero_default(self):
+        def f() -> None:
+            arr: list[float] = [1.5] * 10
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateFloat(10, 1.5);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_float_array_zero_default_omitted(self):
+        def f() -> None:
+            arr: list[float] = [0.0] * 10
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateFloat(10);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_float32_array(self):
+        def f() -> None:
+            arr: list[float32] = [2.5] * 8
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateFloat(8, 2.5);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_bool_array_true_default(self):
+        def f() -> None:
+            arr: list[bool] = [True] * 10
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateBool(10, true);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_bool_array_false_default_omitted(self):
+        def f() -> None:
+            arr: list[bool] = [False] * 10
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateBool(10);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_str_array_nonempty_default(self):
+        def f() -> None:
+            arr: list[str] = ["hello"] * 10
+
+        expected = (
+            "void f() {\n"
+            '    int arr = xsArrayCreateString(10, "hello");\n'
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_str_array_empty_default_omitted(self):
+        def f() -> None:
+            arr: list[str] = [""] * 10
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateString(10);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_vector_array(self):
+        def f() -> None:
+            arr: list[XsVector] = [vector(1.0, 2.0, 3.0)] * 5
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateVector(5, vector(1.0, 2.0, 3.0));\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_vector_array_zero_default_omitted(self):
+        def f() -> None:
+            arr: list[XsVector] = [vector(0.0, 0.0, 0.0)] * 5
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateVector(5);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_array_with_variable_size(self):
+        def f() -> None:
+            n: int = 10
+            arr: list[int] = [0] * n
+
+        expected = (
+            "void f() {\n"
+            "    int n = 10;\n"
+            "    int arr = xsArrayCreateInt(n);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_empty_list_raises(self):
+        def f() -> None:
+            arr: list[int] = []
+
+        with self.assertRaises(ValueError):
+            _convert(f)
+
+    def test_array_creation_in_expression(self):
+        def f() -> None:
+            xs_array_get_int([10] * 10, 0)
+
+        expected = (
+            "void f() {\n"
+            "    xsArrayGetInt(xsArrayCreateInt(10, 10), 0);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_int32_cast_in_array(self):
+        def f() -> None:
+            arr: list[int] = [int32(10)] * int32(10)
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(10, 10);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_float32_cast_in_array(self):
+        def f() -> None:
+            arr: list[float] = [float32(1.5)] * 8
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateFloat(8, 1.5);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_variable_default_raises(self):
+        def f() -> None:
+            x: int = 5
+            arr: list[int] = [x] * 10
+
+        with self.assertRaises(ValueError):
+            _convert(f)
+
+    def test_size_is_variable(self):
+        def f() -> None:
+            x: int = 5
+            arr: list[int] = [10] * x
+
+        expected = (
+            "void f() {\n"
+            "    int x = 5;\n"
+            "    int arr = xsArrayCreateInt(x, 10);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_no_indent_mode(self):
+        def f() -> None:
+            arr: list[int] = [1] * 10
+
+        self.assertEqual(
+            "void f(){int arr=xsArrayCreateInt(10,1);}",
+            _convert(f, indent=False),
+        )
+
+    def test_no_indent_zero_default(self):
+        def f() -> None:
+            arr: list[int] = [0] * 10
+
+        self.assertEqual(
+            "void f(){int arr=xsArrayCreateInt(10);}",
+            _convert(f, indent=False),
+        )
 
 
 if __name__ == "__main__":

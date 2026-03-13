@@ -4,7 +4,7 @@ import re
 from ast import FunctionDef, Constant, Name, expr, arg, Expr, AnnAssign, Call, Assign, BinOp, Add, Sub, Mod, Mult, Div, \
     operator, If, Compare, Eq, Gt, GtE, Lt, LtE, NotEq, cmpop, For, While, AugAssign, Match, MatchValue, MatchAs, \
     Return, Pass, Subscript, stmt, Attribute, keyword, With, Tuple, UnaryOp, USub, JoinedStr, FormattedValue, Global, \
-    BoolOp, Or, And, Not, FloorDiv
+    BoolOp, Or, And, Not, FloorDiv, List
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional
 
@@ -70,6 +70,25 @@ class PythonToXsConverter:
         "float32": "0.0",
         "int": "0",
         "int32": "0",
+    }
+
+    _ARRAY_CREATE_MAP = {
+        "int": "xsArrayCreateInt",
+        "int32": "xsArrayCreateInt",
+        "float": "xsArrayCreateFloat",
+        "float32": "xsArrayCreateFloat",
+        "bool": "xsArrayCreateBool",
+        "str": "xsArrayCreateString",
+        "XsVector": "xsArrayCreateVector",
+    }
+
+    _ARRAY_ZERO_XS: dict[str, str] = {
+        "int": "0",
+        "int32": "0",
+        "float": "0.0",
+        "float32": "0.0",
+        "bool": "false",
+        "str": '""',
     }
 
     @staticmethod
@@ -147,19 +166,72 @@ class PythonToXsConverter:
             xs += f"{self.sp}={self.sp}{self._to_xs_expression(default, ctx)}"
         return xs
 
+    def _infer_array_element_type(self, node) -> str:
+        if isinstance(node, Call) and isinstance(node.func, Name):
+            func_name = node.func.id
+            if func_name in self._ARRAY_CREATE_MAP:
+                return func_name
+            if func_name == "vector":
+                return "XsVector"
+        value = self._unpack_constant(node)
+        if value is not None:
+            if isinstance(value, bool):
+                return "bool"
+            if isinstance(value, int):
+                return "int"
+            if isinstance(value, float):
+                return "float"
+            if isinstance(value, str):
+                return "str"
+        raise ValueError(f"cannot infer array element type from value")
+
+    def _to_xs_array_create(self, element_type: str, default_node, size_node, ctx: XsContext) -> str:
+        create_func = self._ARRAY_CREATE_MAP.get(element_type)
+        if create_func is None:
+            raise ValueError(f"unsupported array element type: {element_type}")
+
+        size_xs = self._to_xs_expression(size_node, ctx, enclosed=True)
+        default_xs = self._to_xs_expression(default_node, ctx, enclosed=True)
+
+        zero_xs = self._ARRAY_ZERO_XS.get(element_type)
+        if element_type == "XsVector":
+            zero_xs = f"vector(0.0,{self.sp}0.0,{self.sp}0.0)"
+
+        if zero_xs is not None and default_xs == zero_xs:
+            return f"{create_func}({size_xs})"
+        return f"{create_func}({size_xs},{self.sp}{default_xs})"
+
+    def _parse_array_literal(self, value) -> tuple:
+        if isinstance(value, List):
+            raise ValueError("cannot create array from list literal - use [default] * size syntax")
+        if not (isinstance(value, BinOp) and isinstance(value.op, Mult) and isinstance(value.left, List)):
+            raise ValueError("array must be defined as [default_value] * size")
+
+        list_node = value.left
+        if len(list_node.elts) != 1:
+            raise ValueError("array default must be a single-element list")
+
+        default_node = list_node.elts[0]
+        if self._unpack_constant(default_node) is None and not isinstance(default_node, Call):
+            raise ValueError("array default value must be a literal")
+        return default_node, value.right
+
+    _ARRAY_LIST_NAMES = {"list", "List"}
+
     def _to_xs_variable_definition(self, a: AnnAssign, ctx: XsContext) -> str:
         if isinstance(a.annotation, Name):
             modifier = ""
             type = self._to_xs_type(a.annotation.id)
-        elif isinstance(a.annotation, Subscript):
-            if isinstance(a.annotation.value, Name):
+        elif isinstance(a.annotation, Subscript) and isinstance(a.annotation.value, Name):
+            if a.annotation.value.id in self._ARRAY_LIST_NAMES:
+                modifier = ""
+                type = "int"
+            else:
                 modifier = self._to_xs_modifier(a.annotation.value.id) + " "
-            else:
-                raise ValueError("assignment with xs modifier type must have the modifier type")
-            if isinstance(a.annotation.slice, Name):
-                type = self._to_xs_type(a.annotation.slice.id)
-            else:
-                raise ValueError("assignment must have a variable type")
+                if isinstance(a.annotation.slice, Name):
+                    type = self._to_xs_type(a.annotation.slice.id)
+                else:
+                    raise ValueError("assignment must have a variable type")
         else:
             raise ValueError("assignment must have a variable type")
 
@@ -187,9 +259,10 @@ class PythonToXsConverter:
         else:
             raise ValueError("assignment needs to be a variable")
         op = self._to_xs_binary_op(a.op)
-        if isinstance(a.value, Constant) and a.value.value == 1 and op == "+":
+        aug_value = self._unpack_constant(a.value)
+        if aug_value == 1 and not isinstance(aug_value, bool) and op == "+":
             return self._stmt(ctx.depth, f"{name}++")
-        if isinstance(a.value, Constant) and a.value.value == 1 and op == "-":
+        if aug_value == 1 and not isinstance(aug_value, bool) and op == "-":
             return self._stmt(ctx.depth, f"{name}--")
         return self._stmt(ctx.depth, f"{name}{self.sp}={self.sp}{name}{self.sp}{op}{self.sp}{self._to_xs_expression(a.value, ctx)}")
 
@@ -216,6 +289,10 @@ class PythonToXsConverter:
             if e.func.id in self._macro_functions:
                 return self._to_xs_constant(self._eval_macro_function(e), enclosed)
             return self._to_xs_call(e, ctx, enclosed)
+        if isinstance(e, BinOp) and isinstance(e.op, Mult) and isinstance(e.left, List):
+            default_node, size_node = self._parse_array_literal(e)
+            element_type = self._infer_array_element_type(default_node)
+            return self._to_xs_array_create(element_type, default_node, size_node, ctx)
         if isinstance(e, BinOp):
             left_xs = self._to_xs_expression(e.left, ctx)
             op_xs = self._to_xs_binary_op(e.op)
@@ -248,6 +325,8 @@ class PythonToXsConverter:
             left_xs = self._to_xs_expression(e.values[0], ctx)
             right_xs = self._to_xs_expression(e.values[1], ctx)
             return self._wrap_parens(f"{left_xs}{self.sp}{op_xs}{self.sp}{right_xs}", enclosed)
+        if isinstance(e, List):
+            raise ValueError("cannot create array from list literal - use [default] * size syntax")
         raise ValueError(f"Unsupported expression: {expr}")
 
     def _to_xs_constant(self, value, enclosed: bool = False):
@@ -277,8 +356,13 @@ class PythonToXsConverter:
     def _unpack_constant(self, node: expr) -> Optional[Any]:
         if isinstance(node, Constant):
             return node.value
-        if isinstance(node, UnaryOp) and isinstance(node.op, USub) and isinstance(node.operand, Constant):
-            return -node.operand.value
+        if isinstance(node, UnaryOp) and isinstance(node.op, USub):
+            inner = self._unpack_constant(node.operand)
+            if inner is not None:
+                return -inner
+        if (isinstance(node, Call) and isinstance(node.func, Name)
+                and node.func.id in self._NUMERIC_CAST_ZEROS and len(node.args) == 1):
+            return self._unpack_constant(node.args[0])
         return None
 
     def _to_xs_numeric_cast(self, zero: str, arg, ctx: XsContext, enclosed: bool) -> str:
@@ -557,7 +641,8 @@ class PythonToXsConverter:
         inclusive_sign = "<=" if positive else ">="
         if isinstance(param, BinOp) and isinstance(param.op, expected_op):
             for main, other in [(param.left, param.right), (param.right, param.left)]:
-                if isinstance(other, Constant) and other.value == 1:
+                other_value = self._unpack_constant(other)
+                if other_value == 1 and not isinstance(other_value, bool):
                     return f"{inclusive_sign}{self.sp}{self._to_xs_expression(main, ctx, enclosed=enclosed)}"
         exclusive_sign = "<" if positive else ">"
         return f"{exclusive_sign}{self.sp}{self._to_xs_expression(param, ctx, enclosed=enclosed)}"
