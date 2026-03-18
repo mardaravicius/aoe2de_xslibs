@@ -128,7 +128,7 @@ class FunctionsTest(unittest.TestCase):
             for b in edges:
                 expected = int32(a) | int32(b)
                 actual = xs_bit_or(int32(a), int32(b))
-                self.assertEqual(expected, actual, f"{a} ^ {b}")
+                self.assertEqual(expected, actual, f"{a} | {b}")
 
     def test_random_uniform_in_range(self):
         xs_mt_seed(int32(random.randint(-2147483648, 2147483647)))
