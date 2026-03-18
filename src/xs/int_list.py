@@ -186,7 +186,7 @@ def xs_int_list_from_repeated_list(lst: int32 = int32(-1), times: int32 = int32(
         return c_int_list_max_capacity_error
     new_capacity: int32 = (size * times) + 1
     if new_capacity > c_int_list_max_capacity:
-        return c_int_list_generic_error
+        return c_int_list_max_capacity_error
     new_lst: int32 = xs_array_create_int(new_capacity)
     if new_lst < 0:
         return c_int_list_generic_error

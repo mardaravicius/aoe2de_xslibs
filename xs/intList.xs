@@ -182,7 +182,7 @@ int xsIntListFromRepeatedList(int lst = -1, int times = 0) {
     }
     int newCapacity = (size * times) + 1;
     if (newCapacity > cIntListMaxCapacity) {
-        return (cIntListGenericError);
+        return (cIntListMaxCapacityError);
     }
     int newLst = xsArrayCreateInt(newCapacity);
     if (newLst < 0) {

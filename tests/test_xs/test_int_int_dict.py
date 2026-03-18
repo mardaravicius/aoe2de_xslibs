@@ -116,6 +116,29 @@ class IntIntDictTest(unittest.TestCase):
         xs_int_int_dict_put(xs_dct, int32(1001), int32(-1001))
         self.assertGreater(xs_int_int_dict_size(xs_dct), xs_int_int_dict_size(xs_dct_copy))
 
+    def test_copy_of_cleared_dict_does_not_leak_ghost_bucket_arrays(self):
+        xs_dct = xs_int_int_dict_create()
+        for k in range(50):
+            xs_int_int_dict_put(xs_dct, int32(k), int32(k * 10))
+        xs_int_int_dict_clear(xs_dct)
+        xs_dct_copy = xs_int_int_dict_copy(xs_dct)
+        id_after = xs_array_create_int(int32(1))
+        self.assertEqual(xs_dct_copy + 1, id_after)
+
+    def test_copy_of_cleared_dict_is_functional(self):
+        xs_dct = xs_int_int_dict_create()
+        for k in range(50):
+            xs_int_int_dict_put(xs_dct, int32(k), int32(k * 10))
+        xs_int_int_dict_clear(xs_dct)
+        xs_dct_copy = xs_int_int_dict_copy(xs_dct)
+        self.assertGreaterEqual(xs_dct_copy, 0)
+        self.assertEqual(0, xs_int_int_dict_size(xs_dct_copy))
+        for k in range(20):
+            xs_int_int_dict_put(xs_dct_copy, int32(k), int32(k))
+        for k in range(20):
+            self.assertEqual(k, xs_int_int_dict_get(xs_dct_copy, int32(k)))
+        self.assertEqual(20, xs_int_int_dict_size(xs_dct_copy))
+
     def test_xs_int_int_next_key(self):
         xs_dct = xs_int_int_dict_create()
         dct = {}

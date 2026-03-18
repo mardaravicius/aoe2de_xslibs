@@ -71,6 +71,14 @@ class VectorListTest(unittest.TestCase):
         result = xs_vector_list_from_repeated_list(xs_lst, c_vector_list_max_capacity)
         self.assertEqual(c_vector_list_max_capacity_error, result)
 
+    def test_xs_vector_list_from_repeated_list_overflow_exact_boundary(self):
+        orig = _vl.c_vector_list_max_capacity
+        _vl.c_vector_list_max_capacity = int32(9)
+        xs_lst = xs_vector_list(vector(1.0, 0.0, 0.0), vector(0.0, 1.0, 0.0), vector(0.0, 0.0, 1.0))
+        result = xs_vector_list_from_repeated_list(xs_lst, int32(3))
+        _vl.c_vector_list_max_capacity = orig
+        self.assertEqual(c_vector_list_max_capacity_error, result)
+
     def test_xs_vector_list_from_array(self):
         v = vector(5.5, 6.6, 7.7)
         xs_arr = xs_array_create_vector(10, v)

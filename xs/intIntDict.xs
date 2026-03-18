@@ -443,17 +443,19 @@ int xsIntIntDictCopy(int dct = -1) {
         } else if (bucketType == _intIntDictArrayBucket) {
             int bucketArr = xsArrayGetInt(dct, i + 1);
             int bucketSize = xsArrayGetInt(dct, i + 2);
-            int bucketCapacity = xsArrayGetSize(bucketArr);
-            int newBucketArr = xsArrayCreateInt(bucketCapacity, 0);
-            if (newBucketArr < 0) {
-                return (cIntIntDictResizeFailedError);
+            if (bucketSize > 0) {
+                int bucketCapacity = xsArrayGetSize(bucketArr);
+                int newBucketArr = xsArrayCreateInt(bucketCapacity, 0);
+                if (newBucketArr < 0) {
+                    return (cIntIntDictResizeFailedError);
+                }
+                for (j = 0; < bucketSize) {
+                    xsArraySetInt(newBucketArr, j, xsArrayGetInt(bucketArr, j));
+                }
+                xsArraySetInt(newDct, i, _intIntDictArrayBucket);
+                xsArraySetInt(newDct, i + 1, newBucketArr);
+                xsArraySetInt(newDct, i + 2, bucketSize);
             }
-            for (j = 0; < bucketSize) {
-                xsArraySetInt(newBucketArr, j, xsArrayGetInt(bucketArr, j));
-            }
-            xsArraySetInt(newDct, i, _intIntDictArrayBucket);
-            xsArraySetInt(newDct, i + 1, newBucketArr);
-            xsArraySetInt(newDct, i + 2, bucketSize);
         }
         i = i + 3;
     }

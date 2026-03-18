@@ -106,6 +106,14 @@ class IntListTest(unittest.TestCase):
         result = xs_int_list_from_repeated_list(xs_lst, c_int_list_max_capacity)
         self.assertEqual(c_int_list_max_capacity_error, result)
 
+    def test_xs_int_list_from_repeated_list_overflow_exact_boundary(self):
+        orig = _il.c_int_list_max_capacity
+        _il.c_int_list_max_capacity = int32(9)
+        xs_lst = xs_int_list(int32(1), int32(2), int32(3))
+        result = xs_int_list_from_repeated_list(xs_lst, int32(3))
+        _il.c_int_list_max_capacity = orig
+        self.assertEqual(c_int_list_max_capacity_error, result)
+
     def test_xs_int_list_from_array(self):
         xs_arr = xs_array_create_int(10, 5)
         lst = [5] * 10

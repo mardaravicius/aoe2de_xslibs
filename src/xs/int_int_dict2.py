@@ -439,15 +439,16 @@ def xs_int_int_dict_copy(dct: int32 = int32(-1)) -> int32:
         elif bucket_type == _int_int_dict_array_bucket:
             bucket_arr: int32 = xs_array_get_int(dct, i + 1)
             bucket_size: int32 = xs_array_get_int(dct, i + 2)
-            bucket_capacity: int32 = xs_array_get_size(bucket_arr)
-            new_bucket_arr: int32 = xs_array_create_int(bucket_capacity, 0)
-            if new_bucket_arr < 0:
-                return c_int_int_dict_resize_failed_error
-            for j in i32range(bucket_size):
-                xs_array_set_int(new_bucket_arr, j, xs_array_get_int(bucket_arr, j))
-            xs_array_set_int(new_dct, i, _int_int_dict_array_bucket)
-            xs_array_set_int(new_dct, i + 1, new_bucket_arr)
-            xs_array_set_int(new_dct, i + 2, bucket_size)
+            if bucket_size > 0:
+                bucket_capacity: int32 = xs_array_get_size(bucket_arr)
+                new_bucket_arr: int32 = xs_array_create_int(bucket_capacity, 0)
+                if new_bucket_arr < 0:
+                    return c_int_int_dict_resize_failed_error
+                for j in i32range(bucket_size):
+                    xs_array_set_int(new_bucket_arr, j, xs_array_get_int(bucket_arr, j))
+                xs_array_set_int(new_dct, i, _int_int_dict_array_bucket)
+                xs_array_set_int(new_dct, i + 1, new_bucket_arr)
+                xs_array_set_int(new_dct, i + 2, bucket_size)
     xs_array_set_int(new_dct, 0, xs_array_get_int(dct, 0))
     return new_dct
 
