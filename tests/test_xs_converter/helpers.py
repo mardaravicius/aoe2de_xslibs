@@ -1,24 +1,10 @@
 import ast
 import inspect
+import subprocess
+import tempfile
 import textwrap
-import unittest
 
-from xs_converter.constants import XsConstants
 from xs_converter.converter import PythonToXsConverter, XsContext
-from xs_converter.functions import (
-    vector,
-    xs_set_player_attribute,
-    xs_player_attribute,
-    xs_get_game_time,
-    xs_effect_amount,
-    xs_get_player_civilization,
-    xs_chat_data,
-    xs_array_get_int,
-)
-from xs_converter.macro import macro_pass_value, macro_repeat_with_iterable
-from xs_converter.symbols import XsConst, XsStatic, XsExtern, XsExternConst, XsVector, xs_rule
-from numpy import int32, float32
-from typing import List, cast
 
 
 def _parse_dedented(fn):
@@ -28,8 +14,25 @@ def _parse_dedented(fn):
     return module.body[0]
 
 
+_xs_check_tmpfile = tempfile.NamedTemporaryFile(mode="w", suffix=".xs", delete=False)
+_xs_check_tmpfile.close()
+
+
+def _xs_check(xs: str) -> None:
+    """Validate XS source with xs-check. Raises AssertionError on failure."""
+    with open(_xs_check_tmpfile.name, "w") as f:
+        f.write(xs)
+    result = subprocess.run(
+        ["xs-check", _xs_check_tmpfile.name, "--ignores", "DiscardedFn"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise AssertionError(f"xs-check failed:\n{result.stdout}{result.stderr}")
+
+
 def _convert(*functions, indent=True, root_flags=None, **kwargs) -> str:
-    """Convert one or more Python functions to XS script.
+    """Convert one or more Python functions to XS script and validate with xs-check.
 
     By default the first function is treated as root (matching to_xs_script
     behaviour).  Override per-function with ``root_flags``.
@@ -42,4 +45,5 @@ def _convert(*functions, indent=True, root_flags=None, **kwargs) -> str:
         xs += converter.to_xs_function_definition(fn_ast, XsContext(), root)
         if i < len(functions) - 1:
             xs += converter.nl
+    _xs_check(xs)
     return xs
