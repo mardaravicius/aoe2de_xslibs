@@ -343,19 +343,88 @@ class PythonToXsConverter:
 
         if isinstance(a.value, Subscript) and python_type is not None:
             value_xs = self._to_xs_array_get(a.value, python_type, ctx)
+        elif isinstance(a.value, Subscript):
+            value_xs = self._to_xs_array_get(a.value, "int", ctx)
         else:
             value_xs = self._to_xs_expression(a.value, ctx, enclosed=True)
         return self._stmt(ctx.depth, f"{modifier}{type} {name}{self.sp}={self.sp}{value_xs}")
 
     def _to_xs_array_get(self, subscript: Subscript, element_type: str, ctx: XsContext) -> str:
-        if not isinstance(subscript.value, Name):
-            raise ValueError("array get target must be a variable name")
         get_func = self._ARRAY_GET_MAP.get(element_type)
         if get_func is None:
             raise ValueError(f"unsupported array element type for get: {element_type}")
-        array_name = self._to_camel_case(subscript.value.id)
         index_xs = self._to_xs_expression(subscript.slice, ctx, enclosed=True)
-        return f"{get_func}({array_name},{self.sp}{index_xs})"
+        if isinstance(subscript.value, Name):
+            array_xs = self._to_camel_case(subscript.value.id)
+        elif isinstance(subscript.value, Subscript):
+            array_xs = self._to_xs_array_get(subscript.value, "int", ctx)
+        else:
+            raise ValueError("array get target must be a variable name or array access")
+        return f"{get_func}({array_xs},{self.sp}{index_xs})"
+
+    def _parse_nd_array_annotation(self, annotation) -> Optional[tuple[int, str]]:
+        if not (isinstance(annotation, Subscript) and isinstance(annotation.value, Name)
+                and annotation.value.id in self._ARRAY_LIST_NAMES):
+            return None
+        depth = 1
+        current = annotation.slice
+        while True:
+            if isinstance(current, Name) and current.id in self._ARRAY_CREATE_MAP:
+                return (depth, current.id)
+            if (isinstance(current, Subscript) and isinstance(current.value, Name)
+                    and current.value.id in self._ARRAY_LIST_NAMES):
+                depth += 1
+                current = current.slice
+            else:
+                return None
+
+    def _parse_nd_array_value(self, value, depth: int) -> Optional[tuple[list, Any]]:
+        sizes = []
+        current = value
+        for _ in range(depth):
+            if not (isinstance(current, BinOp) and isinstance(current.op, Mult)
+                    and isinstance(current.left, List) and len(current.left.elts) == 1):
+                return None
+            sizes.append(current.right)
+            current = current.left.elts[0]
+        if self._unpack_constant(current) is None and not isinstance(current, Call):
+            return None
+        return sizes, current
+
+    def _try_to_xs_nd_array_init(self, e: AnnAssign, ctx: XsContext) -> Optional[str]:
+        ann_result = self._parse_nd_array_annotation(e.annotation)
+        if ann_result is None or ann_result[0] < 2:
+            return None
+        depth, inner_element_type = ann_result
+        if not isinstance(e.target, Name):
+            return None
+        val_result = self._parse_nd_array_value(e.value, depth)
+        if val_result is None:
+            return None
+        sizes, inner_default_node = val_result
+        var_name = self._to_camel_case(e.target.id)
+        return self._to_xs_nd_array_init_stmts(var_name, sizes, inner_element_type, inner_default_node, ctx)
+
+    def _to_xs_nd_array_init_stmts(self, var_name: str, sizes: list, inner_element_type: str, inner_default_node, ctx: XsContext) -> str:
+        outer_size_xs = self._to_xs_expression(sizes[0], ctx, enclosed=True)
+        xs = self._stmt(ctx.depth, f"int {var_name}{self.sp}={self.sp}xsArrayCreateInt({outer_size_xs})")
+        xs += self._to_xs_nd_array_fill_loop(var_name, sizes[0], sizes[1:], inner_element_type, inner_default_node, ctx)
+        return xs
+
+    def _to_xs_nd_array_fill_loop(self, parent_var: str, parent_size_node, sub_sizes: list, inner_element_type: str, inner_default_node, ctx: XsContext) -> str:
+        loop_var = self._next_temp_name()
+        parent_size_xs = self._to_xs_expression(parent_size_node, ctx, enclosed=True)
+        header = f"for{self.sp}({loop_var}{self.sp}={self.sp}0;{self.sp}<{self.sp}{parent_size_xs})"
+        if len(sub_sizes) == 1:
+            create_xs = self._to_xs_array_create(inner_element_type, inner_default_node, sub_sizes[0], ctx)
+            body_xs = self._stmt(ctx.depth + 1, f"xsArraySetInt({parent_var},{self.sp}{loop_var},{self.sp}{create_xs})")
+        else:
+            temp_var = self._next_temp_name()
+            sub_size_xs = self._to_xs_expression(sub_sizes[0], ctx, enclosed=True)
+            body_xs = self._stmt(ctx.depth + 1, f"int {temp_var}{self.sp}={self.sp}xsArrayCreateInt({sub_size_xs})")
+            body_xs += self._stmt(ctx.depth + 1, f"xsArraySetInt({parent_var},{self.sp}{loop_var},{self.sp}{temp_var})")
+            body_xs += self._to_xs_nd_array_fill_loop(temp_var, sub_sizes[0], sub_sizes[1:], inner_element_type, inner_default_node, ctx.indented())
+        return self._block(ctx.depth, header, body_xs)
 
     def _to_xs_variable_assignment(self, a: Assign, ctx: XsContext) -> str:
         if len(a.targets) != 1:
@@ -369,16 +438,19 @@ class PythonToXsConverter:
         return self._stmt(ctx.depth, f"{name}{self.sp}={self.sp}{value_xs}")
 
     def _to_xs_array_set(self, target: Subscript, value, ctx: XsContext) -> str:
-        if not isinstance(target.value, Name):
-            raise ValueError("array assignment target must be a variable name")
-        array_name = self._to_camel_case(target.value.id)
         index_xs = self._to_xs_expression(target.slice, ctx, enclosed=True)
+        if isinstance(target.value, Name):
+            array_xs = self._to_camel_case(target.value.id)
+        elif isinstance(target.value, Subscript):
+            array_xs = self._to_xs_array_get(target.value, "int", ctx)
+        else:
+            raise ValueError("array assignment target must be a variable name or array access")
         element_type = self._infer_array_element_type(value)
         set_func = self._ARRAY_SET_MAP.get(element_type)
         if set_func is None:
             raise ValueError(f"unsupported array element type for set: {element_type}")
         value_xs = self._to_xs_expression(value, ctx, enclosed=True)
-        return self._stmt(ctx.depth, f"{set_func}({array_name},{self.sp}{index_xs},{self.sp}{value_xs})")
+        return self._stmt(ctx.depth, f"{set_func}({array_xs},{self.sp}{index_xs},{self.sp}{value_xs})")
 
     def _to_xs_variable_aug_assignment(self, a: AugAssign, ctx: XsContext) -> str:
         if isinstance(a.target, Name):
@@ -464,15 +536,15 @@ class PythonToXsConverter:
             if value > 999_999_999:
                 if value > 2_147_483_647:
                     raise ValueError(f"xs int can't hold such big value: {value}")
-                base = int(value / 10)
-                remainder = int(value % 10)
+                base = value // 10
+                remainder = value % 10
                 return self._wrap_parens(f"{base}{self.sp}*{self.sp}10{self.sp}+{self.sp}{remainder}", enclosed)
             if value < -999_999_999:
                 if value < -2_147_483_648:
                     raise ValueError(f"xs int can't hold such small value: {value}")
                 value = value * -1
-                base = int(value / 10)
-                remainder = int(value % 10)
+                base = value // 10
+                remainder = value % 10
                 return self._wrap_parens(f"-{base}{self.sp}*{self.sp}10{self.sp}-{self.sp}{remainder}", enclosed)
             return f"{value}"
         if isinstance(value, float):
@@ -514,7 +586,10 @@ class PythonToXsConverter:
         if function_name == "cast":
             if len(e.args) != 2:
                 raise ValueError("cast() requires exactly 2 arguments")
-            return self._to_xs_expression(e.args[1], ctx, enclosed=enclosed)
+            inner = e.args[1]
+            if isinstance(inner, Subscript):
+                return self._to_xs_array_get(inner, e.args[0].id, ctx)
+            return self._to_xs_expression(inner, ctx, enclosed=enclosed)
         zero = self._NUMERIC_CAST_ZEROS.get(function_name)
         if zero is not None:
             return self._to_xs_numeric_cast(zero, e.args[0], ctx, enclosed)
@@ -714,7 +789,11 @@ class PythonToXsConverter:
                 stmt_xs = self._to_xs_list_literal_stmts(
                     self._to_camel_case(e.target.id), e.value.elts, element_type, inner)
             elif isinstance(e, AnnAssign):
-                stmt_xs = self._to_xs_variable_definition(e, inner)
+                nd_result = self._try_to_xs_nd_array_init(e, inner)
+                if nd_result is not None:
+                    stmt_xs = nd_result
+                else:
+                    stmt_xs = self._to_xs_variable_definition(e, inner)
             elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Subscript):
                 stmt_xs = self._to_xs_array_set(e.targets[0], e.value, inner)
             elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Name) and isinstance(e.value, List):
@@ -791,7 +870,8 @@ class PythonToXsConverter:
         expected_op = Add if positive else Sub
         inclusive_sign = "<=" if positive else ">="
         if isinstance(param, BinOp) and isinstance(param.op, expected_op):
-            for main, other in [(param.left, param.right), (param.right, param.left)]:
+            pairs = [(param.left, param.right), (param.right, param.left)] if positive else [(param.left, param.right)]
+            for main, other in pairs:
                 other_value = self._unpack_constant(other)
                 if other_value == 1 and not isinstance(other_value, bool):
                     return f"{inclusive_sign}{self.sp}{self._to_xs_expression(main, ctx, enclosed=enclosed)}"

@@ -2268,6 +2268,55 @@ class TestArrayGet(unittest.TestCase):
             _convert(f, indent=False),
         )
 
+    def test_get_2d_array_access(self):
+        def f() -> None:
+            arr: list[int] = [0] * 10
+            v: int = arr[0][1]
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(10);\n"
+            "    int v = xsArrayGetInt(xsArrayGetInt(arr, 0), 1);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_get_3d_array_access(self):
+        def f() -> None:
+            arr: list[list[list[float]]] = [[[0.0] * 4] * 5] * 3
+            v: float = arr[0][1][2]
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(3);\n"
+            "    for (temp00000000 = 0; < 3) {\n"
+            "        int temp00000001 = xsArrayCreateInt(5);\n"
+            "        xsArraySetInt(arr, temp00000000, temp00000001);\n"
+            "        for (temp00000002 = 0; < 5) {\n"
+            "            xsArraySetInt(temp00000001, temp00000002, xsArrayCreateFloat(4));\n"
+            "        }\n"
+            "    }\n"
+            "    float v = xsArrayGetFloat(xsArrayGetInt(xsArrayGetInt(arr, 0), 1), 2);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_get_2d_array_access_float_result(self):
+        def f() -> None:
+            arr: list[list[float]] = [[0.0] * 5] * 3
+            v: float = arr[0][1]
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(3);\n"
+            "    for (temp00000000 = 0; < 3) {\n"
+            "        xsArraySetInt(arr, temp00000000, xsArrayCreateFloat(5));\n"
+            "    }\n"
+            "    float v = xsArrayGetFloat(xsArrayGetInt(arr, 0), 1);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
 
 class TestListLiteralInitialization(unittest.TestCase):
 
@@ -2935,6 +2984,257 @@ class TestCastInArrays(unittest.TestCase):
             "    int arr = xsArrayCreateFloat(2);\n"
             "    xsArraySetFloat(arr, 0, a);\n"
             "    xsArraySetFloat(arr, 1, 2.0);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+
+    def test_set_2d_array_float(self):
+        def f() -> None:
+            arr: list[list[float]] = [[0.0] * 3] * 2
+            arr[0][1] = 2.2
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(2);\n"
+            "    for (temp00000000 = 0; < 2) {\n"
+            "        xsArraySetInt(arr, temp00000000, xsArrayCreateFloat(3));\n"
+            "    }\n"
+            "    xsArraySetFloat(xsArrayGetInt(arr, 0), 1, 2.2);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_set_2d_array_int(self):
+        def f() -> None:
+            arr: list[list[int]] = [[0] * 4] * 3
+            arr[1][2] = 42
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(3);\n"
+            "    for (temp00000000 = 0; < 3) {\n"
+            "        xsArraySetInt(arr, temp00000000, xsArrayCreateInt(4));\n"
+            "    }\n"
+            "    xsArraySetInt(xsArrayGetInt(arr, 1), 2, 42);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_set_3d_array(self):
+        def f() -> None:
+            arr: list[list[list[float]]] = [[[0.0] * 4] * 5] * 3
+            arr[0][1][2] = 9.9
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(3);\n"
+            "    for (temp00000000 = 0; < 3) {\n"
+            "        int temp00000001 = xsArrayCreateInt(5);\n"
+            "        xsArraySetInt(arr, temp00000000, temp00000001);\n"
+            "        for (temp00000002 = 0; < 5) {\n"
+            "            xsArraySetInt(temp00000001, temp00000002, xsArrayCreateFloat(4));\n"
+            "        }\n"
+            "    }\n"
+            "    xsArraySetFloat(xsArrayGetInt(xsArrayGetInt(arr, 0), 1), 2, 9.9);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_set_2d_array_with_variable_index(self):
+        def f() -> None:
+            arr: list[list[int]] = [[0] * 4] * 3
+            i: int = 1
+            j: int = 2
+            arr[i][j] = 10
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(3);\n"
+            "    for (temp00000000 = 0; < 3) {\n"
+            "        xsArraySetInt(arr, temp00000000, xsArrayCreateInt(4));\n"
+            "    }\n"
+            "    int i = 1;\n"
+            "    int j = 2;\n"
+            "    xsArraySetInt(xsArrayGetInt(arr, i), j, 10);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_set_2d_array_with_cast(self):
+        def f() -> None:
+            arr: list[list[float]] = [[0.0] * 3] * 2
+            x: float = 5.5
+            arr[0][1] = cast(float, x)
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(2);\n"
+            "    for (temp00000000 = 0; < 2) {\n"
+            "        xsArraySetInt(arr, temp00000000, xsArrayCreateFloat(3));\n"
+            "    }\n"
+            "    float x = 5.5;\n"
+            "    xsArraySetFloat(xsArrayGetInt(arr, 0), 1, x);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+
+class TestArrayGetInExpressionContext(unittest.TestCase):
+    """Array access used in general expression contexts.
+
+    All tests in this class currently fail. The root cause is that
+    `_to_xs_expression` has no Subscript handler, so array reads are only
+    supported inside annotated variable definitions and array-set targets.
+    The fix requires `cast(type, arr[i])` to resolve to `xsArrayGetType(arr, i)`.
+    """
+
+    # --- Gap 1: cast(type, arr[i]) in expression positions ---
+
+    def test_cast_array_get_in_function_call(self):
+        def f() -> None:
+            arr: list[str] = [""] * 5
+            xs_chat_data(cast(str, arr[0]))
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateString(5);\n"
+            '    xsChatData(xsArrayGetString(arr, 0));\n'
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_array_get_in_arithmetic(self):
+        def f() -> None:
+            arr: list[int] = [0] * 5
+            x: int = cast(int, arr[0]) + 1
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(5);\n"
+            "    int x = xsArrayGetInt(arr, 0) + 1;\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_array_get_in_condition(self):
+        def f() -> None:
+            arr: list[int] = [0] * 5
+            if cast(int, arr[0]) > 3:
+                pass
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(5);\n"
+            "    if (xsArrayGetInt(arr, 0) > 3) {\n"
+            "    }\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_cast_2d_array_get_in_expression(self):
+        def f() -> None:
+            arr: list[list[float]] = [[0.0] * 5] * 3
+            x: float = cast(float, arr[0][1]) + 1.0
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(3);\n"
+            "    for (temp00000000 = 0; < 3) {\n"
+            "        xsArraySetInt(arr, temp00000000, xsArrayCreateFloat(5));\n"
+            "    }\n"
+            "    float x = xsArrayGetFloat(xsArrayGetInt(arr, 0), 1) + 1.0;\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    # --- Gap 2: cast(type, arr[i]) as the value in an array-set ---
+
+    def test_cast_array_get_as_array_set_value(self):
+        def f() -> None:
+            a: list[int] = [0] * 5
+            b: list[int] = [0] * 5
+            a[0] = cast(int, b[1])
+
+        expected = (
+            "void f() {\n"
+            "    int a = xsArrayCreateInt(5);\n"
+            "    int b = xsArrayCreateInt(5);\n"
+            "    xsArraySetInt(a, 0, xsArrayGetInt(b, 1));\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    # --- Gap 3: sub-array handle via annotated variable definition ---
+
+    def test_get_subarray_handle(self):
+        def f() -> None:
+            arr: list[list[int]] = [[0] * 4] * 3
+            sub: list[int] = arr[0]
+
+        expected = (
+            "void f() {\n"
+            "    int arr = xsArrayCreateInt(3);\n"
+            "    for (temp00000000 = 0; < 3) {\n"
+            "        xsArraySetInt(arr, temp00000000, xsArrayCreateInt(4));\n"
+            "    }\n"
+            "    int sub = xsArrayGetInt(arr, 0);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+
+class TestBugFixes(unittest.TestCase):
+
+    def test_for_bound_sub_not_commutative(self):
+        """Bug: _to_xs_for_bound checked both (left, right) and
+        (right, left) for Sub, but subtraction is not commutative.
+        `1 - n` should NOT be rewritten as `>= n`."""
+        def f() -> None:
+            n: int = 10
+            for i in range(9, 1 - n, -1):
+                xs_chat_data("hi")
+
+        expected = (
+            "void f() {\n"
+            "    int n = 10;\n"
+            "    for (i = 9; > 1 - n) {\n"
+            '        xsChatData("hi");\n'
+            "    }\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_for_bound_sub_minus_one_still_works(self):
+        """Ensure n - 1 with negative step still optimizes to >= n."""
+        def f() -> None:
+            to: int = 2
+            for p2 in range(9, to - 1, -1):
+                xs_chat_data("hi")
+
+        expected = (
+            "void f() {\n"
+            "    int to = 2;\n"
+            "    for (p2 = 9; >= to) {\n"
+            '        xsChatData("hi");\n'
+            "    }\n"
+            "}\n"
+        )
+        self.assertEqual(expected, _convert(f))
+
+    def test_for_bound_add_one_plus_n_still_works(self):
+        """Ensure 1 + n with positive step still optimizes to <= n."""
+        def f() -> None:
+            n: int = 5
+            for i in range(0, 1 + n):
+                xs_chat_data("hi")
+
+        expected = (
+            "void f() {\n"
+            "    int n = 5;\n"
+            "    for (i = 0; <= n) {\n"
+            '        xsChatData("hi");\n'
+            "    }\n"
             "}\n"
         )
         self.assertEqual(expected, _convert(f))
