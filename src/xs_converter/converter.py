@@ -25,6 +25,13 @@ class XsContext:
         return XsContext(self.depth, replacements)
 
 
+def _has_xs_ignore(node: FunctionDef) -> bool:
+    return any(
+        (isinstance(d, Name) and d.id == "xs_ignore")
+        for d in node.decorator_list
+    )
+
+
 class PythonToXsConverter:
     _macro_functions = {
         macro_pass_value.__name__,
@@ -115,14 +122,15 @@ class PythonToXsConverter:
 
     @staticmethod
     def to_xs_script(*functions, indent: bool, root_flags=None, **kwargs) -> str:
-        xs = ""
+        parts = []
+        nl = "\n" if indent else ""
         for i, f in enumerate(functions):
             root_f = (i == 0) if root_flags is None else root_flags[i]
             converter = PythonToXsConverter(indent, kwargs)
-            xs += converter._to_xs_function(f, root_f)
-            if i < len(functions) - 1:
-                xs += converter.nl
-        return xs
+            result = converter._to_xs_function(f, root_f)
+            if result:
+                parts.append(result)
+        return nl.join(parts)
 
     @staticmethod
     def to_xs_file(module: ModuleType, indent: bool, **kwargs) -> str:
@@ -135,7 +143,9 @@ class PythonToXsConverter:
             if isinstance(node, (Import, ImportFrom)):
                 continue
             if isinstance(node, FunctionDef):
-                parts.append(converter.to_xs_function_definition(node, ctx, root_function=len(parts) == 0))
+                result = converter.to_xs_function_definition(node, ctx, root_function=len(parts) == 0)
+                if result:
+                    parts.append(result)
             elif isinstance(node, AnnAssign):
                 parts.append(converter._to_xs_variable_definition(node, ctx))
             elif isinstance(node, Assign):
@@ -710,6 +720,8 @@ class PythonToXsConverter:
         return self._block(ctx.depth, header, cases_xs)
 
     def to_xs_function_definition(self, function: FunctionDef, ctx: XsContext, root_function: bool = True) -> str:
+        if _has_xs_ignore(function):
+            return ""
         type = self._to_xs_function_type(function.returns)
         name = self._to_camel_case(function.name)
 

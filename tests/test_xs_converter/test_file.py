@@ -9,6 +9,7 @@ import tests.test_xs_converter.fixtures.variables as variables
 import tests.test_xs_converter.fixtures.variable_assignment as variable_assignment
 import tests.test_xs_converter.fixtures.multiple_functions as multiple_functions
 import tests.test_xs_converter.fixtures.mixed as mixed
+import tests.test_xs_converter.fixtures.with_xs_ignore as with_xs_ignore
 
 
 class FileConversionTest(unittest.TestCase):
@@ -77,6 +78,18 @@ class FileConversionTest(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             PythonToXsConverter.to_xs_file(mod, indent=True)
         self.assertIn("Expr", str(cm.exception))
+
+    def test_xs_ignore_skips_function(self):
+        expected = (
+            "void converted() {\n"
+            "    int x = 1;\n"
+            "}\n"
+            "\n"
+            "int alsoConverted() {\n"
+            "    return (42);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, convert_file(with_xs_ignore))
 
     def test_empty_file_with_only_imports(self):
         self.assertEqual("", convert_file(imports_only))

@@ -1,6 +1,6 @@
 import unittest
 
-from xs_converter.symbols import xs_rule
+from xs_converter.symbols import xs_rule, xs_ignore
 from xs_converter.functions import xs_set_player_attribute, xs_chat_data
 
 from tests.test_xs_converter.helpers import convert
@@ -311,6 +311,37 @@ class TestXsRule(unittest.TestCase):
             "}\n"
         )
         self.assertEqual(expected, convert(grouped_rule, root_flags=[False]))
+
+
+class TestXsIgnore(unittest.TestCase):
+
+    def test_xs_ignore_single_function(self):
+        @xs_ignore
+        def skipped() -> None:
+            pass
+
+        self.assertEqual("", convert(skipped))
+
+    def test_xs_ignore_in_multiple_functions(self):
+        def kept() -> None:
+            pass
+
+        @xs_ignore
+        def skipped() -> None:
+            pass
+
+        def also_kept() -> int:
+            return 1
+
+        expected = (
+            "void kept() {\n"
+            "}\n"
+            "\n"
+            "int alsoKept() {\n"
+            "    return (1);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, convert(kept, skipped, also_kept))
 
 
 if __name__ == "__main__":
