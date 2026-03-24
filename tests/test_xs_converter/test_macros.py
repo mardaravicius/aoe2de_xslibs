@@ -3,7 +3,7 @@ import unittest
 from xs_converter.functions import xs_set_player_attribute
 from xs_converter.macro import macro_pass_value, macro_repeat_with_iterable
 
-from tests.test_xs_converter.helpers import _convert
+from tests.test_xs_converter.helpers import convert
 
 
 class TestMacros(unittest.TestCase):
@@ -17,7 +17,7 @@ class TestMacros(unittest.TestCase):
             "    int x = 42;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f, my_val=42))
+        self.assertEqual(expected, convert(f, my_val=42))
 
     def test_macro_with_string_value(self):
         def f() -> None:
@@ -28,7 +28,7 @@ class TestMacros(unittest.TestCase):
             '    string x = "hello";\n'
             "}\n"
         )
-        self.assertEqual(expected, _convert(f, msg="hello"))
+        self.assertEqual(expected, convert(f, msg="hello"))
 
     def test_repeat_with_iterable(self):
         def f() -> None:
@@ -41,7 +41,7 @@ class TestMacros(unittest.TestCase):
             "    xsSetPlayerAttribute(2, 100, 20.0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f, players=[(1, 10.0), (2, 20.0)]))
+        self.assertEqual(expected, convert(f, players=[(1, 10.0), (2, 20.0)]))
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ from xs_converter.functions import (
 from xs_converter.macro import macro_pass_value, macro_repeat_with_iterable
 from xs_converter.symbols import XsConst, XsStatic, XsVector
 
-from tests.test_xs_converter.helpers import _convert
+from tests.test_xs_converter.helpers import convert
 from xs_converter.functions import vector
 
 
@@ -121,7 +121,7 @@ class IntegrationTest(unittest.TestCase):
         )
         self.assertEqual(
             expected,
-            _convert(
+            convert(
                 xs_test_function,
                 resource1=400,
                 players=[(1, 40.0), (2, 41.0), (3, 42.0), (5, 43.0), (8, 44.0)],

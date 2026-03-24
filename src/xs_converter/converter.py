@@ -1,11 +1,13 @@
 import ast
 import inspect
 import re
+import textwrap
 from ast import FunctionDef, Constant, Name, expr, arg, Expr, AnnAssign, Call, Assign, BinOp, Add, Sub, Mod, Mult, Div, \
     operator, If, Compare, Eq, Gt, GtE, Lt, LtE, NotEq, cmpop, For, While, AugAssign, Match, MatchValue, MatchAs, \
     Return, Pass, Subscript, stmt, Attribute, keyword, With, Tuple, UnaryOp, USub, JoinedStr, FormattedValue, Global, \
-    BoolOp, Or, And, Not, FloorDiv, List
+    BoolOp, Or, And, Not, FloorDiv, List, Import, ImportFrom
 from dataclasses import dataclass, field
+from types import ModuleType
 from typing import Any, Iterable, Optional
 
 from xs_converter.macro import macro_pass_value, macro_repeat_with_iterable
@@ -112,15 +114,35 @@ class PythonToXsConverter:
     }
 
     @staticmethod
-    def to_xs_script(*functions, indent: bool, **kwargs) -> str:
+    def to_xs_script(*functions, indent: bool, root_flags=None, **kwargs) -> str:
         xs = ""
         for i, f in enumerate(functions):
-            root_f = i == 0
+            root_f = (i == 0) if root_flags is None else root_flags[i]
             converter = PythonToXsConverter(indent, kwargs)
             xs += converter._to_xs_function(f, root_f)
             if i < len(functions) - 1:
                 xs += converter.nl
         return xs
+
+    @staticmethod
+    def to_xs_file(module: ModuleType, indent: bool, **kwargs) -> str:
+        source = inspect.getsource(module)
+        module_ast = ast.parse(source)
+        converter = PythonToXsConverter(indent, kwargs)
+        ctx = XsContext()
+        parts = []
+        for node in module_ast.body:
+            if isinstance(node, (Import, ImportFrom)):
+                continue
+            if isinstance(node, FunctionDef):
+                parts.append(converter.to_xs_function_definition(node, ctx, root_function=len(parts) == 0))
+            elif isinstance(node, AnnAssign):
+                parts.append(converter._to_xs_variable_definition(node, ctx))
+            elif isinstance(node, Assign):
+                parts.append(converter._to_xs_variable_assignment(node, ctx))
+            else:
+                raise ValueError(f"unsupported top-level statement: {type(node).__name__}")
+        return converter.nl.join(parts)
 
     def __init__(self, indent: bool, vars: dict[str, any]):
         if indent:
@@ -770,7 +792,7 @@ class PythonToXsConverter:
         return " ".join(modifiers)
 
     def _to_xs_function(self, function, root_function: bool = True):
-        source = inspect.getsource(function)
+        source = textwrap.dedent(inspect.getsource(function))
         module_ast = ast.parse(source)
         if len(module_ast.body) != 1 or not isinstance(module_ast.body[0], FunctionDef):
             raise ValueError("top level must contain a single function")

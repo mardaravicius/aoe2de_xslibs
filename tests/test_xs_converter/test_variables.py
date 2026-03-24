@@ -4,7 +4,7 @@ from numpy import int32, float32
 from xs_converter.symbols import XsConst, XsStatic, XsExtern, XsExternConst, XsVector
 from xs_converter.functions import vector
 
-from tests.test_xs_converter.helpers import _convert
+from tests.test_xs_converter.helpers import convert
 
 
 class TestVariableDefinitions(unittest.TestCase):
@@ -18,7 +18,7 @@ class TestVariableDefinitions(unittest.TestCase):
             "    int x = 42;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float_var(self):
         def f() -> None:
@@ -29,7 +29,7 @@ class TestVariableDefinitions(unittest.TestCase):
             "    float x = 3.14;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_bool_var(self):
         def f() -> None:
@@ -40,7 +40,7 @@ class TestVariableDefinitions(unittest.TestCase):
             "    bool flag = true;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_string_var(self):
         def f() -> None:
@@ -51,7 +51,7 @@ class TestVariableDefinitions(unittest.TestCase):
             '    string msg = "hello";\n'
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_vector_var(self):
         def f() -> None:
@@ -62,7 +62,7 @@ class TestVariableDefinitions(unittest.TestCase):
             "    vector v = vector(1.0, 2.0, 3.0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_const_modifier(self):
         def f() -> None:
@@ -73,7 +73,7 @@ class TestVariableDefinitions(unittest.TestCase):
             "    const int x = 99;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_static_modifier(self):
         def f() -> None:
@@ -84,7 +84,7 @@ class TestVariableDefinitions(unittest.TestCase):
             "    static int x = 0;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_extern_modifier(self):
         def f() -> None:
@@ -95,7 +95,7 @@ class TestVariableDefinitions(unittest.TestCase):
             "    extern int x = 0;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_extern_const_modifier(self):
         def f() -> None:
@@ -106,7 +106,7 @@ class TestVariableDefinitions(unittest.TestCase):
             "    extern const int x = 0;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_reassignment(self):
         def f() -> None:
@@ -119,7 +119,7 @@ class TestVariableDefinitions(unittest.TestCase):
             "    x = 5;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestAugmentedAssignment(unittest.TestCase):
@@ -135,7 +135,7 @@ class TestAugmentedAssignment(unittest.TestCase):
             "    x++;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_decrement_by_one(self):
         def f() -> None:
@@ -148,7 +148,7 @@ class TestAugmentedAssignment(unittest.TestCase):
             "    x--;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_add_more_than_one(self):
         def f() -> None:
@@ -161,7 +161,7 @@ class TestAugmentedAssignment(unittest.TestCase):
             "    x = x + 10;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_subtract_more_than_one(self):
         def f() -> None:
@@ -174,7 +174,7 @@ class TestAugmentedAssignment(unittest.TestCase):
             "    x = x - 3;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_multiply_assign(self):
         def f() -> None:
@@ -187,7 +187,7 @@ class TestAugmentedAssignment(unittest.TestCase):
             "    x = x * 5;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_div_assign(self):
         def f() -> None:
@@ -200,7 +200,7 @@ class TestAugmentedAssignment(unittest.TestCase):
             "    x = x / 5;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestInt32Float32(unittest.TestCase):
@@ -214,7 +214,7 @@ class TestInt32Float32(unittest.TestCase):
             "    int x = 7;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float32_variable(self):
         def f() -> None:
@@ -225,7 +225,7 @@ class TestInt32Float32(unittest.TestCase):
             "    float x = 1.5;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_int32_return_type(self):
         def f() -> int32:
@@ -236,7 +236,7 @@ class TestInt32Float32(unittest.TestCase):
             "    return (0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float32_return_type(self):
         def f() -> float32:
@@ -247,7 +247,7 @@ class TestInt32Float32(unittest.TestCase):
             "    return (0.0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_int32_cast_from_var(self):
         def f() -> None:
@@ -260,7 +260,7 @@ class TestInt32Float32(unittest.TestCase):
             "    int y = 0 + x;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float32_cast_from_var(self):
         def f() -> None:
@@ -273,7 +273,7 @@ class TestInt32Float32(unittest.TestCase):
             "    float y = 0.0 + x;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_int32_cast_from_constant(self):
         def f() -> None:
@@ -284,7 +284,7 @@ class TestInt32Float32(unittest.TestCase):
             "    int y = 42;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float32_cast_from_constant(self):
         def f() -> None:
@@ -295,7 +295,7 @@ class TestInt32Float32(unittest.TestCase):
             "    float y = 3.14;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 if __name__ == "__main__":

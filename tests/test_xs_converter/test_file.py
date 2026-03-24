@@ -1,0 +1,86 @@
+import unittest
+
+from xs_converter.converter import PythonToXsConverter
+from tests.test_xs_converter.helpers import convert_file, module_from_source
+
+import tests.test_xs_converter.fixtures.imports_only as imports_only
+import tests.test_xs_converter.fixtures.imports_and_function as imports_and_function
+import tests.test_xs_converter.fixtures.variables as variables
+import tests.test_xs_converter.fixtures.variable_assignment as variable_assignment
+import tests.test_xs_converter.fixtures.multiple_functions as multiple_functions
+import tests.test_xs_converter.fixtures.mixed as mixed
+
+
+class FileConversionTest(unittest.TestCase):
+    def test_imports_are_ignored(self):
+        expected = "void foo() {\n}\n"
+        self.assertEqual(expected, convert_file(imports_and_function))
+
+    def test_top_level_variable_declaration(self):
+        expected = (
+            "int count = 5;\n"
+            "\n"
+            "float total = 0.0;\n"
+        )
+        self.assertEqual(expected, convert_file(variables))
+
+    def test_top_level_variable_assignment(self):
+        expected = (
+            "int count = 5;\n"
+            "\n"
+            "count = 10;\n"
+        )
+        self.assertEqual(expected, convert_file(variable_assignment))
+
+    def test_multiple_functions(self):
+        expected = (
+            "void first() {\n"
+            "    int x = 1;\n"
+            "}\n"
+            "\n"
+            "int second() {\n"
+            "    return (42);\n"
+            "}\n"
+        )
+        self.assertEqual(expected, convert_file(multiple_functions))
+
+    def test_mixed_functions_and_variables(self):
+        expected = (
+            "int g = 99;\n"
+            "\n"
+            "void foo(int x = 0) {\n"
+            "    int y = x + g;\n"
+            "}\n"
+        )
+        self.assertEqual(expected, convert_file(mixed))
+
+    def test_unsupported_top_level_if_raises(self):
+        mod = module_from_source("if True:\n    pass\n")
+        with self.assertRaises(ValueError) as cm:
+            PythonToXsConverter.to_xs_file(mod, indent=True)
+        self.assertIn("If", str(cm.exception))
+
+    def test_unsupported_top_level_for_raises(self):
+        mod = module_from_source("for i in range(10):\n    pass\n")
+        with self.assertRaises(ValueError) as cm:
+            PythonToXsConverter.to_xs_file(mod, indent=True)
+        self.assertIn("For", str(cm.exception))
+
+    def test_unsupported_top_level_while_raises(self):
+        mod = module_from_source("while True:\n    pass\n")
+        with self.assertRaises(ValueError) as cm:
+            PythonToXsConverter.to_xs_file(mod, indent=True)
+        self.assertIn("While", str(cm.exception))
+
+    def test_unsupported_top_level_expression_raises(self):
+        mod = module_from_source("print('hello')\n")
+        with self.assertRaises(ValueError) as cm:
+            PythonToXsConverter.to_xs_file(mod, indent=True)
+        self.assertIn("Expr", str(cm.exception))
+
+    def test_empty_file_with_only_imports(self):
+        self.assertEqual("", convert_file(imports_only))
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -10,7 +10,7 @@ from xs_converter.functions import (
     xs_chat_data,
 )
 
-from tests.test_xs_converter.helpers import _convert
+from tests.test_xs_converter.helpers import convert
 
 
 class TestReturn(unittest.TestCase):
@@ -24,7 +24,7 @@ class TestReturn(unittest.TestCase):
             "    return;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_return_value(self):
         def f() -> int:
@@ -35,7 +35,7 @@ class TestReturn(unittest.TestCase):
             "    return (42);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_return_expression(self):
         def f(x: int = 0) -> int:
@@ -46,7 +46,7 @@ class TestReturn(unittest.TestCase):
             "    return (x + 1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestIfElse(unittest.TestCase):
@@ -65,7 +65,7 @@ class TestIfElse(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_if_else(self):
         def f() -> None:
@@ -85,7 +85,7 @@ class TestIfElse(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_if_elif_else(self):
         def f() -> None:
@@ -109,7 +109,7 @@ class TestIfElse(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_if_with_pass_in_else(self):
         def f() -> None:
@@ -128,7 +128,7 @@ class TestIfElse(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestForLoops(unittest.TestCase):
@@ -145,7 +145,7 @@ class TestForLoops(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_range_two_args(self):
         def f() -> None:
@@ -159,7 +159,7 @@ class TestForLoops(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_range_with_plus_one_bound(self):
         def f() -> None:
@@ -175,7 +175,7 @@ class TestForLoops(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_range_step_minus_one(self):
         def f() -> None:
@@ -189,7 +189,7 @@ class TestForLoops(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_range_step_minus_one_with_sub_bound(self):
         def f() -> None:
@@ -205,7 +205,7 @@ class TestForLoops(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_range_step_positive_not_one(self):
         def f() -> None:
@@ -221,7 +221,7 @@ class TestForLoops(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_range_step_negative_not_one(self):
         def f() -> None:
@@ -239,7 +239,7 @@ class TestForLoops(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_range_for_only_expressions(self):
         def f() -> None:
@@ -261,7 +261,7 @@ class TestForLoops(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_range_all_expressions(self):
         def f() -> None:
@@ -289,7 +289,7 @@ class TestForLoops(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_range_bound_sub_not_commutative(self):
         """Subtraction is not commutative: `1 - n` should NOT be rewritten as `>= n`."""
@@ -306,7 +306,7 @@ class TestForLoops(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_range_bound_sub_minus_one_optimizes(self):
         """n - 1 with negative step still optimizes to >= n."""
@@ -323,7 +323,7 @@ class TestForLoops(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_range_bound_add_one_plus_n_optimizes(self):
         """1 + n with positive step still optimizes to <= n."""
@@ -340,7 +340,7 @@ class TestForLoops(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestWhileLoop(unittest.TestCase):
@@ -357,7 +357,7 @@ class TestWhileLoop(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestMatchCase(unittest.TestCase):
@@ -382,7 +382,7 @@ class TestMatchCase(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_switch_with_xs_constants(self):
         def f() -> None:
@@ -399,7 +399,7 @@ class TestMatchCase(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 if __name__ == "__main__":

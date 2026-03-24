@@ -5,7 +5,7 @@ from typing import List, cast
 from xs_converter.functions import vector, xs_set_player_attribute, xs_chat_data, xs_array_get_int
 from xs_converter.symbols import XsVector
 
-from tests.test_xs_converter.helpers import _convert
+from tests.test_xs_converter.helpers import convert
 
 
 class TestArrayDefinitions(unittest.TestCase):
@@ -19,7 +19,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateInt(10, 1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_int_array_zero_default_omitted(self):
         def f() -> None:
@@ -30,7 +30,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateInt(10);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_int_array_negative_default(self):
         def f() -> None:
@@ -41,7 +41,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateInt(5, -1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_int32_array(self):
         def f() -> None:
@@ -52,7 +52,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateInt(20, 5);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_list_uppercase_int(self):
         def f() -> None:
@@ -63,7 +63,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateInt(10, 1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_list_uppercase_int32(self):
         def f() -> None:
@@ -74,7 +74,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateInt(5, 3);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float_array_nonzero_default(self):
         def f() -> None:
@@ -85,7 +85,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateFloat(10, 1.5);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float_array_zero_default_omitted(self):
         def f() -> None:
@@ -96,7 +96,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateFloat(10);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float32_array(self):
         def f() -> None:
@@ -107,7 +107,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateFloat(8, 2.5);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_bool_array_true_default(self):
         def f() -> None:
@@ -118,7 +118,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateBool(10, true);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_bool_array_false_default_omitted(self):
         def f() -> None:
@@ -129,7 +129,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateBool(10);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_str_array_nonempty_default(self):
         def f() -> None:
@@ -140,7 +140,7 @@ class TestArrayDefinitions(unittest.TestCase):
             '    int arr = xsArrayCreateString(10, "hello");\n'
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_str_array_empty_default_omitted(self):
         def f() -> None:
@@ -151,7 +151,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateString(10);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_vector_array(self):
         def f() -> None:
@@ -162,7 +162,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateVector(5, vector(1.0, 2.0, 3.0));\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_vector_array_zero_default_omitted(self):
         def f() -> None:
@@ -173,7 +173,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateVector(5);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_array_with_variable_size(self):
         def f() -> None:
@@ -186,7 +186,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateInt(n);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_empty_annotated_list(self):
         def f() -> None:
@@ -197,7 +197,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateInt(0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_array_creation_in_expression(self):
         def f() -> None:
@@ -208,7 +208,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    xsArrayGetInt(xsArrayCreateInt(10, 10), 0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_int32_cast_in_array(self):
         def f() -> None:
@@ -219,7 +219,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateInt(10, 10);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float32_cast_in_array(self):
         def f() -> None:
@@ -230,7 +230,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateFloat(8, 1.5);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_variable_default_raises(self):
         def f() -> None:
@@ -238,7 +238,7 @@ class TestArrayDefinitions(unittest.TestCase):
             arr: list[int] = [x] * 10
 
         with self.assertRaises(ValueError):
-            _convert(f)
+            convert(f)
 
     def test_size_is_variable(self):
         def f() -> None:
@@ -251,7 +251,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    int arr = xsArrayCreateInt(x, 10);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_no_indent_mode(self):
         def f() -> None:
@@ -259,7 +259,7 @@ class TestArrayDefinitions(unittest.TestCase):
 
         self.assertEqual(
             "void f(){int arr=xsArrayCreateInt(10,1);}",
-            _convert(f, indent=False),
+            convert(f, indent=False),
         )
 
     def test_no_indent_zero_default(self):
@@ -268,7 +268,7 @@ class TestArrayDefinitions(unittest.TestCase):
 
         self.assertEqual(
             "void f(){int arr=xsArrayCreateInt(10);}",
-            _convert(f, indent=False),
+            convert(f, indent=False),
         )
 
     def test_2d_array_init(self):
@@ -283,7 +283,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_3d_array_init(self):
         def f() -> None:
@@ -301,7 +301,7 @@ class TestArrayDefinitions(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestArrayAssignment(unittest.TestCase):
@@ -317,7 +317,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetInt(a, 0, 1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_negative_int(self):
         def f() -> None:
@@ -330,7 +330,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetInt(a, 0, -5);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_float(self):
         def f() -> None:
@@ -343,7 +343,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetFloat(a, 0, 1.5);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_bool_true(self):
         def f() -> None:
@@ -356,7 +356,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetBool(a, 0, true);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_bool_false(self):
         def f() -> None:
@@ -369,7 +369,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetBool(a, 0, false);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_string(self):
         def f() -> None:
@@ -382,7 +382,7 @@ class TestArrayAssignment(unittest.TestCase):
             '    xsArraySetString(a, 0, "hello");\n'
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_empty_string(self):
         def f() -> None:
@@ -395,7 +395,7 @@ class TestArrayAssignment(unittest.TestCase):
             '    xsArraySetString(a, 0, "");\n'
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_int32_cast(self):
         def f() -> None:
@@ -408,7 +408,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetInt(a, 0, -1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_float32_cast(self):
         def f() -> None:
@@ -421,7 +421,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetFloat(a, 0, 1.5);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_vector(self):
         def f() -> None:
@@ -434,7 +434,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetVector(a, 0, vector(1.1, 1.1, 1.1));\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_variable_index(self):
         def f() -> None:
@@ -449,7 +449,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetInt(a, i, 1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_expression_index(self):
         def f() -> None:
@@ -464,7 +464,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetInt(a, i + 1, 1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_non_constant_value_raises(self):
         def f() -> None:
@@ -473,7 +473,7 @@ class TestArrayAssignment(unittest.TestCase):
             a[0] = x
 
         with self.assertRaises(ValueError):
-            _convert(f)
+            convert(f)
 
     def test_no_indent(self):
         def f() -> None:
@@ -482,7 +482,7 @@ class TestArrayAssignment(unittest.TestCase):
 
         self.assertEqual(
             "void f(){int a=xsArrayCreateInt(10);xsArraySetInt(a,0,1);}",
-            _convert(f, indent=False),
+            convert(f, indent=False),
         )
 
     def test_camel_case_array_name(self):
@@ -496,7 +496,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetInt(myArr, 0, 1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_2d_array_float(self):
         def f() -> None:
@@ -512,7 +512,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetFloat(xsArrayGetInt(arr, 0), 1, 2.2);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_2d_array_int(self):
         def f() -> None:
@@ -528,7 +528,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetInt(xsArrayGetInt(arr, 1), 2, 42);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_3d_array(self):
         def f() -> None:
@@ -548,7 +548,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetFloat(xsArrayGetInt(xsArrayGetInt(arr, 0), 1), 2, 9.9);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_2d_array_with_variable_index(self):
         def f() -> None:
@@ -568,7 +568,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetInt(xsArrayGetInt(arr, i), j, 10);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_set_2d_array_with_cast(self):
         def f() -> None:
@@ -586,7 +586,7 @@ class TestArrayAssignment(unittest.TestCase):
             "    xsArraySetFloat(xsArrayGetInt(arr, 0), 1, x);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestArrayGet(unittest.TestCase):
@@ -602,7 +602,7 @@ class TestArrayGet(unittest.TestCase):
             "    int v = xsArrayGetInt(arr, 0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_get_float(self):
         def f() -> None:
@@ -615,7 +615,7 @@ class TestArrayGet(unittest.TestCase):
             "    float v = xsArrayGetFloat(arr, 0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_get_bool(self):
         def f() -> None:
@@ -628,7 +628,7 @@ class TestArrayGet(unittest.TestCase):
             "    bool v = xsArrayGetBool(arr, 0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_get_string(self):
         def f() -> None:
@@ -641,7 +641,7 @@ class TestArrayGet(unittest.TestCase):
             "    string v = xsArrayGetString(arr, 0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_get_vector(self):
         def f() -> None:
@@ -654,7 +654,7 @@ class TestArrayGet(unittest.TestCase):
             "    vector v = xsArrayGetVector(arr, 0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_get_int32(self):
         def f() -> None:
@@ -667,7 +667,7 @@ class TestArrayGet(unittest.TestCase):
             "    int v = xsArrayGetInt(arr, 0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_get_float32(self):
         def f() -> None:
@@ -680,7 +680,7 @@ class TestArrayGet(unittest.TestCase):
             "    float v = xsArrayGetFloat(arr, 0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_get_variable_index(self):
         def f() -> None:
@@ -695,7 +695,7 @@ class TestArrayGet(unittest.TestCase):
             "    int v = xsArrayGetInt(arr, i);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_get_expression_index(self):
         def f() -> None:
@@ -710,7 +710,7 @@ class TestArrayGet(unittest.TestCase):
             "    int v = xsArrayGetInt(arr, i + 1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_get_camel_case(self):
         def f() -> None:
@@ -723,7 +723,7 @@ class TestArrayGet(unittest.TestCase):
             "    int myVal = xsArrayGetInt(myArr, 0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_get_no_indent(self):
         def f() -> None:
@@ -732,7 +732,7 @@ class TestArrayGet(unittest.TestCase):
 
         self.assertEqual(
             "void f(){int arr=xsArrayCreateInt(10);int v=xsArrayGetInt(arr,0);}",
-            _convert(f, indent=False),
+            convert(f, indent=False),
         )
 
     def test_get_2d_array_access(self):
@@ -746,7 +746,7 @@ class TestArrayGet(unittest.TestCase):
             "    int v = xsArrayGetInt(xsArrayGetInt(arr, 0), 1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_get_3d_array_access(self):
         def f() -> None:
@@ -766,7 +766,7 @@ class TestArrayGet(unittest.TestCase):
             "    float v = xsArrayGetFloat(xsArrayGetInt(xsArrayGetInt(arr, 0), 1), 2);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_get_2d_array_access_float_result(self):
         def f() -> None:
@@ -782,7 +782,7 @@ class TestArrayGet(unittest.TestCase):
             "    float v = xsArrayGetFloat(xsArrayGetInt(arr, 0), 1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_array_get_in_function_call(self):
         def f() -> None:
@@ -795,7 +795,7 @@ class TestArrayGet(unittest.TestCase):
             '    xsChatData(xsArrayGetString(arr, 0));\n'
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_array_get_in_arithmetic(self):
         def f() -> None:
@@ -808,7 +808,7 @@ class TestArrayGet(unittest.TestCase):
             "    int x = xsArrayGetInt(arr, 0) + 1;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_array_get_in_condition(self):
         def f() -> None:
@@ -823,7 +823,7 @@ class TestArrayGet(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_2d_array_get_in_expression(self):
         def f() -> None:
@@ -839,7 +839,7 @@ class TestArrayGet(unittest.TestCase):
             "    float x = xsArrayGetFloat(xsArrayGetInt(arr, 0), 1) + 1.0;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_array_get_as_array_set_value(self):
         def f() -> None:
@@ -854,7 +854,7 @@ class TestArrayGet(unittest.TestCase):
             "    xsArraySetInt(a, 0, xsArrayGetInt(b, 1));\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_get_subarray_handle(self):
         def f() -> None:
@@ -870,7 +870,7 @@ class TestArrayGet(unittest.TestCase):
             "    int sub = xsArrayGetInt(arr, 0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestListLiterals(unittest.TestCase):
@@ -887,7 +887,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsArraySetInt(arr, 2, 3);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float_list(self):
         def f() -> None:
@@ -900,7 +900,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsArraySetFloat(arr, 1, 2.5);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_bool_list(self):
         def f() -> None:
@@ -914,7 +914,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsArraySetBool(arr, 2, true);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_string_list(self):
         def f() -> None:
@@ -927,7 +927,7 @@ class TestListLiterals(unittest.TestCase):
             '    xsArraySetString(arr, 1, "world");\n'
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_vector_list(self):
         def f() -> None:
@@ -940,7 +940,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsArraySetVector(arr, 1, vector(4.0, 5.0, 6.0));\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_variables_with_constant_type_hint(self):
         def f() -> None:
@@ -958,7 +958,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsArraySetInt(arr, 2, 3);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_int32_cast_infers_type(self):
         def f() -> None:
@@ -973,7 +973,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsArraySetInt(arr, 1, x);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float32_cast_infers_type(self):
         def f() -> None:
@@ -988,7 +988,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsArraySetFloat(arr, 1, x);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_single_element(self):
         def f() -> None:
@@ -1000,7 +1000,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsArraySetInt(arr, 0, 42);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_negative_constants(self):
         def f() -> None:
@@ -1014,7 +1014,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsArraySetInt(arr, 2, -3);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_camel_case_name(self):
         def f() -> None:
@@ -1027,7 +1027,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsArraySetInt(myArr, 1, 2);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_annotated_list(self):
         def f() -> None:
@@ -1041,7 +1041,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsArraySetInt(arr, 2, 3);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_all_variables_raises_without_annotation(self):
         def f() -> None:
@@ -1050,7 +1050,7 @@ class TestListLiterals(unittest.TestCase):
             arr = [a, b]
 
         with self.assertRaises(ValueError):
-            _convert(f)
+            convert(f)
 
     def test_all_variables_with_annotation(self):
         def f() -> None:
@@ -1070,7 +1070,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsArraySetInt(arr, 2, c);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_empty_annotated_int_list(self):
         def f() -> None:
@@ -1081,7 +1081,7 @@ class TestListLiterals(unittest.TestCase):
             "    int arr = xsArrayCreateInt(0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_empty_annotated_float_list(self):
         def f() -> None:
@@ -1092,7 +1092,7 @@ class TestListLiterals(unittest.TestCase):
             "    int arr = xsArrayCreateFloat(0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_empty_annotated_string_list(self):
         def f() -> None:
@@ -1103,7 +1103,7 @@ class TestListLiterals(unittest.TestCase):
             "    int arr = xsArrayCreateString(0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_empty_annotated_bool_list(self):
         def f() -> None:
@@ -1114,7 +1114,7 @@ class TestListLiterals(unittest.TestCase):
             "    int arr = xsArrayCreateBool(0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_empty_annotated_uppercase_list(self):
         def f() -> None:
@@ -1125,7 +1125,7 @@ class TestListLiterals(unittest.TestCase):
             "    int arr = xsArrayCreateInt(0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_annotated_variables_float(self):
         def f() -> None:
@@ -1139,28 +1139,28 @@ class TestListLiterals(unittest.TestCase):
             "    xsArraySetFloat(arr, 0, a);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_mixed_constant_types_raises(self):
         def f() -> None:
             arr = [1, 2.0]
 
         with self.assertRaises(ValueError):
-            _convert(f)
+            convert(f)
 
     def test_mixed_int_bool_raises(self):
         def f() -> None:
             arr = [1, True]
 
         with self.assertRaises(ValueError):
-            _convert(f)
+            convert(f)
 
     def test_empty_list_raises(self):
         def f() -> None:
             arr = []
 
         with self.assertRaises(ValueError):
-            _convert(f)
+            convert(f)
 
     def test_no_indent(self):
         def f() -> None:
@@ -1168,7 +1168,7 @@ class TestListLiterals(unittest.TestCase):
 
         self.assertEqual(
             "void f(){int arr=xsArrayCreateInt(3);xsArraySetInt(arr,0,1);xsArraySetInt(arr,1,2);xsArraySetInt(arr,2,3);}",
-            _convert(f, indent=False),
+            convert(f, indent=False),
         )
 
     def test_inside_if_block(self):
@@ -1185,7 +1185,7 @@ class TestListLiterals(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_list_in_function_call(self):
         def f() -> None:
@@ -1200,7 +1200,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsArrayGetInt(temp00000000, 0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_two_lists_in_call(self):
         def f() -> None:
@@ -1217,7 +1217,7 @@ class TestListLiterals(unittest.TestCase):
             "    xsSetPlayerAttribute(temp00000000, temp00000001);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_list_in_expression_no_indent(self):
         def f() -> None:
@@ -1225,7 +1225,7 @@ class TestListLiterals(unittest.TestCase):
 
         self.assertEqual(
             "void f(){int temp00000000=xsArrayCreateInt(2);xsArraySetInt(temp00000000,0,1);xsArraySetInt(temp00000000,1,2);xsArrayGetInt(temp00000000,0);}",
-            _convert(f, indent=False),
+            convert(f, indent=False),
         )
 
     def test_list_in_expression_inside_if(self):
@@ -1243,7 +1243,7 @@ class TestListLiterals(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float_list_in_expression(self):
         def f() -> None:
@@ -1257,14 +1257,14 @@ class TestListLiterals(unittest.TestCase):
             "    xsChatData(temp00000000);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_empty_list_in_expression_raises(self):
         def f() -> None:
             xs_chat_data([])
 
         with self.assertRaises(ValueError):
-            _convert(f)
+            convert(f)
 
 
 class TestCastInArrays(unittest.TestCase):
@@ -1280,7 +1280,7 @@ class TestCastInArrays(unittest.TestCase):
             "    int arr = xsArrayCreateInt(10, a);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_float_in_repeat_array(self):
         def f() -> None:
@@ -1293,7 +1293,7 @@ class TestCastInArrays(unittest.TestCase):
             "    int arr = xsArrayCreateFloat(5, a);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_bool_in_repeat_array(self):
         def f() -> None:
@@ -1306,7 +1306,7 @@ class TestCastInArrays(unittest.TestCase):
             "    int arr = xsArrayCreateBool(3, a);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_str_in_repeat_array(self):
         def f() -> None:
@@ -1319,7 +1319,7 @@ class TestCastInArrays(unittest.TestCase):
             "    int arr = xsArrayCreateString(4, a);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_int_in_array_set(self):
         def f() -> None:
@@ -1334,7 +1334,7 @@ class TestCastInArrays(unittest.TestCase):
             "    xsArraySetInt(arr, 0, x);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_float_in_array_set(self):
         def f() -> None:
@@ -1349,7 +1349,7 @@ class TestCastInArrays(unittest.TestCase):
             "    xsArraySetFloat(arr, 0, x);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_bool_in_array_set(self):
         def f() -> None:
@@ -1364,7 +1364,7 @@ class TestCastInArrays(unittest.TestCase):
             "    xsArraySetBool(arr, 0, x);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_str_in_array_set(self):
         def f() -> None:
@@ -1379,7 +1379,7 @@ class TestCastInArrays(unittest.TestCase):
             "    xsArraySetString(arr, 0, x);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_int_in_list_literal(self):
         def f() -> None:
@@ -1396,7 +1396,7 @@ class TestCastInArrays(unittest.TestCase):
             "    xsArraySetInt(arr, 1, b);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_float_in_list_literal(self):
         def f() -> None:
@@ -1413,7 +1413,7 @@ class TestCastInArrays(unittest.TestCase):
             "    xsArraySetFloat(arr, 1, b);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_mixed_with_constants_in_list(self):
         def f() -> None:
@@ -1429,7 +1429,7 @@ class TestCastInArrays(unittest.TestCase):
             "    xsArraySetInt(arr, 2, 30);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_constant_zero_default_omitted(self):
         def f() -> None:
@@ -1440,7 +1440,7 @@ class TestCastInArrays(unittest.TestCase):
             "    int arr = xsArrayCreateInt(10);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_constant_nonzero_default(self):
         def f() -> None:
@@ -1451,7 +1451,7 @@ class TestCastInArrays(unittest.TestCase):
             "    int arr = xsArrayCreateInt(10, 5);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_in_annotated_list_literal(self):
         def f() -> None:
@@ -1468,7 +1468,7 @@ class TestCastInArrays(unittest.TestCase):
             "    xsArraySetFloat(arr, 1, b);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_no_indent(self):
         def f() -> None:
@@ -1477,7 +1477,7 @@ class TestCastInArrays(unittest.TestCase):
 
         self.assertEqual(
             "void f(){int x=5;int arr=xsArrayCreateInt(3,x);}",
-            _convert(f, indent=False),
+            convert(f, indent=False),
         )
 
     def test_cast_expression_in_array_set(self):
@@ -1493,7 +1493,7 @@ class TestCastInArrays(unittest.TestCase):
             "    xsArraySetInt(arr, 0, x + 1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_in_list_literal_with_expression(self):
         def f() -> None:
@@ -1508,7 +1508,7 @@ class TestCastInArrays(unittest.TestCase):
             "    xsArraySetInt(arr, 1, a + 2);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_int32_in_list_literal(self):
         def f() -> None:
@@ -1523,7 +1523,7 @@ class TestCastInArrays(unittest.TestCase):
             "    xsArraySetInt(arr, 1, 20);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_cast_float32_in_list_literal(self):
         def f() -> None:
@@ -1538,7 +1538,7 @@ class TestCastInArrays(unittest.TestCase):
             "    xsArraySetFloat(arr, 1, 2.0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 if __name__ == "__main__":

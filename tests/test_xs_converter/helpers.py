@@ -1,17 +1,8 @@
-import ast
-import inspect
 import subprocess
 import tempfile
-import textwrap
+import types
 
-from xs_converter.converter import PythonToXsConverter, XsContext
-
-
-def _parse_dedented(fn):
-    source = textwrap.dedent(inspect.getsource(fn))
-    module = ast.parse(source)
-    assert len(module.body) == 1 and isinstance(module.body[0], ast.FunctionDef)
-    return module.body[0]
+from xs_converter.converter import PythonToXsConverter
 
 
 _xs_check_tmpfile = tempfile.NamedTemporaryFile(mode="w", suffix=".xs", delete=False)
@@ -31,19 +22,28 @@ def _xs_check(xs: str) -> None:
         raise AssertionError(f"xs-check failed:\n{result.stdout}{result.stderr}")
 
 
-def _convert(*functions, indent=True, root_flags=None, **kwargs) -> str:
+def convert_file(module, indent=True, **kwargs) -> str:
+    xs = PythonToXsConverter.to_xs_file(module, indent=indent, **kwargs)
+    _xs_check(xs)
+    return xs
+
+
+def module_from_source(source: str) -> types.ModuleType:
+    """Create a module whose inspect.getsource returns the given source."""
+    f = tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False)
+    f.write(source)
+    f.close()
+    mod = types.ModuleType("_fake")
+    mod.__file__ = f.name
+    return mod
+
+
+def convert(*functions, indent=True, root_flags=None, **kwargs) -> str:
     """Convert one or more Python functions to XS script and validate with xs-check.
 
     By default the first function is treated as root (matching to_xs_script
     behaviour).  Override per-function with ``root_flags``.
     """
-    xs = ""
-    for i, fn in enumerate(functions):
-        root = (i == 0) if root_flags is None else root_flags[i]
-        converter = PythonToXsConverter(indent, kwargs)
-        fn_ast = _parse_dedented(fn)
-        xs += converter.to_xs_function_definition(fn_ast, XsContext(), root)
-        if i < len(functions) - 1:
-            xs += converter.nl
+    xs = PythonToXsConverter.to_xs_script(*functions, indent=indent, root_flags=root_flags, **kwargs)
     _xs_check(xs)
     return xs

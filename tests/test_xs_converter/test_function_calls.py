@@ -8,7 +8,7 @@ from xs_converter.functions import (
     xs_array_get_int,
 )
 
-from tests.test_xs_converter.helpers import _convert
+from tests.test_xs_converter.helpers import convert
 
 
 class TestFunctionCalls(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestFunctionCalls(unittest.TestCase):
             "    xsGetGameTime();\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_call_with_args(self):
         def f() -> None:
@@ -33,7 +33,7 @@ class TestFunctionCalls(unittest.TestCase):
             "    xsSetPlayerAttribute(1, 20, 33.3);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_nested_calls(self):
         def f() -> None:
@@ -44,7 +44,7 @@ class TestFunctionCalls(unittest.TestCase):
             "    xsSetPlayerAttribute(1, 100, xsPlayerAttribute(1, 100) + 1.0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_str_conversion(self):
         def f() -> None:
@@ -57,7 +57,7 @@ class TestFunctionCalls(unittest.TestCase):
             '    string s = "" + x;\n'
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float_conversion_from_var(self):
         def f() -> None:
@@ -70,7 +70,7 @@ class TestFunctionCalls(unittest.TestCase):
             "    float y = 0.0 + x;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float_conversion_from_constant(self):
         def f() -> None:
@@ -81,7 +81,7 @@ class TestFunctionCalls(unittest.TestCase):
             "    float y = 5;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_int_conversion_from_var(self):
         def f() -> None:
@@ -94,7 +94,7 @@ class TestFunctionCalls(unittest.TestCase):
             "    int y = 0 + x;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_int_conversion_from_constant(self):
         def f() -> None:
@@ -105,7 +105,7 @@ class TestFunctionCalls(unittest.TestCase):
             "    int y = 5;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_float_conversion_from_neg_constant(self):
         def f() -> None:
@@ -116,7 +116,7 @@ class TestFunctionCalls(unittest.TestCase):
             "    float y = -5;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_int_conversion_from_neg_constant(self):
         def f() -> None:
@@ -127,7 +127,7 @@ class TestFunctionCalls(unittest.TestCase):
             "    int y = -5;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_len_call(self):
         def f() -> None:
@@ -140,7 +140,7 @@ class TestFunctionCalls(unittest.TestCase):
             "    int n = xsArrayGetSize(arr);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_len_in_expression(self):
         def f() -> None:
@@ -153,7 +153,7 @@ class TestFunctionCalls(unittest.TestCase):
             "    int n = xsArrayGetSize(arr) - 1;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_len_in_condition(self):
         def f() -> None:
@@ -170,7 +170,7 @@ class TestFunctionCalls(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_len_no_indent(self):
         def f() -> None:
@@ -179,7 +179,7 @@ class TestFunctionCalls(unittest.TestCase):
 
         self.assertEqual(
             "void f(){int arr=xsArrayCreateInt(10);int n=xsArrayGetSize(arr);}",
-            _convert(f, indent=False),
+            convert(f, indent=False),
         )
 
 

@@ -3,7 +3,7 @@ import unittest
 from xs_converter.symbols import xs_rule
 from xs_converter.functions import xs_set_player_attribute, xs_chat_data
 
-from tests.test_xs_converter.helpers import _convert
+from tests.test_xs_converter.helpers import convert
 
 
 class TestEmptyFunction(unittest.TestCase):
@@ -16,13 +16,13 @@ class TestEmptyFunction(unittest.TestCase):
             "void myFunc() {\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(my_func))
+        self.assertEqual(expected, convert(my_func))
 
     def test_void_no_args_no_indent(self):
         def my_func() -> None:
             pass
 
-        self.assertEqual("void myFunc(){}", _convert(my_func, indent=False))
+        self.assertEqual("void myFunc(){}", convert(my_func, indent=False))
 
 
 class TestReturnTypes(unittest.TestCase):
@@ -36,7 +36,7 @@ class TestReturnTypes(unittest.TestCase):
             "    return (42);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(get_value))
+        self.assertEqual(expected, convert(get_value))
 
     def test_float_return(self):
         def get_value() -> float:
@@ -47,7 +47,7 @@ class TestReturnTypes(unittest.TestCase):
             "    return (1.5);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(get_value))
+        self.assertEqual(expected, convert(get_value))
 
     def test_bool_return(self):
         def is_ready() -> bool:
@@ -58,7 +58,7 @@ class TestReturnTypes(unittest.TestCase):
             "    return (true);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(is_ready))
+        self.assertEqual(expected, convert(is_ready))
 
     def test_str_return(self):
         def get_name() -> str:
@@ -69,7 +69,7 @@ class TestReturnTypes(unittest.TestCase):
             '    return ("hello");\n'
             "}\n"
         )
-        self.assertEqual(expected, _convert(get_name))
+        self.assertEqual(expected, convert(get_name))
 
 
 class TestFunctionArguments(unittest.TestCase):
@@ -83,7 +83,7 @@ class TestFunctionArguments(unittest.TestCase):
             "    return (x + 1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(add_one))
+        self.assertEqual(expected, convert(add_one))
 
     def test_multiple_args(self):
         def compute(a: int = 0, b: float = 0.0) -> float:
@@ -93,7 +93,7 @@ class TestFunctionArguments(unittest.TestCase):
             "float compute(int a = 0, float b = 0.0) {\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(compute))
+        self.assertEqual(expected, convert(compute))
 
     def test_bool_default(self):
         def toggle(flag: bool = False) -> None:
@@ -103,7 +103,7 @@ class TestFunctionArguments(unittest.TestCase):
             "void toggle(bool flag = false) {\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(toggle))
+        self.assertEqual(expected, convert(toggle))
 
     def test_string_default(self):
         def greet(name: str = "world") -> None:
@@ -113,7 +113,7 @@ class TestFunctionArguments(unittest.TestCase):
             'void greet(string name = "world") {\n'
             "}\n"
         )
-        self.assertEqual(expected, _convert(greet))
+        self.assertEqual(expected, convert(greet))
 
 
 class TestCamelCaseConversion(unittest.TestCase):
@@ -126,7 +126,7 @@ class TestCamelCaseConversion(unittest.TestCase):
             "void myFunc() {\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(my_func))
+        self.assertEqual(expected, convert(my_func))
 
     def test_multiple_underscores(self):
         def my_long_function_name() -> None:
@@ -136,7 +136,7 @@ class TestCamelCaseConversion(unittest.TestCase):
             "void myLongFunctionName() {\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(my_long_function_name))
+        self.assertEqual(expected, convert(my_long_function_name))
 
     def test_leading_underscore_preserved(self):
         def _private_func() -> None:
@@ -146,7 +146,7 @@ class TestCamelCaseConversion(unittest.TestCase):
             "void _privateFunc() {\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(_private_func))
+        self.assertEqual(expected, convert(_private_func))
 
     def test_variable_name_camel_case(self):
         def f() -> None:
@@ -157,7 +157,7 @@ class TestCamelCaseConversion(unittest.TestCase):
             "    int myVar = 10;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestMultipleFunctions(unittest.TestCase):
@@ -176,7 +176,7 @@ class TestMultipleFunctions(unittest.TestCase):
             "void secondFunc() {\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(first_func, second_func))
+        self.assertEqual(expected, convert(first_func, second_func))
 
     def test_function_with_rule(self):
         def main_func() -> None:
@@ -195,7 +195,7 @@ class TestMultipleFunctions(unittest.TestCase):
             '    xsChatData("tick");\n'
             "}\n"
         )
-        self.assertEqual(expected, _convert(main_func, tick))
+        self.assertEqual(expected, convert(main_func, tick))
 
 
 class TestDocstring(unittest.TestCase):
@@ -213,7 +213,7 @@ class TestDocstring(unittest.TestCase):
             "    int x = 1;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_docstring_as_comment_in_indented_mode(self):
         def f() -> None:
@@ -227,7 +227,7 @@ class TestDocstring(unittest.TestCase):
             "void f() {\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestNoIndentMode(unittest.TestCase):
@@ -240,7 +240,7 @@ class TestNoIndentMode(unittest.TestCase):
 
         self.assertEqual(
             'void f(){int x=1;if(x>0){xsChatData("yes");}}',
-            _convert(f, indent=False),
+            convert(f, indent=False),
         )
 
     def test_for_no_indent(self):
@@ -250,7 +250,7 @@ class TestNoIndentMode(unittest.TestCase):
 
         self.assertEqual(
             'void f(){for(i=0;<5){xsChatData("hi");}}',
-            _convert(f, indent=False),
+            convert(f, indent=False),
         )
 
 
@@ -266,7 +266,7 @@ class TestXsRule(unittest.TestCase):
             "    xsSetPlayerAttribute(1, 20, 33.3);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(my_rule, root_flags=[False]))
+        self.assertEqual(expected, convert(my_rule, root_flags=[False]))
 
     def test_inactive_rule(self):
         @xs_rule()
@@ -277,7 +277,7 @@ class TestXsRule(unittest.TestCase):
             "rule idleRule inactive {\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(idle_rule, root_flags=[False]))
+        self.assertEqual(expected, convert(idle_rule, root_flags=[False]))
 
     def test_high_frequency_rule(self):
         @xs_rule(active=True, high_frequency=True)
@@ -288,7 +288,7 @@ class TestXsRule(unittest.TestCase):
             "rule fastRule active highFrequency {\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(fast_rule, root_flags=[False]))
+        self.assertEqual(expected, convert(fast_rule, root_flags=[False]))
 
     def test_run_immediately_rule(self):
         @xs_rule(active=True, run_immediately=True)
@@ -299,7 +299,7 @@ class TestXsRule(unittest.TestCase):
             "rule initRule active runImmediately {\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(init_rule, root_flags=[False]))
+        self.assertEqual(expected, convert(init_rule, root_flags=[False]))
 
     def test_rule_with_group(self):
         @xs_rule(group="myGroup", active=True)
@@ -310,7 +310,7 @@ class TestXsRule(unittest.TestCase):
             "rule groupedRule group myGroup active {\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(grouped_rule, root_flags=[False]))
+        self.assertEqual(expected, convert(grouped_rule, root_flags=[False]))
 
 
 if __name__ == "__main__":

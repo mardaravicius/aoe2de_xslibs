@@ -3,7 +3,7 @@ import unittest
 from xs_converter.constants import XsConstants
 from xs_converter.functions import xs_effect_amount
 
-from tests.test_xs_converter.helpers import _convert
+from tests.test_xs_converter.helpers import convert
 
 
 class TestConstants(unittest.TestCase):
@@ -17,7 +17,7 @@ class TestConstants(unittest.TestCase):
             "    int x = 150000002 * 10 + 1;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_large_negative_int(self):
         def f() -> None:
@@ -28,7 +28,7 @@ class TestConstants(unittest.TestCase):
             "    int x = -150000002 * 10 - 1;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_max_int(self):
         def f() -> None:
@@ -39,7 +39,7 @@ class TestConstants(unittest.TestCase):
             "    int x = 214748364 * 10 + 7;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_min_int(self):
         def f() -> None:
@@ -50,21 +50,21 @@ class TestConstants(unittest.TestCase):
             "    int x = -214748364 * 10 - 8;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_int_overflow_raises(self):
         def f() -> None:
             x: int = 2_147_483_648
 
         with self.assertRaises(ValueError):
-            _convert(f)
+            convert(f)
 
     def test_int_underflow_raises(self):
         def f() -> None:
             x: int = -2_147_483_649
 
         with self.assertRaises(ValueError):
-            _convert(f)
+            convert(f)
 
     def test_string_with_quotes(self):
         def f() -> None:
@@ -75,7 +75,7 @@ class TestConstants(unittest.TestCase):
             '    string x = "he said \\"hi\\"";\n'
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_false_constant(self):
         def f() -> None:
@@ -86,7 +86,7 @@ class TestConstants(unittest.TestCase):
             "    bool x = false;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_xs_constant_in_call(self):
         def f() -> None:
@@ -97,7 +97,7 @@ class TestConstants(unittest.TestCase):
             "    xsEffectAmount(cSetAttribute, 101, cAttack, 10.0, 1);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestBinaryExpressions(unittest.TestCase):
@@ -111,7 +111,7 @@ class TestBinaryExpressions(unittest.TestCase):
             "    return (1 + 2);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_subtraction(self):
         def f() -> int:
@@ -122,7 +122,7 @@ class TestBinaryExpressions(unittest.TestCase):
             "    return (5 - 3);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_multiplication(self):
         def f() -> int:
@@ -133,7 +133,7 @@ class TestBinaryExpressions(unittest.TestCase):
             "    return (2 * 3);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_division(self):
         def f() -> float:
@@ -144,7 +144,7 @@ class TestBinaryExpressions(unittest.TestCase):
             "    return (10.0 / 3.0);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_floor_division(self):
         def f() -> int:
@@ -155,7 +155,7 @@ class TestBinaryExpressions(unittest.TestCase):
             "    return (10 / 3);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_modulo(self):
         def f() -> int:
@@ -166,7 +166,7 @@ class TestBinaryExpressions(unittest.TestCase):
             "    return (10 % 3);\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_nested_binary_ops(self):
         def f() -> None:
@@ -177,7 +177,7 @@ class TestBinaryExpressions(unittest.TestCase):
             "    float x = (2.2 * 12.45) + 1.1;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_fstring_concatenation(self):
         def f() -> None:
@@ -190,7 +190,7 @@ class TestBinaryExpressions(unittest.TestCase):
             '    string s = ("value=" + x);\n'
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestComparisonExpressions(unittest.TestCase):
@@ -208,7 +208,7 @@ class TestComparisonExpressions(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_not_equal(self):
         def f() -> None:
@@ -223,7 +223,7 @@ class TestComparisonExpressions(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_greater_than(self):
         def f() -> None:
@@ -238,7 +238,7 @@ class TestComparisonExpressions(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_greater_equal(self):
         def f() -> None:
@@ -253,7 +253,7 @@ class TestComparisonExpressions(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_less_than(self):
         def f() -> None:
@@ -268,7 +268,7 @@ class TestComparisonExpressions(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_less_equal(self):
         def f() -> None:
@@ -283,7 +283,7 @@ class TestComparisonExpressions(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestUnaryExpressions(unittest.TestCase):
@@ -297,7 +297,7 @@ class TestUnaryExpressions(unittest.TestCase):
             "    int x = -5;\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_not_operator(self):
         def f() -> None:
@@ -312,7 +312,7 @@ class TestUnaryExpressions(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 class TestBoolOperations(unittest.TestCase):
@@ -332,7 +332,7 @@ class TestBoolOperations(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
     def test_and(self):
         def f() -> None:
@@ -349,7 +349,7 @@ class TestBoolOperations(unittest.TestCase):
             "    }\n"
             "}\n"
         )
-        self.assertEqual(expected, _convert(f))
+        self.assertEqual(expected, convert(f))
 
 
 if __name__ == "__main__":
