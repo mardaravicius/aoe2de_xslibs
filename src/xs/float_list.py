@@ -1,33 +1,19 @@
 from numpy import int32, float32
 
-from xs_converter.converter import PythonToXsConverter
 from xs_converter.functions import xs_array_create_float, xs_array_set_float, xs_array_resize_float, xs_array_get_float, \
-    xs_array_get_size, xs_chat_data, bit_cast_to_float, bit_cast_to_int
+    xs_array_get_size, bit_cast_to_float, bit_cast_to_int
 from xs_converter.symbols import XsExternConst, i32range
 
-c_float_list_success = int32(0)
-c_float_list_generic_error = int32(-1)
-c_float_list_generic_error_float = float32(-1.0)
-c_float_list_index_out_of_range_error = int32(-2)
-c_float_list_resize_failed_error = int32(-3)
-c_float_list_max_capacity_error = int32(-4)
-c_float_list_max_capacity = int32(999999999)
-c_float_list_empty_param = float32(-9999999.0)
-c_float_list_empty_int_param = int32(-999999999)
-_float_list_last_operation_status = c_float_list_success
-
-
-def constants() -> None:
-    c_float_list_success: XsExternConst[int32] = int32(0)
-    c_float_list_generic_error: XsExternConst[int32] = int32(-1)
-    c_float_list_generic_error_float: XsExternConst[float32] = float32(-1.0)
-    c_float_list_index_out_of_range_error: XsExternConst[int32] = int32(-2)
-    c_float_list_resize_failed_error: XsExternConst[int32] = int32(-3)
-    c_float_list_max_capacity_error: XsExternConst[int32] = int32(-4)
-    c_float_list_max_capacity: XsExternConst[int32] = int32(999999999)
-    c_float_list_empty_param: XsExternConst[float32] = float32(-9999999.0)
-    c_float_list_empty_int_param: XsExternConst[int32] = int32(-999999999)
-    _float_list_last_operation_status: int32 = c_float_list_success
+c_float_list_success: XsExternConst[int32] = int32(0)
+c_float_list_generic_error: XsExternConst[int32] = int32(-1)
+c_float_list_generic_error_float: XsExternConst[float32] = float32(-1.0)
+c_float_list_index_out_of_range_error: XsExternConst[int32] = int32(-2)
+c_float_list_resize_failed_error: XsExternConst[int32] = int32(-3)
+c_float_list_max_capacity_error: XsExternConst[int32] = int32(-4)
+c_float_list_max_capacity: XsExternConst[int32] = int32(999999999)
+c_float_list_empty_param: XsExternConst[float32] = float32(-9999999.0)
+c_float_list_empty_int_param: XsExternConst[int32] = int32(-999999999)
+_float_list_last_operation_status: int32 = c_float_list_success
 
 
 def xs_float_list_size(lst: int32 = int32(-1)) -> int32:
@@ -680,85 +666,3 @@ def xs_float_list_last_error() -> int32:
     :return: `c_float_list_success` if the last such operation succeeded, or a negative error code
     """
     return _float_list_last_operation_status
-
-
-def test() -> None:
-    lst: int32 = xs_float_list_create(int32(20))
-    xs_chat_data("arr: " + str(lst))
-    xs_float_list_append(lst, float32(1))
-    xs_float_list_append(lst, float32(2))
-    xs_float_list_append(lst, float32(3))
-    xs_chat_data(xs_float_list_to_string(lst))
-    xs_chat_data("pop 1: " + str(xs_float_list_pop(lst)))
-    xs_chat_data("pop 2: " + str(xs_float_list_pop(lst)))
-    xs_chat_data(xs_float_list_to_string(lst))
-    xs_chat_data("pop 3: " + str(xs_float_list_pop(lst)))
-    xs_chat_data("pop 4: " + str(xs_float_list_pop(lst)))
-    xs_float_list_insert(lst, int32(0), float32(1))
-    xs_float_list_insert(lst, int32(0), float32(2))
-    xs_float_list_insert(lst, int32(0), float32(3))
-    xs_float_list_insert(lst, int32(1), float32(4))
-    xs_float_list_insert(lst, int32(1), float32(5))
-    xs_float_list_insert(lst, int32(5), float32(6))
-    xs_float_list_insert(lst, int32(7), float32(7))
-    xs_chat_data(xs_float_list_to_string(lst))
-    xs_float_list_sort(lst, True)
-    xs_chat_data(xs_float_list_to_string(lst))
-
-
-def float_list(include_test: bool) -> tuple[str, str]:
-    constants_function_xs = PythonToXsConverter.to_xs_script(
-        constants,
-        indent=True,
-    )
-    constants_xs = (constants_function_xs[constants_function_xs.find("extern"):constants_function_xs.rfind("}")]
-                    .strip()
-                    .replace("    ", "")
-                    ) + "\n\n"
-    xs = constants_xs + PythonToXsConverter.to_xs_script(
-        xs_float_list_size,
-        _xs_float_list_set_size,
-        xs_float_list,
-        xs_float_list_create,
-        xs_float_list_from_repeated_val,
-        xs_float_list_from_repeated_list,
-        xs_float_list_from_array,
-        xs_float_list_use_array_as_source,
-        xs_float_list_get,
-        xs_float_list_set,
-        _xs_float_list_extend_float_array,
-        _xs_float_list_shrink_float_array,
-        xs_float_list_to_string,
-        xs_float_list_append,
-        xs_float_list_pop,
-        xs_float_list_insert,
-        xs_float_list_remove,
-        xs_float_list_index,
-        xs_float_list_contains,
-        _xs_float_list_compare_elem,
-        _xs_float_list_sift_down,
-        xs_float_list_sort,
-        xs_float_list_clear,
-        xs_float_list_copy,
-        xs_float_list_extend,
-        xs_float_list_extend_with_array,
-        xs_float_list_compare,
-        xs_float_list_reverse,
-        xs_float_list_count,
-        xs_float_list_sum,
-        xs_float_list_min,
-        xs_float_list_max,
-        xs_float_list_last_error,
-        indent=True,
-    )
-    if include_test:
-        xs += constants_xs + PythonToXsConverter.to_xs_script(
-            test,
-            indent=True,
-        )
-    print(xs)
-    return xs, "floatList"
-
-
-if __name__ == "__main__":
-    float_list(True)

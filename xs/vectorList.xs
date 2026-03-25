@@ -64,6 +64,23 @@ int xsVectorListSize(int lst = -1) {
 }
 
 /*
+    Creates empty list for vector values. List is a dynamic array that grows and shrinks as values are added and removed.
+    @param capacity - initial list capacity
+    @return created list id, or `cVectorListGenericError` on error
+*/
+int xsVectorListCreate(int capacity = 7) {
+    if ((capacity < 0) || (capacity >= cVectorListMaxCapacity)) {
+        return (cVectorListGenericError);
+    }
+    int lst = _xsVectorListArrCreate(capacity + 1);
+    if (lst < 0) {
+        return (cVectorListGenericError);
+    }
+    _xsVectorListSetSize(lst, 0);
+    return (lst);
+}
+
+/*
     Creates a list with provided values. The first value that equals `cVectorListEmptyParam` will stop further insertion.
     This Function can create a list with 12 values at the maximum, but further values can be added with other functions.
     @param v0 through v11 - value at a given index of a list
@@ -135,23 +152,6 @@ int xsVectorList(vector v0 = cVectorListEmptyParam, vector v1 = cVectorListEmpty
     }
     _xsVectorListArrSet(lst, 12, v11);
     _xsVectorListSetSize(lst, 12);
-    return (lst);
-}
-
-/*
-    Creates empty list for vector values. List is a dynamic array that grows and shrinks as values are added and removed.
-    @param capacity - initial list capacity
-    @return created list id, or `cVectorListGenericError` on error
-*/
-int xsVectorListCreate(int capacity = 7) {
-    if ((capacity < 0) || (capacity >= cVectorListMaxCapacity)) {
-        return (cVectorListGenericError);
-    }
-    int lst = _xsVectorListArrCreate(capacity + 1);
-    if (lst < 0) {
-        return (cVectorListGenericError);
-    }
-    _xsVectorListSetSize(lst, 0);
     return (lst);
 }
 
@@ -290,24 +290,6 @@ int _xsVectorListShrinkVectorArray(int lst = -1, int size = 0, int capacity = 0)
 }
 
 /*
-    Returns a string representation of the list in the format `[v0, v1, ...]`.
-    @param lst - list id
-    @return string representation of the list
-*/
-string xsVectorListToString(int lst = -1) {
-    int size = xsVectorListSize(lst);
-    string s = "[";
-    for (i = 1; <= size) {
-        s = s + ("" + _xsVectorListArrGet(lst, i));
-        if (i < size) {
-            s = s + ", ";
-        }
-    }
-    s = s + "]";
-    return (s);
-}
-
-/*
     Appends a value to the end of the list, growing the backing array if needed.
     @param lst - list id
     @param value - value to append
@@ -325,6 +307,34 @@ int xsVectorListAppend(int lst = -1, vector value = vector(0.0, 0.0, 0.0)) {
     }
     _xsVectorListArrSet(lst, nextIdx, value);
     _xsVectorListSetSize(lst, nextIdx);
+    return (cVectorListSuccess);
+}
+
+/*
+    Inserts a value at the given index, shifting subsequent elements to the right.
+    @param lst - list id
+    @param idx - zero-based index at which to insert
+    @param value - value to insert
+    @return `cVectorListSuccess` on success, or error if negative
+*/
+int xsVectorListInsert(int lst = -1, int idx = -1, vector value = vector(0.0, 0.0, 0.0)) {
+    int capacity = xsVectorListCapacity(lst);
+    int size = xsVectorListSize(lst);
+    if ((idx < 0) || (idx > size)) {
+        return (cVectorListIndexOutOfRangeError);
+    }
+    int newSize = size + 1;
+    if (capacity <= newSize) {
+        int r = _xsVectorListExtendVectorArray(lst, capacity);
+        if (r != cVectorListSuccess) {
+            return (r);
+        }
+    }
+    for (i = size; > idx) {
+        _xsVectorListArrSet(lst, i + 1, _xsVectorListArrGet(lst, i));
+    }
+    _xsVectorListArrSet(lst, idx + 1, value);
+    _xsVectorListSetSize(lst, newSize);
     return (cVectorListSuccess);
 }
 
@@ -357,34 +367,6 @@ vector xsVectorListPop(int lst = -1, int idx = cVectorListMaxCapacity) {
     }
     _vectorListLastOperationStatus = cVectorListSuccess;
     return (removedElem);
-}
-
-/*
-    Inserts a value at the given index, shifting subsequent elements to the right.
-    @param lst - list id
-    @param idx - zero-based index at which to insert
-    @param value - value to insert
-    @return `cVectorListSuccess` on success, or error if negative
-*/
-int xsVectorListInsert(int lst = -1, int idx = -1, vector value = vector(0.0, 0.0, 0.0)) {
-    int capacity = xsVectorListCapacity(lst);
-    int size = xsVectorListSize(lst);
-    if ((idx < 0) || (idx > size)) {
-        return (cVectorListIndexOutOfRangeError);
-    }
-    int newSize = size + 1;
-    if (capacity <= newSize) {
-        int r = _xsVectorListExtendVectorArray(lst, capacity);
-        if (r != cVectorListSuccess) {
-            return (r);
-        }
-    }
-    for (i = size; > idx) {
-        _xsVectorListArrSet(lst, i + 1, _xsVectorListArrGet(lst, i));
-    }
-    _xsVectorListArrSet(lst, idx + 1, value);
-    _xsVectorListSetSize(lst, newSize);
-    return (cVectorListSuccess);
 }
 
 /*
@@ -463,20 +445,21 @@ bool xsVectorListContains(int lst = -1, vector value = vector(-1.0, -1.0, -1.0))
 }
 
 /*
-    Removes all elements from the list and shrinks the backing array.
+    Returns a string representation of the list in the format `[v0, v1, ...]`.
     @param lst - list id
-    @return `cVectorListSuccess` on success, or error if negative
+    @return string representation of the list
 */
-int xsVectorListClear(int lst = -1) {
-    int capacity = xsVectorListCapacity(lst);
-    if (capacity > 8) {
-        int r = _xsVectorListArrResize(lst, 8);
-        if (r != 1) {
-            return (cVectorListResizeFailedError);
+string xsVectorListToString(int lst = -1) {
+    int size = xsVectorListSize(lst);
+    string s = "[";
+    for (i = 1; <= size) {
+        s = s + ("" + _xsVectorListArrGet(lst, i));
+        if (i < size) {
+            s = s + ", ";
         }
     }
-    _xsVectorListSetSize(lst, 0);
-    return (cVectorListSuccess);
+    s = s + "]";
+    return (s);
 }
 
 /*
@@ -572,6 +555,23 @@ int xsVectorListExtendWithArray(int source = -1, int arr = -1) {
         _xsVectorListArrSet(source, (i + sourceSize) + 1, xsArrayGetVector(arr, i));
     }
     _xsVectorListSetSize(source, newSize);
+    return (cVectorListSuccess);
+}
+
+/*
+    Removes all elements from the list and shrinks the backing array.
+    @param lst - list id
+    @return `cVectorListSuccess` on success, or error if negative
+*/
+int xsVectorListClear(int lst = -1) {
+    int capacity = xsVectorListCapacity(lst);
+    if (capacity > 8) {
+        int r = _xsVectorListArrResize(lst, 8);
+        if (r != 1) {
+            return (cVectorListResizeFailedError);
+        }
+    }
+    _xsVectorListSetSize(lst, 0);
     return (cVectorListSuccess);
 }
 

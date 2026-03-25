@@ -3,9 +3,9 @@ import inspect
 import re
 import textwrap
 from ast import FunctionDef, Constant, Name, expr, arg, Expr, AnnAssign, Call, Assign, BinOp, Add, Sub, Mod, Mult, Div, \
-    operator, If, Compare, Eq, Gt, GtE, Lt, LtE, NotEq, cmpop, For, While, AugAssign, Match, MatchValue, MatchAs, \
-    Return, Pass, Subscript, stmt, Attribute, keyword, With, Tuple, UnaryOp, USub, JoinedStr, FormattedValue, Global, \
-    BoolOp, Or, And, Not, FloorDiv, List, Import, ImportFrom
+    If, Compare, Eq, Gt, GtE, Lt, LtE, NotEq, For, While, AugAssign, Match, MatchValue, MatchAs, Return, Pass, \
+    Subscript, stmt, Attribute, keyword, With, Tuple, UnaryOp, USub, JoinedStr, FormattedValue, Global, BoolOp, Or, And, \
+    Not, FloorDiv, List, Import, ImportFrom
 from dataclasses import dataclass, field
 from types import ModuleType
 from typing import Any, Iterable, Optional
@@ -23,13 +23,6 @@ class XsContext:
 
     def with_replacements(self, replacements: dict[str, str]) -> 'XsContext':
         return XsContext(self.depth, replacements)
-
-
-def _has_xs_ignore(node: FunctionDef) -> bool:
-    return any(
-        (isinstance(d, Name) and d.id == "xs_ignore")
-        for d in node.decorator_list
-    )
 
 
 class PythonToXsConverter:
@@ -138,23 +131,34 @@ class PythonToXsConverter:
         module_ast = ast.parse(source)
         converter = PythonToXsConverter(indent, kwargs)
         ctx = XsContext()
-        parts = []
+        parts: list[tuple[bool, str]] = []
         for node in module_ast.body:
             if isinstance(node, (Import, ImportFrom)):
                 continue
             if isinstance(node, FunctionDef):
                 result = converter.to_xs_function_definition(node, ctx, root_function=len(parts) == 0)
                 if result:
-                    parts.append(result)
+                    parts.append((True, result))
             elif isinstance(node, AnnAssign):
-                parts.append(converter._to_xs_variable_definition(node, ctx))
+                parts.append((False, converter._to_xs_variable_definition(node, ctx)))
             elif isinstance(node, Assign):
-                parts.append(converter._to_xs_variable_assignment(node, ctx))
+                parts.append((False, converter._to_xs_variable_assignment(node, ctx)))
             else:
                 raise ValueError(f"unsupported top-level statement: {type(node).__name__}")
-        return converter.nl.join(parts)
+        return PythonToXsConverter._format_parts(converter, parts)
 
-    def __init__(self, indent: bool, vars: dict[str, any]):
+    @staticmethod
+    def _format_parts(converter: PythonToXsConverter, parts: list[tuple[bool, str]]) -> str:
+        result = ""
+        for i, (is_func, text) in enumerate(parts):
+            if i > 0:
+                prev_is_func = parts[i - 1][0]
+                if is_func or prev_is_func:
+                    result += converter.nl
+            result += text
+        return result
+
+    def __init__(self, indent: bool, vars: dict[str, Any]):
         if indent:
             self.sp = " "
             self.nl = "\n"
@@ -230,7 +234,7 @@ class PythonToXsConverter:
             return node.args[0].id, node.args[1]
         return None
 
-    def _infer_array_element_type(self, node) -> str:
+    def _infer_array_element_type(self, node: expr) -> str:
         if isinstance(node, Call) and isinstance(node.func, Name):
             func_name = node.func.id
             if func_name in self._ARRAY_CREATE_MAP:
@@ -297,7 +301,7 @@ class PythonToXsConverter:
         self._temp_counter += 1
         return name
 
-    def _annotation_element_type(self, annotation) -> Optional[str]:
+    def _annotation_element_type(self, annotation: expr) -> Optional[str]:
         if (isinstance(annotation, Subscript)
                 and isinstance(annotation.value, Name)
                 and annotation.value.id in self._ARRAY_LIST_NAMES
@@ -325,7 +329,7 @@ class PythonToXsConverter:
         return sorted(inferred)[0]
 
     def _to_xs_list_literal_stmts(self, var_name: str, elements: list[expr],
-                                   element_type: str, ctx: XsContext) -> str:
+                                  element_type: str, ctx: XsContext) -> str:
         create_func = self._ARRAY_CREATE_MAP[element_type]
         set_func = self._ARRAY_SET_MAP[element_type]
         saved_pending = self._pending_stmts
@@ -394,7 +398,7 @@ class PythonToXsConverter:
             raise ValueError("array get target must be a variable name or array access")
         return f"{get_func}({array_xs},{self.sp}{index_xs})"
 
-    def _parse_nd_array_annotation(self, annotation) -> Optional[tuple[int, str]]:
+    def _parse_nd_array_annotation(self, annotation: expr) -> Optional[tuple[int, str]]:
         if not (isinstance(annotation, Subscript) and isinstance(annotation.value, Name)
                 and annotation.value.id in self._ARRAY_LIST_NAMES):
             return None
@@ -437,13 +441,15 @@ class PythonToXsConverter:
         var_name = self._to_camel_case(e.target.id)
         return self._to_xs_nd_array_init_stmts(var_name, sizes, inner_element_type, inner_default_node, ctx)
 
-    def _to_xs_nd_array_init_stmts(self, var_name: str, sizes: list, inner_element_type: str, inner_default_node, ctx: XsContext) -> str:
+    def _to_xs_nd_array_init_stmts(self, var_name: str, sizes: list, inner_element_type: str, inner_default_node,
+                                   ctx: XsContext) -> str:
         outer_size_xs = self._to_xs_expression(sizes[0], ctx, enclosed=True)
         xs = self._stmt(ctx.depth, f"int {var_name}{self.sp}={self.sp}xsArrayCreateInt({outer_size_xs})")
         xs += self._to_xs_nd_array_fill_loop(var_name, sizes[0], sizes[1:], inner_element_type, inner_default_node, ctx)
         return xs
 
-    def _to_xs_nd_array_fill_loop(self, parent_var: str, parent_size_node, sub_sizes: list, inner_element_type: str, inner_default_node, ctx: XsContext) -> str:
+    def _to_xs_nd_array_fill_loop(self, parent_var: str, parent_size_node, sub_sizes: list, inner_element_type: str,
+                                  inner_default_node, ctx: XsContext) -> str:
         loop_var = self._next_temp_name()
         parent_size_xs = self._to_xs_expression(parent_size_node, ctx, enclosed=True)
         header = f"for{self.sp}({loop_var}{self.sp}={self.sp}0;{self.sp}<{self.sp}{parent_size_xs})"
@@ -455,7 +461,8 @@ class PythonToXsConverter:
             sub_size_xs = self._to_xs_expression(sub_sizes[0], ctx, enclosed=True)
             body_xs = self._stmt(ctx.depth + 1, f"int {temp_var}{self.sp}={self.sp}xsArrayCreateInt({sub_size_xs})")
             body_xs += self._stmt(ctx.depth + 1, f"xsArraySetInt({parent_var},{self.sp}{loop_var},{self.sp}{temp_var})")
-            body_xs += self._to_xs_nd_array_fill_loop(temp_var, sub_sizes[0], sub_sizes[1:], inner_element_type, inner_default_node, ctx.indented())
+            body_xs += self._to_xs_nd_array_fill_loop(temp_var, sub_sizes[0], sub_sizes[1:], inner_element_type,
+                                                      inner_default_node, ctx.indented())
         return self._block(ctx.depth, header, body_xs)
 
     def _to_xs_variable_assignment(self, a: Assign, ctx: XsContext) -> str:
@@ -495,7 +502,8 @@ class PythonToXsConverter:
             return self._stmt(ctx.depth, f"{name}++")
         if aug_value == 1 and not isinstance(aug_value, bool) and op == "-":
             return self._stmt(ctx.depth, f"{name}--")
-        return self._stmt(ctx.depth, f"{name}{self.sp}={self.sp}{name}{self.sp}{op}{self.sp}{self._to_xs_expression(a.value, ctx)}")
+        return self._stmt(ctx.depth,
+                          f"{name}{self.sp}={self.sp}{name}{self.sp}{op}{self.sp}{self._to_xs_expression(a.value, ctx)}")
 
     def _to_xs_expression_top(self, e: Expr, ctx: XsContext) -> str:
         if (isinstance(e.value, Constant) and isinstance(e.value.value, str)
@@ -666,7 +674,8 @@ class PythonToXsConverter:
             header = f"for{self.sp}({loop_var}{self.sp}={self.sp}{start_xs};{self.sp}{bound_xs})"
             return self._block(ctx.depth, header, self._to_xs_body(e.body, ctx))
 
-        xs = self._stmt(ctx.depth, f"int {loop_var}{self.sp}={self.sp}{self._to_xs_expression(start_node, ctx, enclosed=True)}")
+        xs = self._stmt(ctx.depth,
+                        f"int {loop_var}{self.sp}={self.sp}{self._to_xs_expression(start_node, ctx, enclosed=True)}")
         if isinstance(step, int):
             positive = step > 0
             op = "+" if positive else "-"
@@ -719,8 +728,15 @@ class PythonToXsConverter:
         header = f"switch{self.sp}({self._to_xs_expression(e.subject, ctx, enclosed=True)})"
         return self._block(ctx.depth, header, cases_xs)
 
+    @staticmethod
+    def _has_xs_ignore(node: FunctionDef) -> bool:
+        return any(
+            (isinstance(d, Name) and d.id == "xs_ignore")
+            for d in node.decorator_list
+        )
+
     def to_xs_function_definition(self, function: FunctionDef, ctx: XsContext, root_function: bool = True) -> str:
-        if _has_xs_ignore(function):
+        if self._has_xs_ignore(function):
             return ""
         type = self._to_xs_function_type(function.returns)
         name = self._to_camel_case(function.name)
@@ -755,7 +771,8 @@ class PythonToXsConverter:
         return xs
 
     def _to_xs_parameters(self, function: FunctionDef, ctx: XsContext) -> str:
-        parameters = [self._to_xs_arg(a, default, ctx) for a, default in zip(function.args.args, function.args.defaults)]
+        parameters = [self._to_xs_arg(a, default, ctx) for a, default in
+                      zip(function.args.args, function.args.defaults)]
         return f",{self.sp}".join(parameters)
 
     def _to_xs_rule_modifiers(self, function: FunctionDef, root_function: bool, has_parameters: bool, type: str) -> str:
@@ -830,7 +847,8 @@ class PythonToXsConverter:
                     stmt_xs = self._to_xs_variable_definition(e, inner)
             elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Subscript):
                 stmt_xs = self._to_xs_array_set(e.targets[0], e.value, inner)
-            elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Name) and isinstance(e.value, List):
+            elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Name) and isinstance(
+                    e.value, List):
                 element_type = self._infer_list_literal_type(e.value.elts)
                 stmt_xs = self._to_xs_list_literal_stmts(
                     self._to_camel_case(e.targets[0].id), e.value.elts, element_type, inner)
@@ -864,28 +882,28 @@ class PythonToXsConverter:
             return self._stmt(ctx.depth, "return")
         return self._stmt(ctx.depth, f"return{self.sp}({self._to_xs_expression(e.value, ctx, enclosed=True)})")
 
-    def _eval_macro_function(self, call: Call) -> any:
+    def _eval_macro_function(self, call: Call) -> Any:
         if not isinstance(call.func, Name):
             raise ValueError("Macro should be a name token")
         return self._eval_macro_var(call)
 
-    def _eval_macro_var(self, call: Call) -> any:
+    def _eval_macro_var(self, call: Call) -> Any:
         if 1 <= len(call.args) <= 2 and isinstance(call.args[0], Constant) and isinstance(
                 call.args[0].value, str):
             return eval(call.args[0].value, self._vars)
         raise ValueError("macro should have 1 string constant argument")
 
-    def _to_xs_macro_with(self, e: With, ctx: XsContext) -> str:
-        if not (len(e.items) == 1 and isinstance(e.items[0].context_expr, Call)):
+    def _to_xs_macro_with(self, w: With, ctx: XsContext) -> str:
+        if not (len(w.items) == 1 and isinstance(w.items[0].context_expr, Call)):
             raise ValueError("incorrect repeated macro usage")
 
-        if isinstance(e.items[0].optional_vars, Name):
-            names = [e.items[0].optional_vars.id]
-        elif isinstance(e.items[0].optional_vars, Tuple):
-            names = [n.id for n in e.items[0].optional_vars.elts if isinstance(n, Name)]
+        if isinstance(w.items[0].optional_vars, Name):
+            names = [w.items[0].optional_vars.id]
+        elif isinstance(w.items[0].optional_vars, Tuple):
+            names = [n.id for n in w.items[0].optional_vars.elts if isinstance(n, Name)]
         else:
             raise ValueError("only unpacked single or deconstructer tuple are allowed")
-        iterable_value = self._eval_macro_function(e.items[0].context_expr)
+        iterable_value = self._eval_macro_function(w.items[0].context_expr)
         if not isinstance(iterable_value, Iterable):
             raise ValueError("repeater macro needs a reference to an iterable")
         xs = ""
@@ -897,7 +915,7 @@ class PythonToXsConverter:
                 value_batch = [value]
             for name, val in zip(names, value_batch):
                 new_replacements[name] = self._to_xs_constant(val)
-            xs += self._to_xs_body(e.body, ctx.with_replacements(new_replacements))
+            xs += self._to_xs_body(w.body, ctx.with_replacements(new_replacements))
         return xs
 
     def _to_xs_for_bound(self, param: expr, ctx: XsContext, positive: bool, enclosed: bool) -> str:

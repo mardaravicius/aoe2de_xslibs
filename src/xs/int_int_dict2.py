@@ -1,50 +1,26 @@
-import numpy
 from numpy import int32, float32
 
-from xs_converter.converter import PythonToXsConverter
 from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_resize_int, xs_array_get_int, \
     xs_array_get_size
 from xs_converter.symbols import XsExternConst, i32range
 
-numpy.seterr(over="ignore")
-
-c_int_int_dict_success = int32(0)
-c_int_int_dict_generic_error = int32(-1)
-c_int_int_dict_no_key_error = int32(-2)
-c_int_int_dict_resize_failed_error = int32(-3)
-c_int_int_dict_max_capacity_error = int32(-4)
-c_int_int_dict_max_capacity = int32(999999999)
-c_int_int_dict_max_load_factor = float32(0.75)
-c_int_int_dict_empty_param = int32(-999999999)
-c_int_int_dict_initial_num_of_buckets = int32(49)
-c_int_int_dict_initial_bucket_size = int32(4)
-c_int_int_dict_min_bucket_size = int32(2)
-c_int_int_dict_hash_constant = int32(16777619)
-_int_int_dict_empty_bucket = int32(0)
-_int_int_dict_inline_bucket = int32(1)
-_int_int_dict_array_bucket = int32(2)
-_int_int_dict_last_operation_status = c_int_int_dict_success
-_int_int_dict_temp_array = int32(-1)
-
-
-def constants() -> None:
-    c_int_int_dict_success: XsExternConst[int] = int32(0)
-    c_int_int_dict_generic_error: XsExternConst[int] = int32(-1)
-    c_int_int_dict_no_key_error: XsExternConst[int] = int32(-2)
-    c_int_int_dict_resize_failed_error: XsExternConst[int] = int32(-3)
-    c_int_int_dict_max_capacity_error: XsExternConst[int] = int32(-4)
-    c_int_int_dict_max_capacity: XsExternConst[int] = int32(999999999)
-    c_int_int_dict_max_load_factor: XsExternConst[float32] = float32(0.75)
-    c_int_int_dict_empty_param: XsExternConst[int] = int32(-999999999)
-    c_int_int_dict_initial_num_of_buckets: XsExternConst[int] = int32(49)
-    c_int_int_dict_initial_bucket_size: XsExternConst[int] = int32(4)
-    c_int_int_dict_min_bucket_size: XsExternConst[int] = int32(2)
-    c_int_int_dict_hash_constant: XsExternConst[int] = int32(16777619)
-    _int_int_dict_empty_bucket: int32 = int32(0)
-    _int_int_dict_inline_bucket: int32 = int32(1)
-    _int_int_dict_array_bucket: int32 = int32(2)
-    _int_int_dict_last_operation_status: int32 = c_int_int_dict_success
-    _int_int_dict_temp_array: int32 = int32(-1)
+c_int_int_dict_success: XsExternConst[int] = int32(0)
+c_int_int_dict_generic_error: XsExternConst[int] = int32(-1)
+c_int_int_dict_no_key_error: XsExternConst[int] = int32(-2)
+c_int_int_dict_resize_failed_error: XsExternConst[int] = int32(-3)
+c_int_int_dict_max_capacity_error: XsExternConst[int] = int32(-4)
+c_int_int_dict_max_capacity: XsExternConst[int] = int32(999999999)
+c_int_int_dict_max_load_factor: XsExternConst[float32] = float32(0.75)
+c_int_int_dict_empty_param: XsExternConst[int] = int32(-999999999)
+c_int_int_dict_initial_num_of_buckets: XsExternConst[int] = int32(49)
+c_int_int_dict_initial_bucket_size: XsExternConst[int] = int32(4)
+c_int_int_dict_min_bucket_size: XsExternConst[int] = int32(2)
+c_int_int_dict_hash_constant: XsExternConst[int] = int32(16777619)
+_int_int_dict_empty_bucket: int32 = int32(0)
+_int_int_dict_inline_bucket: int32 = int32(1)
+_int_int_dict_array_bucket: int32 = int32(2)
+_int_int_dict_last_operation_status: int32 = c_int_int_dict_success
+_int_int_dict_temp_array: int32 = int32(-1)
 
 
 def xs_int_int_dict_create() -> int32:
@@ -179,33 +155,10 @@ def _xs_int_int_dict_move_to_temp_array(dct: int32 = int32(-1), size: int32 = in
     return temp_data_size
 
 
-def xs_int_int_dict_put(dct: int32 = int32(-1), key: int32 = int32(-1), val: int32 = int32(0)) -> int32:
-    """
-    Inserts or updates a key-value pair. Triggers a rehash when load factor exceeds the threshold. Sets last error on completion.
-    :param dct: dict id
-    :param key: key to insert or update
-    :param val: value to associate with the key
-    :return: previous value if the key already existed, or `c_int_int_dict_generic_error` if newly inserted or on error.
-        Because -1 is both the error sentinel and a valid previous value, callers must check
-        `xs_int_int_dict_last_error()` to distinguish: `c_int_int_dict_success` means the key
-        existed and the returned value is valid; `c_int_int_dict_no_key_error` means a new key
-        was inserted; any other negative status indicates an error.
-    """
-    global _int_int_dict_last_operation_status
-    size: int32 = xs_array_get_int(dct, 0)
-    capacity: int32 = xs_array_get_size(dct)
-
-    previous_value: int32 = _xs_int_int_dict_replace(dct, key, val, capacity)
-    if _int_int_dict_last_operation_status == c_int_int_dict_no_key_error:
-        size += 1
-        xs_array_set_int(dct, 0, size)
-    elif _int_int_dict_last_operation_status == c_int_int_dict_success:
-        return previous_value
-    else:
-        return c_int_int_dict_generic_error
-
-    _xs_int_int_dict_rehash_if_needed(dct, size, capacity)
-    return c_int_int_dict_generic_error
+def _xs_int_int_dict_clear_arrays(dct: int32 = int32(-1), capacity: int32 = int32(-1),
+                                  new_capacity: int32 = int32(-1)) -> None:
+    for j in i32range(capacity, new_capacity, 3):
+        xs_array_set_int(dct, j, _int_int_dict_empty_bucket)
 
 
 def _xs_int_int_dict_rehash_if_needed(dct: int32 = int32(-1), size: int32 = int32(0),
@@ -236,10 +189,33 @@ def _xs_int_int_dict_rehash_if_needed(dct: int32 = int32(-1), size: int32 = int3
     return c_int_int_dict_success
 
 
-def _xs_int_int_dict_clear_arrays(dct: int32 = int32(-1), capacity: int32 = int32(-1),
-                                  new_capacity: int32 = int32(-1)) -> None:
-    for j in i32range(capacity, new_capacity, 3):
-        xs_array_set_int(dct, j, _int_int_dict_empty_bucket)
+def xs_int_int_dict_put(dct: int32 = int32(-1), key: int32 = int32(-1), val: int32 = int32(0)) -> int32:
+    """
+    Inserts or updates a key-value pair. Triggers a rehash when load factor exceeds the threshold. Sets last error on completion.
+    :param dct: dict id
+    :param key: key to insert or update
+    :param val: value to associate with the key
+    :return: previous value if the key already existed, or `c_int_int_dict_generic_error` if newly inserted or on error.
+        Because -1 is both the error sentinel and a valid previous value, callers must check
+        `xs_int_int_dict_last_error()` to distinguish: `c_int_int_dict_success` means the key
+        existed and the returned value is valid; `c_int_int_dict_no_key_error` means a new key
+        was inserted; any other negative status indicates an error.
+    """
+    global _int_int_dict_last_operation_status
+    size: int32 = xs_array_get_int(dct, 0)
+    capacity: int32 = xs_array_get_size(dct)
+
+    previous_value: int32 = _xs_int_int_dict_replace(dct, key, val, capacity)
+    if _int_int_dict_last_operation_status == c_int_int_dict_no_key_error:
+        size += 1
+        xs_array_set_int(dct, 0, size)
+    elif _int_int_dict_last_operation_status == c_int_int_dict_success:
+        return previous_value
+    else:
+        return c_int_int_dict_generic_error
+
+    _xs_int_int_dict_rehash_if_needed(dct, size, capacity)
+    return c_int_int_dict_generic_error
 
 
 def xs_int_int_dict(
@@ -738,62 +714,3 @@ def xs_int_int_dict_equals(a: int32 = int32(-1), b: int32 = int32(-1)) -> bool:
                 if xs_int_int_dict_last_error() != c_int_int_dict_success:
                     return False
     return True
-
-
-def test() -> None:
-    pass
-
-
-def int_int_dict(include_test: bool) -> tuple[str, str]:
-    test()
-    constants_function_xs = PythonToXsConverter.to_xs_script(
-        constants,
-        indent=True,
-    )
-    constants_xs = (constants_function_xs[constants_function_xs.find("extern"):constants_function_xs.rfind("}")]
-                    .strip()
-                    .replace("    ", "")
-                    ) + "\n\n"
-    xs = constants_xs + PythonToXsConverter.to_xs_script(
-        _xs_int_int_dict_hash,
-        _xs_int_int_dict_find_key_in_array,
-        _xs_int_int_dict_replace,
-        _xs_int_int_dict_move_to_temp_array,
-        _xs_int_int_dict_clear_arrays,
-        _xs_int_int_dict_rehash_if_needed,
-        xs_int_int_dict_put,
-        xs_int_int_dict_create,
-        xs_int_int_dict,
-        xs_int_int_dict_get,
-        xs_int_int_dict_remove,
-        xs_int_int_dict_contains,
-        xs_int_int_dict_size,
-        xs_int_int_dict_clear,
-        xs_int_int_dict_copy,
-        _xs_int_int_find_next_from_bucket,
-        xs_int_int_dict_next_key,
-        xs_int_int_dict_has_next,
-        xs_int_int_dict_to_string,
-        xs_int_int_dict_last_error,
-        xs_int_int_dict_update,
-        xs_int_int_dict_put_if_absent,
-        xs_int_int_dict_keys,
-        xs_int_int_dict_values,
-        xs_int_int_dict_equals,
-        indent=True,
-    )
-    constants_xs = (constants_function_xs[constants_function_xs.find("extern"):constants_function_xs.rfind("}")]
-                    .strip()
-                    .replace("    ", "")
-                    ) + "\n\n"
-    if include_test:
-        xs += constants_xs + PythonToXsConverter.to_xs_script(
-            test,
-            indent=True,
-        )
-    print(xs)
-    return xs, "intIntDict"
-
-
-if __name__ == "__main__":
-    int_int_dict(True)

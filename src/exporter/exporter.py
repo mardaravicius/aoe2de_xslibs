@@ -1,25 +1,29 @@
 import subprocess
 from pathlib import Path
+from types import ModuleType
 
-from xs.binary_functions import functions
-from xs.float_list import float_list
-from xs.int_int_dict2 import int_int_dict
-from xs.int_list import int_list
-from xs.string_list import string_list
-from xs.vector_list import vector_list
+import xs.binary_functions as binary_functions
+import xs.float_list as float_list
+# import xs.int_int_dict as int_int_dict_v1
+import xs.int_int_dict2 as int_int_dict
+import xs.int_list as int_list
+import xs.string_list as string_list
+import xs.vector_list as vector_list
+from xs_converter.converter import PythonToXsConverter
 
 
-def main(include_xs_tests: bool = False) -> None:
-    xs_file_creators = [
-        int_list,
-        float_list,
-        string_list,
-        int_int_dict,
-        vector_list,
-        functions,
+def main() -> None:
+    xs_modules: list[tuple[ModuleType, str]] = [
+        (int_list, "intList"),
+        (float_list, "floatList"),
+        (string_list, "stringList"),
+        (int_int_dict, "intIntDict"),
+        # (int_int_dict_v1, "intIntDict"),
+        (vector_list, "vectorList"),
+        (binary_functions, "binaryFunctions"),
     ]
-    for fc in xs_file_creators:
-        xs, name = fc(include_xs_tests)
+    for module, name in xs_modules:
+        xs = PythonToXsConverter.to_xs_file(module, indent=True)
         path = Path("..") / ".." / "xs" / (name + ".xs")
         write_xs_file(path, xs)
         result = subprocess.run(["xs-check", str(path.resolve()), "--ignores", "DiscardedFn"])

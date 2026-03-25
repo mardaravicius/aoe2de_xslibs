@@ -1,29 +1,17 @@
 from numpy import int32, float32
 
-from xs_converter.converter import PythonToXsConverter
-from xs_converter.functions import xs_array_get_size, xs_chat_data, xs_array_get_int, xs_array_create_string, \
+from xs_converter.functions import xs_array_get_size, xs_array_get_int, xs_array_create_string, \
     xs_array_create_int, xs_array_set_string, xs_array_set_int, xs_array_get_string, xs_array_resize_string
 from xs_converter.symbols import XsExternConst, i32range
 
-c_string_list_success = int32(0)
-c_string_list_generic_error = int32(-1)
-c_string_list_index_out_of_range_error = int32(-2)
-c_string_list_resize_failed_error = int32(-3)
-c_string_list_max_capacity_error = int32(-4)
-c_string_list_max_capacity = int32(999999999)
-c_string_list_empty_int_param = int32(-999999999)
-_string_list_last_operation_status = c_string_list_success
-
-
-def constants() -> None:
-    c_string_list_success: XsExternConst[int32] = int32(0)
-    c_string_list_generic_error: XsExternConst[int32] = int32(-1)
-    c_string_list_index_out_of_range_error: XsExternConst[int32] = int32(-2)
-    c_string_list_resize_failed_error: XsExternConst[int32] = int32(-3)
-    c_string_list_max_capacity_error: XsExternConst[int32] = int32(-4)
-    c_string_list_max_capacity: XsExternConst[int32] = int32(999999999)
-    c_string_list_empty_int_param: XsExternConst[int32] = int32(-999999999)
-    _string_list_last_operation_status: int32 = c_string_list_success
+c_string_list_success: XsExternConst[int32] = int32(0)
+c_string_list_generic_error: XsExternConst[int32] = int32(-1)
+c_string_list_index_out_of_range_error: XsExternConst[int32] = int32(-2)
+c_string_list_resize_failed_error: XsExternConst[int32] = int32(-3)
+c_string_list_max_capacity_error: XsExternConst[int32] = int32(-4)
+c_string_list_max_capacity: XsExternConst[int32] = int32(999999999)
+c_string_list_empty_int_param: XsExternConst[int32] = int32(-999999999)
+_string_list_last_operation_status: int32 = c_string_list_success
 
 
 def xs_string_list_size(lst: int32 = int32(-1)) -> int32:
@@ -695,83 +683,3 @@ def xs_string_list_last_error() -> int32:
     :return: `c_string_list_success` if the last such operation succeeded, or a negative error code
     """
     return _string_list_last_operation_status
-
-
-def test() -> None:
-    lst: int32 = xs_string_list_create(int32(20))
-    xs_chat_data("arr: " + str(lst))
-    xs_string_list_append(lst, "1")
-    xs_string_list_append(lst, "2")
-    xs_string_list_append(lst, "3")
-    xs_chat_data(xs_string_list_to_string(lst))
-    xs_chat_data("pop 1: " + xs_string_list_pop(lst))
-    xs_chat_data("pop 2: " + xs_string_list_pop(lst))
-    xs_chat_data(xs_string_list_to_string(lst))
-    xs_chat_data("pop 3: " + xs_string_list_pop(lst))
-    xs_chat_data("pop 4: " + xs_string_list_pop(lst))
-    xs_string_list_insert(lst, int32(0), "1")
-    xs_string_list_insert(lst, int32(0), "2")
-    xs_string_list_insert(lst, int32(0), "3")
-    xs_string_list_insert(lst, int32(1), "4")
-    xs_string_list_insert(lst, int32(1), "5")
-    xs_string_list_insert(lst, int32(5), "6")
-    xs_string_list_insert(lst, int32(7), "7")
-    xs_chat_data(xs_string_list_to_string(lst))
-    xs_string_list_sort(lst, True)
-    xs_chat_data(xs_string_list_to_string(lst))
-
-
-def string_list(include_test: bool) -> tuple[str, str]:
-    constants_function_xs = PythonToXsConverter.to_xs_script(
-        constants,
-        indent=True,
-    )
-    constants_xs = (constants_function_xs[constants_function_xs.find("extern"):constants_function_xs.rfind("}")]
-                    .strip()
-                    .replace("    ", "")
-                    ) + "\n\n"
-    xs = constants_xs + PythonToXsConverter.to_xs_script(
-        xs_string_list_size,
-        xs_string_list,
-        xs_string_list_create,
-        xs_string_list_from_repeated_val,
-        xs_string_list_from_repeated_list,
-        xs_string_list_from_array,
-        xs_string_list_use_array_as_source,
-        xs_string_list_get,
-        xs_string_list_set,
-        _xs_string_list_extend_string_array,
-        _xs_string_list_shrink_string_array,
-        xs_string_list_to_string,
-        xs_string_list_append,
-        xs_string_list_pop,
-        xs_string_list_insert,
-        xs_string_list_remove,
-        xs_string_list_index,
-        xs_string_list_contains,
-        _xs_string_list_compare_elem,
-        _xs_string_list_sift_down,
-        xs_string_list_sort,
-        xs_string_list_clear,
-        xs_string_list_copy,
-        xs_string_list_extend,
-        xs_string_list_extend_with_array,
-        xs_string_list_compare,
-        xs_string_list_reverse,
-        xs_string_list_count,
-        xs_string_list_min,
-        xs_string_list_max,
-        xs_string_list_last_error,
-        indent=True,
-    )
-    if include_test:
-        xs += constants_xs + PythonToXsConverter.to_xs_script(
-            test,
-            indent=True,
-        )
-    print(xs)
-    return xs, "stringList"
-
-
-if __name__ == "__main__":
-    string_list(True)

@@ -20,7 +20,6 @@ class FileConversionTest(unittest.TestCase):
     def test_top_level_variable_declaration(self):
         expected = (
             "int count = 5;\n"
-            "\n"
             "float total = 0.0;\n"
         )
         self.assertEqual(expected, convert_file(variables))
@@ -28,7 +27,6 @@ class FileConversionTest(unittest.TestCase):
     def test_top_level_variable_assignment(self):
         expected = (
             "int count = 5;\n"
-            "\n"
             "count = 10;\n"
         )
         self.assertEqual(expected, convert_file(variable_assignment))

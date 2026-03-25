@@ -1,35 +1,21 @@
 from numpy import int32, float32
 
-from xs_converter.converter import PythonToXsConverter
 from xs_converter.functions import xs_array_create_vector, xs_array_set_vector, xs_array_resize_vector, \
-    xs_array_get_vector, xs_array_get_size, xs_chat_data, bit_cast_to_float, bit_cast_to_int, vector, xs_vector_get_x, \
+    xs_array_get_vector, xs_array_get_size, bit_cast_to_float, bit_cast_to_int, vector, xs_vector_get_x, \
     xs_vector_set, xs_array_set_float, xs_vector_get_y, xs_vector_get_z, xs_array_get_float, xs_array_resize_float, \
     xs_array_create_float
 from xs_converter.symbols import XsExternConst, i32range, XsVector
 
-c_vector_list_success = int32(0)
-c_vector_list_generic_error = int32(-1)
-c_vector_list_generic_error_vector = vector(-1.0, -1.0, -1.0)
-c_vector_list_index_out_of_range_error = int32(-2)
-c_vector_list_resize_failed_error = int32(-3)
-c_vector_list_max_capacity_error = int32(-4)
-c_vector_list_max_capacity = int32(333333333) # int32(999999999)
-c_vector_list_empty_param = vector(-9999999.0, -9999999.0, -9999999.0)
-c_vector_list_empty_int_param = int32(-999999999)
-_vector_list_last_operation_status = c_vector_list_success
-
-
-def constants() -> None:
-    c_vector_list_success: XsExternConst[int32] = int32(0)
-    c_vector_list_generic_error: XsExternConst[int32] = int32(-1)
-    c_vector_list_generic_error_vector: XsExternConst[XsVector] = vector(-1.0, -1.0, -1.0)
-    c_vector_list_index_out_of_range_error: XsExternConst[int32] = int32(-2)
-    c_vector_list_resize_failed_error: XsExternConst[int32] = int32(-3)
-    c_vector_list_max_capacity_error: XsExternConst[int32] = int32(-4)
-    c_vector_list_max_capacity: XsExternConst[int32] = int32(333333333) # int32(999999999)
-    c_vector_list_empty_param: XsExternConst[XsVector] = vector(-9999999.0, -9999999.0, -9999999.0)
-    c_vector_list_empty_int_param: XsExternConst[int32] = -999999999
-    _vector_list_last_operation_status: int32 = c_vector_list_success
+c_vector_list_success: XsExternConst[int32] = int32(0)
+c_vector_list_generic_error: XsExternConst[int32] = int32(-1)
+c_vector_list_generic_error_vector: XsExternConst[XsVector] = vector(-1.0, -1.0, -1.0)
+c_vector_list_index_out_of_range_error: XsExternConst[int32] = int32(-2)
+c_vector_list_resize_failed_error: XsExternConst[int32] = int32(-3)
+c_vector_list_max_capacity_error: XsExternConst[int32] = int32(-4)
+c_vector_list_max_capacity: XsExternConst[int32] = int32(333333333) # int32(999999999)
+c_vector_list_empty_param: XsExternConst[XsVector] = vector(-9999999.0, -9999999.0, -9999999.0)
+c_vector_list_empty_int_param: XsExternConst[int32] = int32(-999999999)
+_vector_list_last_operation_status: int32 = c_vector_list_success
 
 
 def _xs_vector_list_arr_create(size: int32 = int32(0), value: XsVector = vector(0.0, 0.0, 0.0)) -> int32:
@@ -604,81 +590,3 @@ def xs_vector_list_last_error() -> int32:
     :return: `c_vector_list_success` if the last such operation succeeded, or a negative error code
     """
     return _vector_list_last_operation_status
-
-
-def test() -> None:
-    lst: int32 = xs_vector_list_create(int32(20))
-    xs_chat_data("arr: " + str(lst))
-    xs_vector_list_append(lst, vector(1.1, 2.2, 3.3))
-    xs_vector_list_append(lst, vector(11.11, 22.22, 33.33))
-    xs_vector_list_append(lst, vector(111.111, 222.222, 333.333))
-    xs_chat_data(xs_vector_list_to_string(lst))
-    xs_chat_data("pop 1: " + str(xs_vector_list_pop(lst)))
-    xs_chat_data("pop 2: " + str(xs_vector_list_pop(lst)))
-    xs_chat_data(xs_vector_list_to_string(lst))
-    xs_chat_data("pop 3: " + str(xs_vector_list_pop(lst)))
-    xs_chat_data("pop 4: " + str(xs_vector_list_pop(lst)))
-    xs_vector_list_insert(lst, int32(0), vector(1.0, 1.1, 1.2))
-    xs_vector_list_insert(lst, int32(0), vector(2.0, 2.1, 2.2))
-    xs_vector_list_insert(lst, int32(0), vector(3.0, 3.1, 3.2))
-    xs_vector_list_insert(lst, int32(1), vector(4.0, 4.1, 4.2))
-    xs_vector_list_insert(lst, int32(1), vector(5.0, 5.1, 5.2))
-    xs_vector_list_insert(lst, int32(5), vector(6.0, 6.1, 6.2))
-    xs_vector_list_insert(lst, int32(7), vector(7.0, 7.1, 7.2))
-    xs_chat_data(xs_vector_list_to_string(lst))
-
-
-def vector_list(include_test: bool) -> tuple[str, str]:
-    constants_function_xs = PythonToXsConverter.to_xs_script(
-        constants,
-        indent=True,
-    )
-    constants_xs = (constants_function_xs[constants_function_xs.find("extern"):constants_function_xs.rfind("}")]
-                    .strip()
-                    .replace("    ", "")
-                    ) + "\n\n"
-    xs = constants_xs + PythonToXsConverter.to_xs_script(
-        _xs_vector_list_arr_create,
-        _xs_vector_list_arr_set,
-        _xs_vector_list_arr_get,
-        _xs_vector_list_arr_resize,
-        _xs_vector_list_set_size,
-        xs_vector_list_capacity,
-        xs_vector_list_size,
-        xs_vector_list,
-        xs_vector_list_create,
-        xs_vector_list_from_repeated_val,
-        xs_vector_list_from_repeated_list,
-        xs_vector_list_from_array,
-        # xs_vector_list_use_array_as_source,
-        xs_vector_list_get,
-        xs_vector_list_set,
-        _xs_vector_list_extend_vector_array,
-        _xs_vector_list_shrink_vector_array,
-        xs_vector_list_to_string,
-        xs_vector_list_append,
-        xs_vector_list_pop,
-        xs_vector_list_insert,
-        xs_vector_list_remove,
-        xs_vector_list_index,
-        xs_vector_list_contains,
-        xs_vector_list_clear,
-        xs_vector_list_copy,
-        xs_vector_list_extend,
-        xs_vector_list_extend_with_array,
-        xs_vector_list_reverse,
-        xs_vector_list_count,
-        xs_vector_list_last_error,
-        indent=True,
-    )
-    if include_test:
-        xs += constants_xs + PythonToXsConverter.to_xs_script(
-            test,
-            indent=True,
-        )
-    print(xs)
-    return xs, "vectorList"
-
-
-if __name__ == "__main__":
-    vector_list(True)

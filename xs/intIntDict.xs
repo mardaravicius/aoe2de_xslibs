@@ -16,6 +16,16 @@ int _intIntDictArrayBucket = 2;
 int _intIntDictLastOperationStatus = cIntIntDictSuccess;
 int _intIntDictTempArray = -1;
 
+/*
+    Creates an empty int-to-int dictionary.
+    @return created dict id, or `cIntIntDictGenericError` on error
+*/
+int xsIntIntDictCreate() {
+    int dct = xsArrayCreateInt(cIntIntDictInitialNumOfBuckets, 0);
+    xsArraySetInt(dct, 0, 0);
+    return (dct);
+}
+
 int _xsIntIntDictHash(int key = -1, int capacity = 0) {
     int hash = key * cIntIntDictHashConstant;
     int numOfBuckets = (capacity - 1) / 3;
@@ -218,16 +228,6 @@ int xsIntIntDictPut(int dct = -1, int key = -1, int val = 0) {
     }
     _xsIntIntDictRehashIfNeeded(dct, size, capacity);
     return (cIntIntDictGenericError);
-}
-
-/*
-    Creates an empty int-to-int dictionary.
-    @return created dict id, or `cIntIntDictGenericError` on error
-*/
-int xsIntIntDictCreate() {
-    int dct = xsArrayCreateInt(cIntIntDictInitialNumOfBuckets, 0);
-    xsArraySetInt(dct, 0, 0);
-    return (dct);
 }
 
 /*
@@ -463,6 +463,59 @@ int xsIntIntDictCopy(int dct = -1) {
     return (newDct);
 }
 
+/*
+    Returns a string representation of the dict in the format `{k1 - v1, k2 - v2, ...}`.
+    @param dct - dict id
+    @return string representation of the dict
+*/
+string xsIntIntDictToString(int dct = -1) {
+    int dictSize = xsArrayGetSize(dct);
+    string s = "{";
+    int key = 0;
+    int val = 0;
+    bool first = true;
+    int i = 1;
+    while (i < dictSize) {
+        int bucketType = xsArrayGetInt(dct, i);
+        if (bucketType == _intIntDictInlineBucket) {
+            key = xsArrayGetInt(dct, i + 1);
+            val = xsArrayGetInt(dct, i + 2);
+            if (first) {
+                first = false;
+            } else {
+                s = s + ", ";
+            }
+            s = s + (key + ": " + val);
+        } else if (bucketType == _intIntDictArrayBucket) {
+            int bucketArr = xsArrayGetInt(dct, i + 1);
+            int bucketSize = xsArrayGetInt(dct, i + 2);
+            int j = 0;
+            while (j < bucketSize) {
+                key = xsArrayGetInt(bucketArr, j);
+                val = xsArrayGetInt(bucketArr, j + 1);
+                if (first) {
+                    first = false;
+                } else {
+                    s = s + ", ";
+                }
+                s = s + (key + ": " + val);
+                j = j + 2;
+            }
+        }
+        i = i + 3;
+    }
+    s = s + "}";
+    return (s);
+}
+
+/*
+    Returns the status code of the last operation that sets it (put, get, remove, next_key, has_next).
+    @return `cIntIntDictSuccess` if the last such operation succeeded, or a negative error code
+*/
+int xsIntIntDictLastError() {
+    return (_intIntDictLastOperationStatus);
+}
+
 int _xsIntIntFindNextFromBucket(int bucket = -1, int dct = -1, int dictSize = -1) {
     int i = bucket;
     while (i < dictSize) {
@@ -531,59 +584,6 @@ bool xsIntIntDictHasNext(int dct = -1, bool isFirst = true, int prevKey = -1) {
     bool r = _intIntDictLastOperationStatus != cIntIntDictNoKeyError;
     _intIntDictLastOperationStatus = cIntIntDictSuccess;
     return (r);
-}
-
-/*
-    Returns a string representation of the dict in the format `{k1 - v1, k2 - v2, ...}`.
-    @param dct - dict id
-    @return string representation of the dict
-*/
-string xsIntIntDictToString(int dct = -1) {
-    int dictSize = xsArrayGetSize(dct);
-    string s = "{";
-    int key = 0;
-    int val = 0;
-    bool first = true;
-    int i = 1;
-    while (i < dictSize) {
-        int bucketType = xsArrayGetInt(dct, i);
-        if (bucketType == _intIntDictInlineBucket) {
-            key = xsArrayGetInt(dct, i + 1);
-            val = xsArrayGetInt(dct, i + 2);
-            if (first) {
-                first = false;
-            } else {
-                s = s + ", ";
-            }
-            s = s + (key + ": " + val);
-        } else if (bucketType == _intIntDictArrayBucket) {
-            int bucketArr = xsArrayGetInt(dct, i + 1);
-            int bucketSize = xsArrayGetInt(dct, i + 2);
-            int j = 0;
-            while (j < bucketSize) {
-                key = xsArrayGetInt(bucketArr, j);
-                val = xsArrayGetInt(bucketArr, j + 1);
-                if (first) {
-                    first = false;
-                } else {
-                    s = s + ", ";
-                }
-                s = s + (key + ": " + val);
-                j = j + 2;
-            }
-        }
-        i = i + 3;
-    }
-    s = s + "}";
-    return (s);
-}
-
-/*
-    Returns the status code of the last operation that sets it (put, get, remove, next_key, has_next).
-    @return `cIntIntDictSuccess` if the last such operation succeeded, or a negative error code
-*/
-int xsIntIntDictLastError() {
-    return (_intIntDictLastOperationStatus);
 }
 
 /*

@@ -1,29 +1,17 @@
 from numpy import int32
 
-from xs_converter.converter import PythonToXsConverter
 from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_resize_int, xs_array_get_int, \
-    xs_array_get_size, xs_chat_data, abs
+    xs_array_get_size, abs
 from xs_converter.symbols import XsExternConst, i32range
 
-c_int_list_success = int32(0)
-c_int_list_generic_error = int32(-1)
-c_int_list_index_out_of_range_error = int32(-2)
-c_int_list_resize_failed_error = int32(-3)
-c_int_list_max_capacity_error = int32(-4)
-c_int_list_max_capacity = int32(999999999)
-c_int_list_empty_param = int32(-999999999)
-_int_list_last_operation_status = c_int_list_success
-
-
-def constants() -> None:
-    c_int_list_success: XsExternConst[int32] = int32(0)
-    c_int_list_generic_error: XsExternConst[int32] = int32(-1)
-    c_int_list_index_out_of_range_error: XsExternConst[int32] = int32(-2)
-    c_int_list_resize_failed_error: XsExternConst[int32] = int32(-3)
-    c_int_list_max_capacity_error: XsExternConst[int32] = int32(-4)
-    c_int_list_max_capacity: XsExternConst[int32] = int32(999999999)
-    c_int_list_empty_param: XsExternConst[int32] = int32(-999999999)
-    _int_list_last_operation_status: int32 = c_int_list_success
+c_int_list_success: XsExternConst[int32] = int32(0)
+c_int_list_generic_error: XsExternConst[int32] = int32(-1)
+c_int_list_index_out_of_range_error: XsExternConst[int32] = int32(-2)
+c_int_list_resize_failed_error: XsExternConst[int32] = int32(-3)
+c_int_list_max_capacity_error: XsExternConst[int32] = int32(-4)
+c_int_list_max_capacity: XsExternConst[int32] = int32(999999999)
+c_int_list_empty_param: XsExternConst[int32] = int32(-999999999)
+_int_list_last_operation_status: int32 = c_int_list_success
 
 
 def xs_int_list_create(capacity: int32 = int32(7)) -> int32:
@@ -116,6 +104,12 @@ def xs_int_list(
     return lst
 
 
+def _xs_int_list_int_abs(n: int32 = int32(0)) -> int32:
+    if n < int32(0):
+        return n * int32(-1)
+    return n
+
+
 def xs_int_list_from_range(start: int32 = int32(0), stop: int32 = int32(0), step: int32 = int32(1)) -> int32:
     """
     Creates a list from a given range.
@@ -130,8 +124,8 @@ def xs_int_list_from_range(start: int32 = int32(0), stop: int32 = int32(0), step
         return c_int_list_generic_error
     if step < 0 and start < stop:
         return c_int_list_generic_error
-    distance: int32 = int32(abs(stop - start))
-    stepa: int32 = int32(abs(step))
+    distance: int32 = _xs_int_list_int_abs(stop - start)
+    stepa: int32 = _xs_int_list_int_abs(step)
     size: int32 = distance // stepa
     if size >= c_int_list_max_capacity:
         return c_int_list_generic_error
@@ -712,85 +706,3 @@ def xs_int_list_last_error() -> int32:
     :return: `c_int_list_success` if the last such operation succeeded, or a negative error code
     """
     return _int_list_last_operation_status
-
-
-def test() -> None:
-    lst: int32 = xs_int_list_create(int32(20))
-    xs_chat_data("lst: " + str(lst))
-    xs_int_list_append(lst, int32(1))
-    xs_int_list_append(lst, int32(2))
-    xs_int_list_append(lst, int32(3))
-    xs_chat_data(xs_int_list_to_string(lst))
-    xs_chat_data("pop 1: " + str(xs_int_list_pop(lst)))
-    xs_chat_data("pop 2: " + str(xs_int_list_pop(lst)))
-    xs_chat_data(xs_int_list_to_string(lst))
-    xs_chat_data("pop 3: " + str(xs_int_list_pop(lst)))
-    xs_chat_data("pop 4: " + str(xs_int_list_pop(lst)))
-    xs_int_list_insert(lst, int32(0), int32(1))
-    xs_int_list_insert(lst, int32(0), int32(2))
-    xs_int_list_insert(lst, int32(0), int32(3))
-    xs_int_list_insert(lst, int32(1), int32(4))
-    xs_int_list_insert(lst, int32(1), int32(5))
-    xs_int_list_insert(lst, int32(5), int32(6))
-    xs_int_list_insert(lst, int32(7), int32(7))
-    xs_chat_data(xs_int_list_to_string(lst))
-    xs_int_list_sort(lst, True)
-    xs_chat_data(xs_int_list_to_string(lst))
-
-
-def int_list(include_test: bool) -> tuple[str, str]:
-    constants_function_xs = PythonToXsConverter.to_xs_script(
-        constants,
-        indent=True,
-    )
-    constants_xs = (constants_function_xs[constants_function_xs.find("extern"):constants_function_xs.rfind("}")]
-                    .strip()
-                    .replace("    ", "")
-                    ) + "\n\n"
-    xs = constants_xs + PythonToXsConverter.to_xs_script(
-        xs_int_list,
-        xs_int_list_create,
-        xs_int_list_from_range,
-        xs_int_list_from_repeated_val,
-        xs_int_list_from_repeated_list,
-        xs_int_list_from_array,
-        xs_int_list_use_array_as_source,
-        xs_int_list_get,
-        xs_int_list_set,
-        xs_int_list_size,
-        _xs_int_list_extend_int_array,
-        _xs_int_list_shrink_int_array,
-        xs_int_list_to_string,
-        xs_int_list_append,
-        xs_int_list_pop,
-        xs_int_list_insert,
-        xs_int_list_remove,
-        xs_int_list_index,
-        xs_int_list_contains,
-        _xs_int_list_compare_elem,
-        _xs_int_list_sift_down,
-        xs_int_list_sort,
-        xs_int_list_clear,
-        xs_int_list_copy,
-        xs_int_list_extend,
-        xs_int_list_extend_with_array,
-        xs_int_list_compare,
-        xs_int_list_reverse,
-        xs_int_list_count,
-        xs_int_list_sum,
-        xs_int_list_min,
-        xs_int_list_max,
-        xs_int_list_last_error,
-        indent=True,
-    )
-    if include_test:
-        xs += constants_xs + PythonToXsConverter.to_xs_script(
-            test,
-            indent=True,
-        )
-    print(xs)
-    return xs, "intList"
-
-
-if __name__ == "__main__":
-    int_list(True)

@@ -1,47 +1,26 @@
 from numpy import int32, float32
 
-from xs_converter.converter import PythonToXsConverter
 from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_resize_int, xs_array_get_int, \
     xs_array_get_size
 from xs_converter.symbols import XsExternConst, i32range
 
-c_int_int_dict_success = int32(0)
-c_int_int_dict_generic_error = int32(-1)
-c_int_int_dict_no_key_error = int32(-2)
-c_int_int_dict_resize_failed_error = int32(-3)
-c_int_int_dict_max_capacity_error = int32(-4)
-c_int_int_dict_max_capacity = int32(999999999)
-c_int_int_dict_max_load_factor = float32(0.75)
-c_int_int_dict_empty_param = int32(-999999999)
-c_int_int_dict_initial_num_of_buckets = int32(17)
-c_int_int_dict_initial_bucket_size = int32(3)
-c_int_int_dict_min_bucket_size = int32(3)
-c_int_int_dict_hash_constant = int32(16777619)
-_int_int_dict_last_operation_status = c_int_int_dict_success
-_c_int_int_dict_key_exists = False
-_int_int_dict_temp_array = int32(-1)
-_int_int_dict_iterator_prev_key = int32(-1)
-_int_int_dict_iterator_prev_idx = int32(1)
-
-
-def constants() -> None:
-    c_int_int_dict_success: XsExternConst[int32] = int32(0)
-    c_int_int_dict_generic_error: XsExternConst[int32] = int32(-1)
-    c_int_int_dict_no_key_error: XsExternConst[int32] = int32(-2)
-    c_int_int_dict_resize_failed_error: XsExternConst[int32] = int32(-3)
-    c_int_int_dict_max_capacity_error: XsExternConst[int32] = int32(-4)
-    c_int_int_dict_max_capacity: XsExternConst[int32] = int32(999999999)
-    c_int_int_dict_max_load_factor: XsExternConst[float] = float32(0.75)
-    c_int_int_dict_empty_param: XsExternConst[int32] = int32(-999999999)
-    c_int_int_dict_initial_num_of_buckets: XsExternConst[int32] = int32(17)
-    c_int_int_dict_initial_bucket_size: XsExternConst[int32] = int32(3)
-    c_int_int_dict_min_bucket_size: XsExternConst[int32] = int32(3)
-    c_int_int_dict_hash_constant: XsExternConst[int32] = int32(16777619)
-    _int_int_dict_last_operation_status: int32 = c_int_int_dict_success
-    _c_int_int_dict_key_exists: bool = False
-    _int_int_dict_temp_array: int32 = int32(-1)
-    _int_int_dict_iterator_prev_key: int32 = int32(-1)
-    _int_int_dict_iterator_prev_idx: int32 = int32(1)
+c_int_int_dict_success: XsExternConst[int32] = int32(0)
+c_int_int_dict_generic_error: XsExternConst[int32] = int32(-1)
+c_int_int_dict_no_key_error: XsExternConst[int32] = int32(-2)
+c_int_int_dict_resize_failed_error: XsExternConst[int32] = int32(-3)
+c_int_int_dict_max_capacity_error: XsExternConst[int32] = int32(-4)
+c_int_int_dict_max_capacity: XsExternConst[int32] = int32(999999999)
+c_int_int_dict_max_load_factor: XsExternConst[float] = float32(0.75)
+c_int_int_dict_empty_param: XsExternConst[int32] = int32(-999999999)
+c_int_int_dict_initial_num_of_buckets: XsExternConst[int32] = int32(17)
+c_int_int_dict_initial_bucket_size: XsExternConst[int32] = int32(3)
+c_int_int_dict_min_bucket_size: XsExternConst[int32] = int32(3)
+c_int_int_dict_hash_constant: XsExternConst[int32] = int32(16777619)
+_int_int_dict_last_operation_status: int32 = c_int_int_dict_success
+_c_int_int_dict_key_exists: bool = False
+_int_int_dict_temp_array: int32 = int32(-1)
+_int_int_dict_iterator_prev_key: int32 = int32(-1)
+_int_int_dict_iterator_prev_idx: int32 = int32(1)
 
 
 def xs_int_int_dict_create() -> int32:
@@ -446,53 +425,3 @@ def xs_int_int_dict_update(source: int32 = int32(-1), dct: int32 = int32(-1)) ->
             return err
         _int_int_dict_last_operation_status = c_int_int_dict_success
     return c_int_int_dict_success
-
-
-def test() -> None:
-    pass
-
-
-def int_int_dict(include_test: bool) -> tuple[str, str]:
-    test()
-    constants_function_xs = PythonToXsConverter.to_xs_script(
-        constants,
-        indent=True,
-    )
-    constants_xs = (constants_function_xs[constants_function_xs.find("extern"):constants_function_xs.rfind("}")]
-                    .strip()
-                    .replace("    ", "")
-                    ) + "\n\n"
-    xs = constants_xs + PythonToXsConverter.to_xs_script(
-        _xs_int_int_dict_hash,
-        _xs_int_int_dict_replace,
-        _xs_int_int_dict_move_to_temp_array,
-        xs_int_int_dict_put,
-        xs_int_int_dict_create,
-        xs_int_int_dict,
-        xs_int_int_dict_get,
-        xs_int_int_dict_remove,
-        xs_int_int_dict_contains,
-        xs_int_int_dict_size,
-        xs_int_int_dict_clear,
-        xs_int_int_dict_copy,
-        xs_int_int_dct_iterator_start,
-        xs_int_int_dct_iterator_has_next,
-        _xs_int_int_dct_iterator_next,
-        xs_int_int_dct_iterator_next_key,
-        xs_int_int_dct_iterator_next_value,
-        xs_int_int_dict_to_string,
-        xs_int_int_dict_last_error,
-        xs_int_int_dict_update,
-        indent=True,
-    )
-    if include_test:
-        xs += constants_xs + PythonToXsConverter.to_xs_script(
-            test,
-            indent=True,
-        )
-    print(xs)
-    return xs, "intIntDict"
-
-
-if __name__ == "__main__":
-    int_int_dict(True)

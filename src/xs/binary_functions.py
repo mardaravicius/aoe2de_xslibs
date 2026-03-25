@@ -1,59 +1,30 @@
-import numpy
 from numpy import int32
 
-from xs_converter.converter import PythonToXsConverter
 from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_get_int, xs_get_random_number
 from xs_converter.symbols import XsConst
 
-numpy.seterr(over="ignore")
-
 _bit_operator_powers: int32 = int32(-1)
 
-_c_mt_n: int32 = int32(624)
-_c_mt_m: int32 = int32(397)
+_c_mt_n: XsConst[int32] = int32(624)
+_c_mt_m: XsConst[int32] = int32(397)
 _c_mt_nm: int32 = int32(-1)
-_c_mt_w: int32 = int32(32)
-_c_mt_r: int32 = int32(31)
+_c_mt_w: XsConst[int32] = int32(32)
+_c_mt_r: XsConst[int32] = int32(31)
 _c_mt_matrix_a: int32 = int32(-1)
 _c_mt_upper_mask: int32 = int32(-1)
 _c_mt_lower_mask: int32 = int32(-1)
 _c_mt_a: int32 = int32(-1)
-_c_mt_u: int32 = int32(11)
-_c_mt_s: int32 = int32(7)
-_c_mt_t: int32 = int32(15)
-_c_mt_l: int32 = int32(18)
+_c_mt_u: XsConst[int32] = int32(11)
+_c_mt_s: XsConst[int32] = int32(7)
+_c_mt_t: XsConst[int32] = int32(15)
+_c_mt_l: XsConst[int32] = int32(18)
 _c_mt_b: int32 = int32(-1)
-_c_mt_c: int32 = int32(-272236544)
+_c_mt_c: XsConst[int32] = int32(-272236544)
 _c_mt_f: int32 = int32(-1)
 
 _mt_seed_set: bool = False
 _mt_state_array: int32 = int32(-1)
 _mt_state_index: int32 = int32(0)
-
-
-def constants() -> None:
-    _bit_operator_powers: int32 = int32(-1)
-
-    _c_mt_n: XsConst[int32] = int32(624)
-    _c_mt_m: XsConst[int32] = int32(397)
-    _c_mt_nm: int32 = int32(-1)
-    _c_mt_w: XsConst[int32] = int32(32)
-    _c_mt_r: XsConst[int32] = int32(31)
-    _c_mt_matrix_a: int32 = int32(-1)
-    _c_mt_upper_mask: int32 = int32(-1)
-    _c_mt_lower_mask: int32 = int32(-1)
-    _c_mt_a: int32 = int32(-1)
-    _c_mt_u: XsConst[int32] = int32(11)
-    _c_mt_s: XsConst[int32] = int32(7)
-    _c_mt_t: XsConst[int32] = int32(15)
-    _c_mt_l: XsConst[int32] = int32(18)
-    _c_mt_b: int32 = int32(-1)
-    _c_mt_c: XsConst[int32] = int32(-272236544)
-    _c_mt_f: int32 = int32(-1)
-
-    _mt_seed_set: bool = False
-    _mt_state_array: int32 = int32(-1)
-    _mt_state_index: int32 = int32(0)
 
 
 def _xs_bit_get_powers() -> int32:
@@ -220,35 +191,3 @@ def xs_mt_random_uniform_range(start: int32 = int32(0), end: int32 = int32(99999
         if rr >= start and rr < end:
             return rr
     return int32(-1)
-
-
-def functions(include_test: bool = False) -> tuple[str, str]:
-    constants_function_xs = PythonToXsConverter.to_xs_script(
-        constants,
-        indent=True,
-    )
-    constants_xs = (constants_function_xs[constants_function_xs.find("int"):constants_function_xs.rfind("}")]
-                    .strip()
-                    .replace("    ", "")
-                    ) + "\n\n"
-    xs = constants_xs + PythonToXsConverter.to_xs_script(
-        _xs_bit_get_powers,
-        _xs_bit_shift_right_divide,
-        xs_bit_shift_right_logical,
-        xs_bit_shift_right_arithmetic,
-        xs_bit_shift_left,
-        xs_bit_not,
-        xs_bit_and,
-        xs_bit_or,
-        xs_bit_xor,
-        xs_mt_seed,
-        xs_mt_random,
-        xs_mt_random_uniform_range,
-        indent=True,
-    )
-    print(xs)
-    return xs, "binaryFunctions"
-
-
-if __name__ == "__main__":
-    functions()
