@@ -122,6 +122,42 @@ class TestVariableDefinitions(unittest.TestCase):
         self.assertEqual(expected, convert(f))
 
 
+class TestCamelCaseVariableNames(unittest.TestCase):
+
+    def test_trailing_underscore_preserved(self):
+        def f() -> None:
+            my_var_: int = 10
+
+        expected = (
+            "void f() {\n"
+            "    int myVar_ = 10;\n"
+            "}\n"
+        )
+        self.assertEqual(expected, convert(f))
+
+    def test_double_underscore_preserved(self):
+        def f() -> None:
+            my__var: int = 10
+
+        expected = (
+            "void f() {\n"
+            "    int my__var = 10;\n"
+            "}\n"
+        )
+        self.assertEqual(expected, convert(f))
+
+    def test_leading_and_trailing_underscores_preserved(self):
+        def f() -> None:
+            _my_var_: int = 10
+
+        expected = (
+            "void f() {\n"
+            "    int _myVar_ = 10;\n"
+            "}\n"
+        )
+        self.assertEqual(expected, convert(f))
+
+
 class TestAugmentedAssignment(unittest.TestCase):
 
     def test_increment_by_one(self):
