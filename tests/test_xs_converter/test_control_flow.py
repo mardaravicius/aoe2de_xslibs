@@ -283,9 +283,42 @@ class TestForLoops(unittest.TestCase):
             "    int e = 5;\n"
             "    int f = 6;\n"
             "    int i = a + b;\n"
-            "    while (i < (c + d)) {\n"
-            '        xsChatData("hi");\n'
-            "        i = i + (e + f);\n"
+            "    int temp00000000 = e + f;\n"
+            "    if (temp00000000 > 0) {\n"
+            "        while (i < (c + d)) {\n"
+            '            xsChatData("hi");\n'
+            "            i = i + temp00000000;\n"
+            "        }\n"
+            "    } else if (temp00000000 < 0) {\n"
+            "        while (i > (c + d)) {\n"
+            '            xsChatData("hi");\n'
+            "            i = i + temp00000000;\n"
+            "        }\n"
+            "    }\n"
+            "}\n"
+        )
+        self.assertEqual(expected, convert(f))
+
+    def test_range_step_variable_negative_dispatches_by_sign(self):
+        def f() -> None:
+            step: int = -2
+            for i in range(9, 0, step):
+                xs_chat_data("hi")
+
+        expected = (
+            "void f() {\n"
+            "    int step = -2;\n"
+            "    int i = 9;\n"
+            "    if (step > 0) {\n"
+            "        while (i < 0) {\n"
+            '            xsChatData("hi");\n'
+            "            i = i + step;\n"
+            "        }\n"
+            "    } else if (step < 0) {\n"
+            "        while (i > 0) {\n"
+            '            xsChatData("hi");\n'
+            "            i = i + step;\n"
+            "        }\n"
             "    }\n"
             "}\n"
         )

@@ -130,19 +130,43 @@ class PythonToXsConverter:
         source = inspect.getsource(module)
         module_ast = ast.parse(source)
         converter = PythonToXsConverter(indent, kwargs)
+        converter._source = source
         ctx = XsContext()
         parts: list[tuple[bool, str]] = []
+        has_function = False
         for node in module_ast.body:
             if isinstance(node, (Import, ImportFrom)):
                 continue
             if isinstance(node, FunctionDef):
-                result = converter.to_xs_function_definition(node, ctx, root_function=len(parts) == 0)
+                result = converter.to_xs_function_definition(node, ctx, root_function=not has_function)
                 if result:
                     parts.append((True, result))
+                    has_function = True
+            elif isinstance(node, AnnAssign) and isinstance(node.value, List):
+                if not isinstance(node.target, Name):
+                    raise ValueError("assignment must have a variable name")
+                element_type = converter._annotation_element_type(node.annotation)
+                if element_type is None:
+                    element_type = converter._infer_list_literal_type(node.value.elts)
+                stmt_xs = converter._to_xs_list_literal_stmts(
+                    converter._to_camel_case(node.target.id), node.value.elts, element_type, ctx)
+                parts.append((False, converter._flush_pending() + stmt_xs))
             elif isinstance(node, AnnAssign):
-                parts.append((False, converter._to_xs_variable_definition(node, ctx)))
+                nd_result = converter._try_to_xs_nd_array_init(node, ctx)
+                stmt_xs = nd_result if nd_result is not None else converter._to_xs_variable_definition(node, ctx)
+                parts.append((False, converter._flush_pending() + stmt_xs))
+            elif isinstance(node, Assign) and len(node.targets) == 1 and isinstance(node.targets[0], Subscript):
+                stmt_xs = converter._to_xs_array_set(node.targets[0], node.value, ctx)
+                parts.append((False, converter._flush_pending() + stmt_xs))
+            elif isinstance(node, Assign) and len(node.targets) == 1 and isinstance(node.targets[0], Name) and isinstance(
+                    node.value, List):
+                element_type = converter._infer_list_literal_type(node.value.elts)
+                stmt_xs = converter._to_xs_list_literal_stmts(
+                    converter._to_camel_case(node.targets[0].id), node.value.elts, element_type, ctx)
+                parts.append((False, converter._flush_pending() + stmt_xs))
             elif isinstance(node, Assign):
-                parts.append((False, converter._to_xs_variable_assignment(node, ctx)))
+                stmt_xs = converter._to_xs_variable_assignment(node, ctx)
+                parts.append((False, converter._flush_pending() + stmt_xs))
             else:
                 raise ValueError(f"unsupported top-level statement: {type(node).__name__}")
         return converter._format_parts(parts)
@@ -170,6 +194,7 @@ class PythonToXsConverter:
         self._doc_strings = set()
         self._pending_stmts: list[str] = []
         self._temp_counter = 0
+        self._source: Optional[str] = None
 
     def _wrap_parens(self, xs: str, enclosed: bool) -> str:
         if enclosed:
@@ -555,6 +580,14 @@ class PythonToXsConverter:
             parts = [self._to_xs_expression(val, ctx) for val in e.values]
             return f"({f'{self.sp}+{self.sp}'.join(parts)})"
         if isinstance(e, FormattedValue):
+            source_segment = ast.get_source_segment(self._source, e) if self._source is not None else None
+            is_debug_expr = source_segment is not None and re.fullmatch(r"\{.+?=\s*\}", source_segment) is not None
+            if is_debug_expr and e.conversion == ord("r") and e.format_spec is None:
+                return self._to_xs_expression(e.value, ctx)
+            if e.conversion != -1:
+                raise ValueError("f-string conversion is not supported")
+            if e.format_spec is not None:
+                raise ValueError("f-string format spec is not supported")
             return self._to_xs_expression(e.value, ctx)
         if isinstance(e, BoolOp):
             op_xs = self._to_xs_binary_op(e.op)
@@ -675,14 +708,45 @@ class PythonToXsConverter:
             positive = step > 0
             op = "+" if positive else "-"
             step_xs = self._to_xs_constant(abs(step))
+            bound_xs = self._to_xs_for_bound(end_node, ctx, positive, False)
+            body_xs = self._to_xs_body(e.body, ctx)
+            body_xs += self._stmt(ctx.depth + 1,
+                                  f"{loop_var}{self.sp}={self.sp}{loop_var}{self.sp}{op}{self.sp}{step_xs}")
+            xs += self._block(ctx.depth, f"while{self.sp}({loop_var}{self.sp}{bound_xs})", body_xs)
+            return xs
+
+        step_xs = self._to_xs_expression(step, ctx, enclosed=True)
+        if isinstance(step, Name):
+            step_ref = step_xs
         else:
-            positive = True
-            op = "+"
-            step_xs = self._to_xs_expression(step, ctx)
-        bound_xs = self._to_xs_for_bound(end_node, ctx, positive, False)
-        body_xs = self._to_xs_body(e.body, ctx)
-        body_xs += self._stmt(ctx.depth + 1, f"{loop_var}{self.sp}={self.sp}{loop_var}{self.sp}{op}{self.sp}{step_xs}")
-        xs += self._block(ctx.depth, f"while{self.sp}({loop_var}{self.sp}{bound_xs})", body_xs)
+            step_ref = self._next_temp_name()
+            xs += self._stmt(ctx.depth, f"int {step_ref}{self.sp}={self.sp}{step_xs}")
+
+        positive_body_xs = self._to_xs_body(e.body, ctx.indented())
+        positive_body_xs += self._stmt(ctx.depth + 2,
+                                       f"{loop_var}{self.sp}={self.sp}{loop_var}{self.sp}+{self.sp}{step_ref}")
+        positive_bound_xs = self._to_xs_for_bound(end_node, ctx, True, False)
+        positive_while_xs = self._block(
+            ctx.depth + 1,
+            f"while{self.sp}({loop_var}{self.sp}{positive_bound_xs})",
+            positive_body_xs,
+        )
+
+        negative_body_xs = self._to_xs_body(e.body, ctx.indented())
+        negative_body_xs += self._stmt(ctx.depth + 2,
+                                       f"{loop_var}{self.sp}={self.sp}{loop_var}{self.sp}+{self.sp}{step_ref}")
+        negative_bound_xs = self._to_xs_for_bound(end_node, ctx, False, False)
+        negative_while_xs = self._block(
+            ctx.depth + 1,
+            f"while{self.sp}({loop_var}{self.sp}{negative_bound_xs})",
+            negative_body_xs,
+        )
+
+        xs += f"{ctx.depth * self.indent}if{self.sp}({step_ref}{self.sp}>{self.sp}0){self.sp}{{{self.nl}"
+        xs += positive_while_xs
+        xs += f"{ctx.depth * self.indent}}}{self.sp}else if{self.sp}({step_ref}{self.sp}<{self.sp}0){self.sp}{{{self.nl}"
+        xs += negative_while_xs
+        xs += f"{ctx.depth * self.indent}}}{self.nl}"
         return xs
 
     def _parse_range_args(self, args: list[expr]) -> tuple[Optional[expr], expr, int | expr]:
@@ -817,6 +881,7 @@ class PythonToXsConverter:
 
     def _to_xs_function(self, function: Callable[..., Any], root_function: bool = True) -> str:
         source = textwrap.dedent(inspect.getsource(function))
+        self._source = source
         module_ast = ast.parse(source)
         if len(module_ast.body) != 1 or not isinstance(module_ast.body[0], FunctionDef):
             raise ValueError("top level must contain a single function")

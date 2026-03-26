@@ -192,6 +192,24 @@ class TestBinaryExpressions(unittest.TestCase):
         )
         self.assertEqual(expected, convert(f))
 
+    def test_fstring_format_spec_raises(self):
+        def f() -> None:
+            x: float = 1.234
+            s: str = f"{x:.2f}"
+
+        with self.assertRaises(ValueError) as cm:
+            convert(f)
+        self.assertIn("format spec", str(cm.exception))
+
+    def test_fstring_conversion_raises(self):
+        def f() -> None:
+            x: int = 7
+            s: str = f"{x!r}"
+
+        with self.assertRaises(ValueError) as cm:
+            convert(f)
+        self.assertIn("conversion", str(cm.exception))
+
 
 class TestComparisonExpressions(unittest.TestCase):
 

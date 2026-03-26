@@ -92,6 +92,27 @@ class FileConversionTest(unittest.TestCase):
     def test_empty_file_with_only_imports(self):
         self.assertEqual("", convert_file(imports_only))
 
+    def test_top_level_list_literal_is_lowered_with_temp_statements(self):
+        mod = module_from_source("arr: list[int] = [1, 2, 3]\n")
+        expected = (
+            "int arr = xsArrayCreateInt(3);\n"
+            "xsArraySetInt(arr, 0, 1);\n"
+            "xsArraySetInt(arr, 1, 2);\n"
+            "xsArraySetInt(arr, 2, 3);\n"
+        )
+        self.assertEqual(expected, convert_file(mod))
+
+    def test_first_function_stays_root_even_after_top_level_variables(self):
+        mod = module_from_source(
+            "x: int = 1\n"
+            "@xs_rule()\n"
+            "def tick() -> None:\n"
+            "    pass\n"
+        )
+        with self.assertRaises(ValueError) as cm:
+            PythonToXsConverter.to_xs_file(mod, indent=True)
+        self.assertIn("default root function", str(cm.exception))
+
 
 if __name__ == "__main__":
     unittest.main()
