@@ -1,5 +1,6 @@
 import unittest
 
+from xs_converter.exceptions import XsConversionError
 from xs_converter.constants import XsConstants
 from xs_converter.functions import xs_effect_amount
 
@@ -56,14 +57,14 @@ class TestConstants(unittest.TestCase):
         def f() -> None:
             x: int = 2_147_483_648
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(XsConversionError):
             convert(f)
 
     def test_int_underflow_raises(self):
         def f() -> None:
             x: int = -2_147_483_649
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(XsConversionError):
             convert(f)
 
     def test_string_with_quotes(self):
@@ -197,16 +198,20 @@ class TestBinaryExpressions(unittest.TestCase):
             x: float = 1.234
             s: str = f"{x:.2f}"
 
-        with self.assertRaises(ValueError) as cm:
+        with self.assertRaises(XsConversionError) as cm:
             convert(f)
-        self.assertIn("format spec", str(cm.exception))
+        message = str(cm.exception)
+        self.assertIn("format spec", message)
+        self.assertIn("Location:", message)
+        self.assertIn('s: str = f"{x:.2f}"', message)
+        self.assertIn("^", message)
 
     def test_fstring_conversion_raises(self):
         def f() -> None:
             x: int = 7
             s: str = f"{x!r}"
 
-        with self.assertRaises(ValueError) as cm:
+        with self.assertRaises(XsConversionError) as cm:
             convert(f)
         self.assertIn("conversion", str(cm.exception))
 

@@ -6,23 +6,12 @@ from ast import FunctionDef, Constant, Name, expr, arg, Expr, AnnAssign, Call, A
     If, Compare, Eq, Gt, GtE, Lt, LtE, NotEq, For, While, AugAssign, Match, MatchValue, MatchAs, Return, Pass, \
     Subscript, stmt, Attribute, keyword, With, Tuple, UnaryOp, USub, JoinedStr, FormattedValue, Global, BoolOp, Or, And, \
     Not, FloorDiv, List, Import, ImportFrom, operator, cmpop, boolop
-from dataclasses import dataclass, field
 from types import ModuleType
 from typing import Any, Callable, Iterable, Optional
 
+from xs_converter.context import XsContext
+from xs_converter.exceptions import XsConversionError
 from xs_converter.macro import macro_pass_value, macro_repeat_with_iterable
-
-
-@dataclass(frozen=True)
-class XsContext:
-    depth: int = 0
-    replacements: dict[str, str] = field(default_factory=dict)
-
-    def indented(self) -> 'XsContext':
-        return XsContext(self.depth + 1, self.replacements)
-
-    def with_replacements(self, replacements: dict[str, str]) -> 'XsContext':
-        return XsContext(self.depth, replacements)
 
 
 class PythonToXsConverter:
@@ -127,48 +116,71 @@ class PythonToXsConverter:
 
     @staticmethod
     def to_xs_file(module: ModuleType, indent: bool, **kwargs) -> str:
-        source = inspect.getsource(module)
-        module_ast = ast.parse(source)
         converter = PythonToXsConverter(indent, kwargs)
-        converter._source = source
+        source_name = inspect.getsourcefile(module) or getattr(module, "__file__", None)
+        try:
+            try:
+                source_lines, start_line = inspect.getsourcelines(module)
+            except (OSError, TypeError):
+                source = inspect.getsource(module)
+                source_lines = source.splitlines(keepends=True)
+                start_line = 1
+        except (OSError, TypeError) as exc:
+            raise converter._source_access_error(exc, source_name) from exc
+
+        source = "".join(source_lines)
+        try:
+            module_ast = ast.parse(source, filename=source_name or "<unknown>")
+        except SyntaxError as exc:
+            raise converter._syntax_error(exc, source_name) from exc
+
+        converter._set_source_context(
+            source,
+            source_name=source_name,
+            line_offset=max(start_line - 1, 0),
+            display_source_lines=source.splitlines(),
+        )
         ctx = XsContext()
         parts: list[tuple[bool, str]] = []
         has_function = False
         for node in module_ast.body:
             if isinstance(node, (Import, ImportFrom)):
                 continue
-            if isinstance(node, FunctionDef):
-                result = converter.to_xs_function_definition(node, ctx, root_function=not has_function)
-                if result:
-                    parts.append((True, result))
-                    has_function = True
-            elif isinstance(node, AnnAssign) and isinstance(node.value, List):
-                if not isinstance(node.target, Name):
-                    raise ValueError("assignment must have a variable name")
-                element_type = converter._annotation_element_type(node.annotation)
-                if element_type is None:
-                    element_type = converter._infer_list_literal_type(node.value.elts)
-                stmt_xs = converter._to_xs_list_literal_stmts(
-                    converter._to_camel_case(node.target.id), node.value.elts, element_type, ctx)
-                parts.append((False, converter._flush_pending() + stmt_xs))
-            elif isinstance(node, AnnAssign):
-                nd_result = converter._try_to_xs_nd_array_init(node, ctx)
-                stmt_xs = nd_result if nd_result is not None else converter._to_xs_variable_definition(node, ctx)
-                parts.append((False, converter._flush_pending() + stmt_xs))
-            elif isinstance(node, Assign) and len(node.targets) == 1 and isinstance(node.targets[0], Subscript):
-                stmt_xs = converter._to_xs_array_set(node.targets[0], node.value, ctx)
-                parts.append((False, converter._flush_pending() + stmt_xs))
-            elif isinstance(node, Assign) and len(node.targets) == 1 and isinstance(node.targets[0], Name) and isinstance(
-                    node.value, List):
-                element_type = converter._infer_list_literal_type(node.value.elts)
-                stmt_xs = converter._to_xs_list_literal_stmts(
-                    converter._to_camel_case(node.targets[0].id), node.value.elts, element_type, ctx)
-                parts.append((False, converter._flush_pending() + stmt_xs))
-            elif isinstance(node, Assign):
-                stmt_xs = converter._to_xs_variable_assignment(node, ctx)
-                parts.append((False, converter._flush_pending() + stmt_xs))
-            else:
-                raise ValueError(f"unsupported top-level statement: {type(node).__name__}")
+            try:
+                if isinstance(node, FunctionDef):
+                    result = converter.to_xs_function_definition(node, ctx, root_function=not has_function)
+                    if result:
+                        parts.append((True, result))
+                        has_function = True
+                elif isinstance(node, AnnAssign) and isinstance(node.value, List):
+                    if not isinstance(node.target, Name):
+                        raise converter._error("Variable declaration must use a simple variable name.", node.target)
+                    element_type = converter._annotation_element_type(node.annotation)
+                    if element_type is None:
+                        element_type = converter._infer_list_literal_type(node.value.elts, node.value)
+                    stmt_xs = converter._to_xs_list_literal_stmts(
+                        converter._to_camel_case(node.target.id), node.value.elts, element_type, ctx)
+                    parts.append((False, converter._flush_pending() + stmt_xs))
+                elif isinstance(node, AnnAssign):
+                    nd_result = converter._try_to_xs_nd_array_init(node, ctx)
+                    stmt_xs = nd_result if nd_result is not None else converter._to_xs_variable_definition(node, ctx)
+                    parts.append((False, converter._flush_pending() + stmt_xs))
+                elif isinstance(node, Assign) and len(node.targets) == 1 and isinstance(node.targets[0], Subscript):
+                    stmt_xs = converter._to_xs_array_set(node.targets[0], node.value, ctx)
+                    parts.append((False, converter._flush_pending() + stmt_xs))
+                elif isinstance(node, Assign) and len(node.targets) == 1 and isinstance(node.targets[0], Name) and isinstance(
+                        node.value, List):
+                    element_type = converter._infer_list_literal_type(node.value.elts, node.value)
+                    stmt_xs = converter._to_xs_list_literal_stmts(
+                        converter._to_camel_case(node.targets[0].id), node.value.elts, element_type, ctx)
+                    parts.append((False, converter._flush_pending() + stmt_xs))
+                elif isinstance(node, Assign):
+                    stmt_xs = converter._to_xs_variable_assignment(node, ctx)
+                    parts.append((False, converter._flush_pending() + stmt_xs))
+                else:
+                    raise converter._error(f"Unsupported top-level statement: {type(node).__name__}.", node)
+            except Exception as exc:
+                converter._raise_as_conversion_error(exc, node)
         return converter._format_parts(parts)
 
     def _format_parts(self, parts: list[tuple[bool, str]]) -> str:
@@ -195,6 +207,122 @@ class PythonToXsConverter:
         self._pending_stmts: list[str] = []
         self._temp_counter = 0
         self._source: Optional[str] = None
+        self._source_name: Optional[str] = None
+        self._source_line_offset = 0
+        self._source_column_offset = 0
+        self._display_source_lines: list[str] = []
+
+    @staticmethod
+    def _common_indent(lines: list[str]) -> int:
+        indents = [len(line) - len(line.lstrip()) for line in lines if line.strip()]
+        return min(indents, default=0)
+
+    @staticmethod
+    def _syntax_error(exc: SyntaxError, source_name: Optional[str]) -> XsConversionError:
+        return XsConversionError(
+            exc.msg,
+            source_name=exc.filename or source_name,
+            line=exc.lineno,
+            column=exc.offset,
+            source_line=exc.text.rstrip("\n") if exc.text is not None else None,
+            end_column=exc.end_offset,
+        )
+
+    @staticmethod
+    def _source_access_error(exc: Exception, source_name: Optional[str]) -> XsConversionError:
+        return XsConversionError(
+            f"Could not read Python source: {exc}",
+            source_name=source_name,
+        )
+
+    def _set_source_context(
+            self,
+            parsed_source: str,
+            *,
+            source_name: Optional[str],
+            line_offset: int = 0,
+            column_offset: int = 0,
+            display_source_lines: Optional[list[str]] = None,
+    ) -> None:
+        self._source = parsed_source
+        self._source_name = source_name
+        self._source_line_offset = line_offset
+        self._source_column_offset = column_offset
+        self._display_source_lines = display_source_lines or parsed_source.splitlines()
+
+    def _error(self, message: str, node: Optional[ast.AST] = None) -> XsConversionError:
+        if node is None:
+            return XsConversionError(message, source_name=self._source_name)
+
+        lineno = getattr(node, "lineno", None)
+        col_offset = getattr(node, "col_offset", None)
+        end_col_offset = getattr(node, "end_col_offset", None)
+
+        line = None
+        column = None
+        end_column = None
+        source_line = None
+
+        if lineno is not None:
+            line = lineno + self._source_line_offset
+            if 0 < lineno <= len(self._display_source_lines):
+                source_line = self._display_source_lines[lineno - 1]
+        if col_offset is not None:
+            column = col_offset + 1 + self._source_column_offset
+        if end_col_offset is not None:
+            end_column = end_col_offset + 1 + self._source_column_offset
+
+        return XsConversionError(
+            message,
+            source_name=self._source_name,
+            line=line,
+            column=column,
+            source_line=source_line,
+            end_column=end_column,
+        )
+
+    def _build_source_start_error(self, message: str) -> XsConversionError:
+        source_line = self._display_source_lines[0] if self._display_source_lines else None
+        line = self._source_line_offset + 1 if (self._source_name is not None or source_line is not None) else None
+        column = 1 if source_line is not None else None
+        end_column = 1 if source_line is not None else None
+        return XsConversionError(
+            message,
+            source_name=self._source_name,
+            line=line,
+            column=column,
+            source_line=source_line,
+            end_column=end_column,
+        )
+
+    def _enrich_conversion_error(self, exc: XsConversionError, node: Optional[ast.AST]) -> XsConversionError:
+        if node is None:
+            if exc.source_name is None and self._source_name is not None:
+                return XsConversionError(
+                    exc.message,
+                    source_name=self._source_name,
+                    line=exc.line,
+                    column=exc.column,
+                    source_line=exc.source_line,
+                    end_column=exc.end_column,
+                )
+            return exc
+
+        enriched = self._error(exc.message, node)
+        return XsConversionError(
+            exc.message,
+            source_name=exc.source_name or enriched.source_name,
+            line=exc.line if exc.line is not None else enriched.line,
+            column=exc.column if exc.column is not None else enriched.column,
+            source_line=exc.source_line or enriched.source_line,
+            end_column=exc.end_column if exc.end_column is not None else enriched.end_column,
+        )
+
+    def _raise_as_conversion_error(self, exc: Exception, node: Optional[ast.AST]) -> None:
+        if isinstance(exc, XsConversionError):
+            raise self._enrich_conversion_error(exc, node) from exc
+        message = str(exc) or exc.__class__.__name__
+        raise self._error(message, node) from exc
 
     def _wrap_parens(self, xs: str, enclosed: bool) -> str:
         if enclosed:
@@ -219,28 +347,32 @@ class PythonToXsConverter:
         s = re.sub(r'(?<!_)_(?!_)([a-zA-Z0-9])', lambda m: m.group(1).upper(), s)
         return prefix + s + suffix
 
-    def _to_xs_type(self, python_type: str) -> str:
+    def _to_xs_type(self, annotation: expr) -> str:
+        if not isinstance(annotation, Name):
+            raise self._error("Type annotations must be simple type names.", annotation)
+
+        python_type = annotation.id
         xs_type = self._TYPE_MAP.get(python_type)
         if xs_type is None:
-            raise ValueError(f"not convertible type: {python_type}")
+            raise self._error(f"Python type {python_type!r} cannot be converted to an XS type.", annotation)
         return xs_type
 
-    def _to_xs_modifier(self, python_type: str) -> str:
+    def _to_xs_modifier(self, python_type: str, node: Optional[ast.AST] = None) -> str:
         xs_mod = self._MODIFIER_MAP.get(python_type)
         if xs_mod is None:
-            raise ValueError(f"not convertible modifier: {python_type}")
+            raise self._error(f"Python modifier {python_type!r} cannot be converted to an XS modifier.", node)
         return xs_mod
 
     def _to_xs_function_type(self, expression: expr) -> str:
         if isinstance(expression, Constant) and expression.value is None:
             return "void"
         if isinstance(expression, Name):
-            return self._to_xs_type(expression.id)
-        raise ValueError(f"unexpected token {expression}")
+            return self._to_xs_type(expression)
+        raise self._error("Function return annotations must be a type name or None.", expression)
 
     def _to_xs_arg(self, a: arg, default: Optional[expr], ctx: XsContext) -> str:
         name = self._to_camel_case(a.arg)
-        type = self._to_xs_type(a.annotation.id)
+        type = self._to_xs_type(a.annotation)
         xs = f"{type} {name}"
         if default is not None:
             xs += f"{self.sp}={self.sp}{self._to_xs_expression(default, ctx)}"
@@ -276,12 +408,12 @@ class PythonToXsConverter:
                 return "float"
             if isinstance(value, str):
                 return "str"
-        raise ValueError(f"cannot infer array element type from value")
+        raise self._error("Could not infer the array element type from this value.", node)
 
     def _to_xs_array_create(self, element_type: str, default_node: expr, size_node: expr, ctx: XsContext) -> str:
         create_func = self._ARRAY_CREATE_MAP.get(element_type)
         if create_func is None:
-            raise ValueError(f"unsupported array element type: {element_type}")
+            raise self._error(f"Array creation does not support element type {element_type!r}.", default_node)
 
         size_xs = self._to_xs_expression(size_node, ctx, enclosed=True)
         default_xs = self._to_xs_expression(default_node, ctx, enclosed=True)
@@ -296,17 +428,17 @@ class PythonToXsConverter:
 
     def _parse_array_literal(self, value: expr) -> tuple[expr, expr]:
         if isinstance(value, List):
-            raise ValueError("cannot create array from list literal - use [default] * size syntax")
+            raise self._error("Array creation from list literals is not supported here; use [default] * size instead.", value)
         if not (isinstance(value, BinOp) and isinstance(value.op, Mult) and isinstance(value.left, List)):
-            raise ValueError("array must be defined as [default_value] * size")
+            raise self._error("Arrays must be defined with [default_value] * size syntax.", value)
 
         list_node = value.left
         if len(list_node.elts) != 1:
-            raise ValueError("array default must be a single-element list")
+            raise self._error("Array defaults must be a single-element list.", list_node)
 
         default_node = list_node.elts[0]
         if self._unpack_constant(default_node) is None and not isinstance(default_node, Call):
-            raise ValueError("array default value must be a literal")
+            raise self._error("Array default values must be literals or constructor calls.", default_node)
         return default_node, value.right
 
     _ARRAY_LIST_NAMES = {"list", "List"}
@@ -332,22 +464,24 @@ class PythonToXsConverter:
             return annotation.slice.id
         return None
 
-    def _infer_list_literal_type(self, elements: list[expr]) -> str:
+    def _infer_list_literal_type(self, elements: list[expr], node: Optional[ast.AST] = None) -> str:
         inferred = set()
         for elt in elements:
             try:
                 t = self._infer_array_element_type(elt)
                 inferred.add(t)
-            except ValueError:
+            except XsConversionError:
                 continue
+        error_node = node if node is not None else (elements[0] if elements else None)
         if not inferred:
-            raise ValueError(
-                "cannot infer array type from list literal: "
-                "at least one element must be a constant or typed cast"
+            raise self._error(
+                "Could not infer the array type from this list literal: "
+                "at least one element must be a constant or typed cast.",
+                error_node,
             )
         create_funcs = {self._ARRAY_CREATE_MAP[t] for t in inferred}
         if len(create_funcs) > 1:
-            raise ValueError("mixed constant types in list literal are not supported")
+            raise self._error("Mixed constant types in a list literal are not supported.", error_node)
         return sorted(inferred)[0]
 
     def _to_xs_list_literal_stmts(self, var_name: str, elements: list[expr],
@@ -367,8 +501,8 @@ class PythonToXsConverter:
     def _to_xs_list_literal_expr(self, list_node: List, ctx: XsContext) -> str:
         elements = list_node.elts
         if not elements:
-            raise ValueError("cannot create array from empty list literal")
-        element_type = self._infer_list_literal_type(elements)
+            raise self._error("Cannot create an array from an empty list literal without a type annotation.", list_node)
+        element_type = self._infer_list_literal_type(elements, list_node)
         temp_name = self._next_temp_name()
         self._pending_stmts.append(
             self._to_xs_list_literal_stmts(temp_name, elements, element_type, ctx)
@@ -379,25 +513,25 @@ class PythonToXsConverter:
         if isinstance(a.annotation, Name):
             modifier = ""
             python_type = a.annotation.id
-            xs_type = self._to_xs_type(python_type)
+            xs_type = self._to_xs_type(a.annotation)
         elif isinstance(a.annotation, Subscript) and isinstance(a.annotation.value, Name):
             python_type = None
             if a.annotation.value.id in self._ARRAY_LIST_NAMES:
                 modifier = ""
                 xs_type = "int"
             else:
-                modifier = self._to_xs_modifier(a.annotation.value.id) + " "
+                modifier = self._to_xs_modifier(a.annotation.value.id, a.annotation.value) + " "
                 if isinstance(a.annotation.slice, Name):
-                    xs_type = self._to_xs_type(a.annotation.slice.id)
+                    xs_type = self._to_xs_type(a.annotation.slice)
                 else:
-                    raise ValueError("assignment must have a variable type")
+                    raise self._error("Variable declarations must include a supported type annotation.", a.annotation.slice)
         else:
-            raise ValueError("assignment must have a variable type")
+            raise self._error("Variable declarations must include a supported type annotation.", a.annotation)
 
         if isinstance(a.target, Name):
             name = self._to_camel_case(a.target.id)
         else:
-            raise ValueError("assignment must have a variable name")
+            raise self._error("Variable declarations must use a simple variable name.", a.target)
 
         if isinstance(a.value, Subscript) and python_type is not None:
             value_xs = self._to_xs_array_get(a.value, python_type, ctx)
@@ -410,14 +544,14 @@ class PythonToXsConverter:
     def _to_xs_array_get(self, subscript: Subscript, element_type: str, ctx: XsContext) -> str:
         get_func = self._ARRAY_GET_MAP.get(element_type)
         if get_func is None:
-            raise ValueError(f"unsupported array element type for get: {element_type}")
+            raise self._error(f"Array reads do not support element type {element_type!r}.", subscript)
         index_xs = self._to_xs_expression(subscript.slice, ctx, enclosed=True)
         if isinstance(subscript.value, Name):
             array_xs = self._to_camel_case(subscript.value.id)
         elif isinstance(subscript.value, Subscript):
             array_xs = self._to_xs_array_get(subscript.value, "int", ctx)
         else:
-            raise ValueError("array get target must be a variable name or array access")
+            raise self._error("Array read targets must be variable names or nested array accesses.", subscript.value)
         return f"{get_func}({array_xs},{self.sp}{index_xs})"
 
     def _parse_nd_array_annotation(self, annotation: expr) -> Optional[tuple[int, str]]:
@@ -489,12 +623,12 @@ class PythonToXsConverter:
 
     def _to_xs_variable_assignment(self, a: Assign, ctx: XsContext) -> str:
         if len(a.targets) != 1:
-            raise ValueError("only one target assignment is supported")
+            raise self._error("Only single-target assignments are supported.", a)
         target = a.targets[0]
         if isinstance(target, Name):
             name = self._to_camel_case(target.id)
         else:
-            raise ValueError("assignment needs to be a variable")
+            raise self._error("Assignment target must be a variable name.", target)
         value_xs = self._to_xs_expression(a.value, ctx, enclosed=True)
         return self._stmt(ctx.depth, f"{name}{self.sp}={self.sp}{value_xs}")
 
@@ -505,11 +639,11 @@ class PythonToXsConverter:
         elif isinstance(target.value, Subscript):
             array_xs = self._to_xs_array_get(target.value, "int", ctx)
         else:
-            raise ValueError("array assignment target must be a variable name or array access")
+            raise self._error("Array assignment target must be a variable name or nested array access.", target.value)
         element_type = self._infer_array_element_type(value)
         set_func = self._ARRAY_SET_MAP.get(element_type)
         if set_func is None:
-            raise ValueError(f"unsupported array element type for set: {element_type}")
+            raise self._error(f"Array assignment does not support element type {element_type!r}.", value)
         value_xs = self._to_xs_expression(value, ctx, enclosed=True)
         return self._stmt(ctx.depth, f"{set_func}({array_xs},{self.sp}{index_xs},{self.sp}{value_xs})")
 
@@ -517,8 +651,8 @@ class PythonToXsConverter:
         if isinstance(a.target, Name):
             name = self._to_camel_case(a.target.id)
         else:
-            raise ValueError("assignment needs to be a variable")
-        op = self._to_xs_binary_op(a.op)
+            raise self._error("Assignment target must be a variable name.", a.target)
+        op = self._to_xs_binary_op(a.op, a)
         aug_value = self._unpack_constant(a.value)
         if aug_value == 1 and not isinstance(aug_value, bool) and op == "+":
             return self._stmt(ctx.depth, f"{name}++")
@@ -533,71 +667,75 @@ class PythonToXsConverter:
             return ""
         return self._stmt(ctx.depth, self._to_xs_expression(e.value, ctx))
 
-    def _to_xs_binary_op(self, op: operator | cmpop | boolop) -> str:
+    def _to_xs_binary_op(self, op: operator | cmpop | boolop, node: Optional[ast.AST] = None) -> str:
         xs_op = self._OPERATOR_MAP.get(type(op))
         if xs_op is None:
-            raise ValueError(f"unknown binary operator: {op}")
+            raise self._error(f"Unsupported binary operator: {op}.", node)
         return xs_op
 
     def _to_xs_expression(self, e: expr, ctx: XsContext, enclosed: bool = False) -> str:
-        if isinstance(e, Constant):
-            return self._to_xs_constant(e.value, enclosed)
-        if isinstance(e, Name):
-            if e.id in ctx.replacements:
-                return ctx.replacements[e.id]
-            return self._to_camel_case(e.id)
-        if isinstance(e, Call):
-            if isinstance(e.func, Name) and e.func.id in self._macro_functions:
-                return self._to_xs_constant(self._eval_macro_function(e), enclosed)
-            return self._to_xs_call(e, ctx, enclosed)
-        if isinstance(e, BinOp) and isinstance(e.op, Mult) and isinstance(e.left, List):
-            default_node, size_node = self._parse_array_literal(e)
-            element_type = self._infer_array_element_type(default_node)
-            return self._to_xs_array_create(element_type, default_node, size_node, ctx)
-        if isinstance(e, BinOp):
-            left_xs = self._to_xs_expression(e.left, ctx)
-            op_xs = self._to_xs_binary_op(e.op)
-            right_xs = self._to_xs_expression(e.right, ctx)
-            return self._wrap_parens(f"{left_xs}{self.sp}{op_xs}{self.sp}{right_xs}", enclosed)
-        if isinstance(e, UnaryOp):
-            value = self._unpack_constant(e)
-            if value is not None:
-                return self._to_xs_constant(value, enclosed)
-            if isinstance(e.op, Not):
-                return self._wrap_parens(
-                    f"{self._to_xs_expression(e.operand, ctx)}{self.sp}=={self.sp}false", enclosed)
-            raise ValueError(f"unsupported unary operator: {e}")
-        if isinstance(e, Compare):
-            if len(e.comparators) != 1 or len(e.ops) != 1:
-                raise ValueError("comparison must have exactly 1 operator and 1 comparator")
-            left_xs = self._to_xs_expression(e.left, ctx)
-            op = self._to_xs_binary_op(e.ops[0])
-            right_xs = self._to_xs_expression(e.comparators[0], ctx)
-            return self._wrap_parens(f"{left_xs}{self.sp}{op}{self.sp}{right_xs}", enclosed)
-        if isinstance(e, Attribute) and isinstance(e.value, Name) and e.value.id == "XsConstants":
-            return self._to_camel_case(e.attr)
-        if isinstance(e, JoinedStr):
-            parts = [self._to_xs_expression(val, ctx) for val in e.values]
-            return f"({f'{self.sp}+{self.sp}'.join(parts)})"
-        if isinstance(e, FormattedValue):
-            source_segment = ast.get_source_segment(self._source, e) if self._source is not None else None
-            is_debug_expr = source_segment is not None and re.fullmatch(r"\{.+?=\s*\}", source_segment) is not None
-            if is_debug_expr and e.conversion == ord("r") and e.format_spec is None:
+        try:
+            if isinstance(e, Constant):
+                return self._to_xs_constant(e.value, enclosed, e)
+            if isinstance(e, Name):
+                if e.id in ctx.replacements:
+                    return ctx.replacements[e.id]
+                return self._to_camel_case(e.id)
+            if isinstance(e, Call):
+                if isinstance(e.func, Name) and e.func.id in self._macro_functions:
+                    return self._to_xs_constant(self._eval_macro_function(e), enclosed, e)
+                return self._to_xs_call(e, ctx, enclosed)
+            if isinstance(e, BinOp) and isinstance(e.op, Mult) and isinstance(e.left, List):
+                default_node, size_node = self._parse_array_literal(e)
+                element_type = self._infer_array_element_type(default_node)
+                return self._to_xs_array_create(element_type, default_node, size_node, ctx)
+            if isinstance(e, BinOp):
+                left_xs = self._to_xs_expression(e.left, ctx)
+                op_xs = self._to_xs_binary_op(e.op, e)
+                right_xs = self._to_xs_expression(e.right, ctx)
+                return self._wrap_parens(f"{left_xs}{self.sp}{op_xs}{self.sp}{right_xs}", enclosed)
+            if isinstance(e, UnaryOp):
+                value = self._unpack_constant(e)
+                if value is not None:
+                    return self._to_xs_constant(value, enclosed, e)
+                if isinstance(e.op, Not):
+                    return self._wrap_parens(
+                        f"{self._to_xs_expression(e.operand, ctx)}{self.sp}=={self.sp}false", enclosed)
+                raise self._error(f"Unsupported unary operator: {e}.", e)
+            if isinstance(e, Compare):
+                if len(e.comparators) != 1 or len(e.ops) != 1:
+                    raise self._error("Comparisons must have exactly one operator and one comparator.", e)
+                left_xs = self._to_xs_expression(e.left, ctx)
+                op = self._to_xs_binary_op(e.ops[0], e)
+                right_xs = self._to_xs_expression(e.comparators[0], ctx)
+                return self._wrap_parens(f"{left_xs}{self.sp}{op}{self.sp}{right_xs}", enclosed)
+            if isinstance(e, Attribute) and isinstance(e.value, Name) and e.value.id == "XsConstants":
+                return self._to_camel_case(e.attr)
+            if isinstance(e, JoinedStr):
+                parts = [self._to_xs_expression(val, ctx) for val in e.values]
+                return f"({f'{self.sp}+{self.sp}'.join(parts)})"
+            if isinstance(e, FormattedValue):
+                source_segment = ast.get_source_segment(self._source, e) if self._source is not None else None
+                is_debug_expr = source_segment is not None and re.fullmatch(r"\{.+?=\s*\}", source_segment) is not None
+                if is_debug_expr and e.conversion == ord("r") and e.format_spec is None:
+                    return self._to_xs_expression(e.value, ctx)
+                if e.conversion != -1:
+                    raise self._error("f-string conversion is not supported.", e)
+                if e.format_spec is not None:
+                    raise self._error("f-string format spec is not supported.", e)
                 return self._to_xs_expression(e.value, ctx)
-            if e.conversion != -1:
-                raise ValueError("f-string conversion is not supported")
-            if e.format_spec is not None:
-                raise ValueError("f-string format spec is not supported")
-            return self._to_xs_expression(e.value, ctx)
-        if isinstance(e, BoolOp):
-            op_xs = self._to_xs_binary_op(e.op)
-            parts = [self._to_xs_expression(v, ctx) for v in e.values]
-            return self._wrap_parens(f"{self.sp}{op_xs}{self.sp}".join(parts), enclosed)
-        if isinstance(e, List):
-            return self._to_xs_list_literal_expr(e, ctx)
-        raise ValueError(f"Unsupported expression: {e}")
+            if isinstance(e, BoolOp):
+                op_xs = self._to_xs_binary_op(e.op, e)
+                parts = [self._to_xs_expression(v, ctx) for v in e.values]
+                return self._wrap_parens(f"{self.sp}{op_xs}{self.sp}".join(parts), enclosed)
+            if isinstance(e, List):
+                return self._to_xs_list_literal_expr(e, ctx)
+            raise self._error(f"Unsupported expression type: {type(e).__name__}.", e)
+        except Exception as exc:
+            self._raise_as_conversion_error(exc, e)
 
-    def _to_xs_constant(self, value: str | bool | int | float, enclosed: bool = False) -> str:
+    def _to_xs_constant(self, value: str | bool | int | float, enclosed: bool = False,
+                        node: Optional[ast.AST] = None) -> str:
         if isinstance(value, str):
             return '"' + value.replace('"', '\\"') + '"'
         if isinstance(value, bool):
@@ -605,13 +743,13 @@ class PythonToXsConverter:
         if isinstance(value, int):
             if value > 999_999_999:
                 if value > 2_147_483_647:
-                    raise ValueError(f"xs int can't hold such big value: {value}")
+                    raise self._error(f"XS ints cannot hold values larger than 2147483647: {value}.", node)
                 base = value // 10
                 remainder = value % 10
                 return self._wrap_parens(f"{base}{self.sp}*{self.sp}10{self.sp}+{self.sp}{remainder}", enclosed)
             if value < -999_999_999:
                 if value < -2_147_483_648:
-                    raise ValueError(f"xs int can't hold such small value: {value}")
+                    raise self._error(f"XS ints cannot hold values smaller than -2147483648: {value}.", node)
                 value = value * -1
                 base = value // 10
                 remainder = value % 10
@@ -619,7 +757,7 @@ class PythonToXsConverter:
             return f"{value}"
         if isinstance(value, float):
             return f"{value}"
-        raise ValueError(f"Unsupported variable type: {value}")
+        raise self._error(f"Unsupported literal value: {value!r}.", node)
 
     def _unpack_constant(self, node: expr) -> Optional[Any]:
         if isinstance(node, Constant):
@@ -639,13 +777,13 @@ class PythonToXsConverter:
     def _to_xs_numeric_cast(self, zero: str, arg: expr, ctx: XsContext, enclosed: bool) -> str:
         value = self._unpack_constant(arg)
         if value is not None:
-            return self._to_xs_constant(value, enclosed)
+            return self._to_xs_constant(value, enclosed, arg)
         xs = f"{zero}{self.sp}+{self.sp}{self._to_xs_expression(arg, ctx)}"
         return self._wrap_parens(xs, enclosed)
 
     def _to_xs_call(self, e: Call, ctx: XsContext, enclosed: bool = False) -> str:
         if not isinstance(e.func, Name):
-            raise ValueError(f"Function call must be referenced by name not: {e.func}")
+            raise self._error(f"Function calls must reference a name, not {e.func}.", e.func)
         function_name = self._to_camel_case(e.func.id)
         if function_name == "str":
             xs = f'""{self.sp}+{self.sp}' + self._to_xs_expression(e.args[0], ctx)
@@ -655,7 +793,7 @@ class PythonToXsConverter:
             return f"xsArrayGetSize({arg_xs})"
         if function_name == "cast":
             if len(e.args) != 2:
-                raise ValueError("cast() requires exactly 2 arguments")
+                raise self._error("cast() requires exactly 2 arguments.", e)
             inner = e.args[1]
             if isinstance(inner, Subscript):
                 return self._to_xs_array_get(inner, e.args[0].id, ctx)
@@ -688,12 +826,12 @@ class PythonToXsConverter:
 
     def _to_xs_for(self, e: For, ctx: XsContext) -> str:
         if not (isinstance(e.iter, Call) and isinstance(e.iter.func, Name) and e.iter.func.id in {"range", "i32range"}):
-            raise ValueError("for loops are only supported over range expressions")
+            raise self._error("For-loops are only supported over range(...) or i32range(...).", e.iter)
         if not isinstance(e.target, Name):
-            raise ValueError("loop target must be a new variable")
+            raise self._error("For-loop targets must be simple variable names.", e.target)
 
         loop_var = self._to_camel_case(e.target.id)
-        start_node, end_node, step = self._parse_range_args(e.iter.args)
+        start_node, end_node, step = self._parse_range_args(e.iter.args, e.iter)
 
         if step == 1 or step == -1:
             positive = step > 0
@@ -749,7 +887,7 @@ class PythonToXsConverter:
         xs += f"{ctx.depth * self.indent}}}{self.nl}"
         return xs
 
-    def _parse_range_args(self, args: list[expr]) -> tuple[Optional[expr], expr, int | expr]:
+    def _parse_range_args(self, args: list[expr], node: Optional[ast.AST] = None) -> tuple[Optional[expr], expr, int | expr]:
         if len(args) == 1:
             return None, args[0], 1
         if len(args) == 2:
@@ -759,9 +897,9 @@ class PythonToXsConverter:
             if step is None:
                 return args[0], args[1], args[2]
             if step == 0:
-                raise ValueError("loop step cannot be 0")
+                raise self._error("For-loop steps cannot be 0.", args[2])
             return args[0], args[1], step
-        raise ValueError("range() takes 1 to 3 arguments")
+        raise self._error("range() accepts 1 to 3 arguments.", node or (args[0] if args else None))
 
     def _unpack_int_constant(self, expr: expr) -> Optional[int]:
         value = self._unpack_constant(expr)
@@ -783,7 +921,8 @@ class PythonToXsConverter:
             elif isinstance(case.pattern, MatchAs) and case.pattern.name is None:
                 cases_xs += self._block(inner.depth, "default:", self._to_xs_body(case.body, inner))
             else:
-                raise ValueError(f"unsupported complex case pattern: {case.pattern}")
+                raise self._error(f"Match statements only support literal cases and `case _`; got {case.pattern}.",
+                                  case.pattern)
         header = f"switch{self.sp}({self._to_xs_expression(e.subject, ctx, enclosed=True)})"
         return self._block(ctx.depth, header, cases_xs)
 
@@ -795,39 +934,42 @@ class PythonToXsConverter:
         )
 
     def to_xs_function_definition(self, function: FunctionDef, ctx: XsContext, root_function: bool = True) -> str:
-        if self._has_xs_ignore(function):
-            return ""
-        xs_type = self._to_xs_function_type(function.returns)
-        name = self._to_camel_case(function.name)
+        try:
+            if self._has_xs_ignore(function):
+                return ""
+            xs_type = self._to_xs_function_type(function.returns)
+            name = self._to_camel_case(function.name)
 
-        if len(function.args.args) != len(function.args.defaults):
-            raise ValueError("all functions arguments must have default value")
+            if len(function.args.args) != len(function.args.defaults):
+                raise self._error("All function arguments must have a default value.", function.args)
 
-        parameters_xs = self._to_xs_parameters(function, ctx)
-        has_parameters = len(parameters_xs) > 0
+            parameters_xs = self._to_xs_parameters(function, ctx)
+            has_parameters = len(parameters_xs) > 0
 
-        rule_modifier_xs = self._to_xs_rule_modifiers(function, root_function, has_parameters, xs_type)
-        has_rules = len(rule_modifier_xs) > 0
-        xs = ""
-        doc = ast.get_docstring(function)
-        if doc is not None:
-            self._doc_strings.add(doc.replace("\n", "").replace(" ", ""))
-        if doc is not None and len(self.indent) > 0:
-            doc = re.sub(r'`([a-zA-Z_][a-zA-Z0-9_]*)`',
-                         lambda m: '`' + self._to_camel_case(m.group(1)) + '`', doc)
-            doc = doc.replace(":param", "@param")
-            doc = doc.replace(":return:", "@return")
-            doc = doc.replace(":", " -")
-            doc = doc.replace("\n", f"\n{(ctx.depth + 1) * self.indent}")
-            xs += f"{ctx.depth * self.indent}/*\n{(ctx.depth + 1) * self.indent}"
-            xs += doc + "\n"
-            xs += f"{ctx.depth * self.indent}*/\n"
-        if has_rules:
-            header = f"rule {name} {rule_modifier_xs}"
-        else:
-            header = f"{xs_type} {name}({parameters_xs})"
-        xs += self._block(ctx.depth, header, self._to_xs_body(function.body, ctx))
-        return xs
+            rule_modifier_xs = self._to_xs_rule_modifiers(function, root_function, has_parameters, xs_type)
+            has_rules = len(rule_modifier_xs) > 0
+            xs = ""
+            doc = ast.get_docstring(function)
+            if doc is not None:
+                self._doc_strings.add(doc.replace("\n", "").replace(" ", ""))
+            if doc is not None and len(self.indent) > 0:
+                doc = re.sub(r'`([a-zA-Z_][a-zA-Z0-9_]*)`',
+                             lambda m: '`' + self._to_camel_case(m.group(1)) + '`', doc)
+                doc = doc.replace(":param", "@param")
+                doc = doc.replace(":return:", "@return")
+                doc = doc.replace(":", " -")
+                doc = doc.replace("\n", f"\n{(ctx.depth + 1) * self.indent}")
+                xs += f"{ctx.depth * self.indent}/*\n{(ctx.depth + 1) * self.indent}"
+                xs += doc + "\n"
+                xs += f"{ctx.depth * self.indent}*/\n"
+            if has_rules:
+                header = f"rule {name} {rule_modifier_xs}"
+            else:
+                header = f"{xs_type} {name}({parameters_xs})"
+            xs += self._block(ctx.depth, header, self._to_xs_body(function.body, ctx))
+            return xs
+        except Exception as exc:
+            self._raise_as_conversion_error(exc, function)
 
     def _to_xs_parameters(self, function: FunctionDef, ctx: XsContext) -> str:
         parameters = [self._to_xs_arg(a, default, ctx) for a, default in
@@ -839,7 +981,8 @@ class PythonToXsConverter:
                           isinstance(d, Call) and isinstance(d.func, Name) and d.func.id == "xs_rule"]
         is_rule = len(rule_decorator) > 0
         if is_rule and (root_function or has_parameters or xs_type != "void"):
-            raise ValueError("can not have xs task with parameters or as a default root function")
+            raise self._error("xs_rule functions cannot have parameters, return values, or be the default root function.",
+                              rule_decorator[0])
         if not is_rule:
             return ""
 
@@ -857,7 +1000,7 @@ class PythonToXsConverter:
             if isinstance(kw, keyword) and isinstance(kw.value, Constant):
                 rule_settings[kw.arg] = kw.value.value
             else:
-                raise ValueError(f"not a keyword: {kw}")
+                raise self._error(f"xs_rule only supports constant keyword arguments; got {kw}.", kw)
         modifiers = []
         if rule_settings.get("group") is not None:
             modifiers.append(f"group {rule_settings['group']}")
@@ -867,7 +1010,8 @@ class PythonToXsConverter:
             modifiers.append("inactive")
         if rule_settings.get("high_frequency"):
             if rule_settings.get("min_interval") is not None or rule_settings.get("max_interval") is not None:
-                raise ValueError("can not use both high_frequency and min/max_interval")
+                raise self._error("xs_rule cannot combine high_frequency with min_interval or max_interval.",
+                                  rule_decorator)
             modifiers.append("highFrequency")
         if rule_settings.get("run_immediately"):
             modifiers.append("runImmediately")
@@ -880,60 +1024,87 @@ class PythonToXsConverter:
         return " ".join(modifiers)
 
     def _to_xs_function(self, function: Callable[..., Any], root_function: bool = True) -> str:
-        source = textwrap.dedent(inspect.getsource(function))
-        self._source = source
-        module_ast = ast.parse(source)
+        source_name = inspect.getsourcefile(function)
+        try:
+            source_lines, start_line = inspect.getsourcelines(function)
+        except (OSError, TypeError):
+            try:
+                source = inspect.getsource(function)
+                source_lines = source.splitlines(keepends=True)
+                start_line = 1
+            except (OSError, TypeError) as exc:
+                raise self._source_access_error(exc, source_name) from exc
+
+        original_source = "".join(source_lines)
+        source = textwrap.dedent(original_source)
+        self._set_source_context(
+            source,
+            source_name=source_name,
+            line_offset=max(start_line - 1, 0),
+            column_offset=self._common_indent(original_source.splitlines()),
+            display_source_lines=original_source.splitlines(),
+        )
+        try:
+            module_ast = ast.parse(source, filename=source_name or "<unknown>")
+        except SyntaxError as exc:
+            raise self._syntax_error(exc, source_name) from exc
+
         if len(module_ast.body) != 1 or not isinstance(module_ast.body[0], FunctionDef):
-            raise ValueError("top level must contain a single function")
+            if module_ast.body:
+                raise self._error("Top-level source must contain a single function definition.", module_ast.body[0])
+            raise self._build_source_start_error("Top-level source must contain a single function definition.")
         return self.to_xs_function_definition(module_ast.body[0], XsContext(), root_function)
 
     def _to_xs_body(self, body: list[expr | stmt], ctx: XsContext) -> str:
         xs = ""
         inner = ctx.indented()
         for e in body:
-            if isinstance(e, AnnAssign) and isinstance(e.value, List):
-                if not isinstance(e.target, Name):
-                    raise ValueError("assignment must have a variable name")
-                element_type = self._annotation_element_type(e.annotation)
-                if element_type is None:
-                    element_type = self._infer_list_literal_type(e.value.elts)
-                stmt_xs = self._to_xs_list_literal_stmts(
-                    self._to_camel_case(e.target.id), e.value.elts, element_type, inner)
-            elif isinstance(e, AnnAssign):
-                nd_result = self._try_to_xs_nd_array_init(e, inner)
-                if nd_result is not None:
-                    stmt_xs = nd_result
+            try:
+                if isinstance(e, AnnAssign) and isinstance(e.value, List):
+                    if not isinstance(e.target, Name):
+                        raise self._error("Variable declaration must use a simple variable name.", e.target)
+                    element_type = self._annotation_element_type(e.annotation)
+                    if element_type is None:
+                        element_type = self._infer_list_literal_type(e.value.elts, e.value)
+                    stmt_xs = self._to_xs_list_literal_stmts(
+                        self._to_camel_case(e.target.id), e.value.elts, element_type, inner)
+                elif isinstance(e, AnnAssign):
+                    nd_result = self._try_to_xs_nd_array_init(e, inner)
+                    if nd_result is not None:
+                        stmt_xs = nd_result
+                    else:
+                        stmt_xs = self._to_xs_variable_definition(e, inner)
+                elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Subscript):
+                    stmt_xs = self._to_xs_array_set(e.targets[0], e.value, inner)
+                elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Name) and isinstance(
+                        e.value, List):
+                    element_type = self._infer_list_literal_type(e.value.elts, e.value)
+                    stmt_xs = self._to_xs_list_literal_stmts(
+                        self._to_camel_case(e.targets[0].id), e.value.elts, element_type, inner)
+                elif isinstance(e, Assign):
+                    stmt_xs = self._to_xs_variable_assignment(e, inner)
+                elif isinstance(e, AugAssign):
+                    stmt_xs = self._to_xs_variable_aug_assignment(e, inner)
+                elif isinstance(e, Expr):
+                    stmt_xs = self._to_xs_expression_top(e, inner)
+                elif isinstance(e, If):
+                    stmt_xs = self._to_xs_if(e, inner)
+                elif isinstance(e, For):
+                    stmt_xs = self._to_xs_for(e, inner)
+                elif isinstance(e, While):
+                    stmt_xs = self._to_xs_while(e, inner)
+                elif isinstance(e, Match):
+                    stmt_xs = self._to_xs_match(e, inner)
+                elif isinstance(e, With):
+                    stmt_xs = self._to_xs_macro_with(e, ctx)
+                elif isinstance(e, Return):
+                    stmt_xs = self._to_xs_return(e, inner)
+                elif isinstance(e, (Pass, Global)):
+                    stmt_xs = ""
                 else:
-                    stmt_xs = self._to_xs_variable_definition(e, inner)
-            elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Subscript):
-                stmt_xs = self._to_xs_array_set(e.targets[0], e.value, inner)
-            elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Name) and isinstance(
-                    e.value, List):
-                element_type = self._infer_list_literal_type(e.value.elts)
-                stmt_xs = self._to_xs_list_literal_stmts(
-                    self._to_camel_case(e.targets[0].id), e.value.elts, element_type, inner)
-            elif isinstance(e, Assign):
-                stmt_xs = self._to_xs_variable_assignment(e, inner)
-            elif isinstance(e, AugAssign):
-                stmt_xs = self._to_xs_variable_aug_assignment(e, inner)
-            elif isinstance(e, Expr):
-                stmt_xs = self._to_xs_expression_top(e, inner)
-            elif isinstance(e, If):
-                stmt_xs = self._to_xs_if(e, inner)
-            elif isinstance(e, For):
-                stmt_xs = self._to_xs_for(e, inner)
-            elif isinstance(e, While):
-                stmt_xs = self._to_xs_while(e, inner)
-            elif isinstance(e, Match):
-                stmt_xs = self._to_xs_match(e, inner)
-            elif isinstance(e, With):
-                stmt_xs = self._to_xs_macro_with(e, ctx)
-            elif isinstance(e, Return):
-                stmt_xs = self._to_xs_return(e, inner)
-            elif isinstance(e, (Pass, Global)):
-                stmt_xs = ""
-            else:
-                raise ValueError(e)
+                    raise self._error(f"Unsupported statement in function body: {type(e).__name__}.", e)
+            except Exception as exc:
+                self._raise_as_conversion_error(exc, e)
             xs += self._flush_pending() + stmt_xs
         return xs
 
@@ -944,28 +1115,34 @@ class PythonToXsConverter:
 
     def _eval_macro_function(self, call: Call) -> Any:
         if not isinstance(call.func, Name):
-            raise ValueError("Macro should be a name token")
+            raise self._error("Macro call must reference a function name.", call.func)
         return self._eval_macro_var(call)
 
     def _eval_macro_var(self, call: Call) -> Any:
         if 1 <= len(call.args) <= 2 and isinstance(call.args[0], Constant) and isinstance(
                 call.args[0].value, str):
-            return eval(call.args[0].value, self._vars)
-        raise ValueError("macro should have 1 string constant argument")
+            try:
+                return eval(call.args[0].value, self._vars)
+            except Exception as exc:
+                raise self._error(f"Failed to evaluate macro expression {call.args[0].value!r}: {exc}",
+                                  call.args[0]) from exc
+        raise self._error("Macro calls must have a string constant as their first argument.", call)
 
     def _to_xs_macro_with(self, w: With, ctx: XsContext) -> str:
         if not (len(w.items) == 1 and isinstance(w.items[0].context_expr, Call)):
-            raise ValueError("incorrect repeated macro usage")
+            raise self._error("Macro repeat blocks must use a single call in the with-statement.", w)
 
         if isinstance(w.items[0].optional_vars, Name):
             names = [w.items[0].optional_vars.id]
         elif isinstance(w.items[0].optional_vars, Tuple):
             names = [n.id for n in w.items[0].optional_vars.elts if isinstance(n, Name)]
         else:
-            raise ValueError("only unpacked single or destructured tuple are allowed")
+            raise self._error("Macro repeat blocks only support a single name or a destructured tuple target.",
+                              w.items[0].optional_vars)
         iterable_value = self._eval_macro_function(w.items[0].context_expr)
         if not isinstance(iterable_value, Iterable):
-            raise ValueError("repeater macro needs a reference to an iterable")
+            raise self._error("Macro repeat blocks require the macro call to evaluate to an iterable.",
+                              w.items[0].context_expr)
         xs = ""
         for value in iterable_value:
             new_replacements = ctx.replacements.copy()

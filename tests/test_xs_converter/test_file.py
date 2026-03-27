@@ -1,6 +1,7 @@
 import unittest
 
 from xs_converter.converter import PythonToXsConverter
+from xs_converter.exceptions import XsConversionError
 from tests.test_xs_converter.helpers import convert_file, module_from_source
 
 import tests.test_xs_converter.fixtures.imports_only as imports_only
@@ -55,25 +56,29 @@ class FileConversionTest(unittest.TestCase):
 
     def test_unsupported_top_level_if_raises(self):
         mod = module_from_source("if True:\n    pass\n")
-        with self.assertRaises(ValueError) as cm:
+        with self.assertRaises(XsConversionError) as cm:
             PythonToXsConverter.to_xs_file(mod, indent=True)
-        self.assertIn("If", str(cm.exception))
+        message = str(cm.exception)
+        self.assertIn("If", message)
+        self.assertIn("Location:", message)
+        self.assertIn("if True:", message)
+        self.assertIn("^", message)
 
     def test_unsupported_top_level_for_raises(self):
         mod = module_from_source("for i in range(10):\n    pass\n")
-        with self.assertRaises(ValueError) as cm:
+        with self.assertRaises(XsConversionError) as cm:
             PythonToXsConverter.to_xs_file(mod, indent=True)
         self.assertIn("For", str(cm.exception))
 
     def test_unsupported_top_level_while_raises(self):
         mod = module_from_source("while True:\n    pass\n")
-        with self.assertRaises(ValueError) as cm:
+        with self.assertRaises(XsConversionError) as cm:
             PythonToXsConverter.to_xs_file(mod, indent=True)
         self.assertIn("While", str(cm.exception))
 
     def test_unsupported_top_level_expression_raises(self):
         mod = module_from_source("print('hello')\n")
-        with self.assertRaises(ValueError) as cm:
+        with self.assertRaises(XsConversionError) as cm:
             PythonToXsConverter.to_xs_file(mod, indent=True)
         self.assertIn("Expr", str(cm.exception))
 
@@ -109,7 +114,7 @@ class FileConversionTest(unittest.TestCase):
             "def tick() -> None:\n"
             "    pass\n"
         )
-        with self.assertRaises(ValueError) as cm:
+        with self.assertRaises(XsConversionError) as cm:
             PythonToXsConverter.to_xs_file(mod, indent=True)
         self.assertIn("default root function", str(cm.exception))
 

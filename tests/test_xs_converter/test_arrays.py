@@ -2,6 +2,7 @@ import unittest
 
 from numpy import int32, float32
 from typing import List, cast
+from xs_converter.exceptions import XsConversionError
 from xs_converter.functions import vector, xs_set_player_attribute, xs_chat_data, xs_array_get_int
 from xs_converter.symbols import XsVector
 
@@ -237,7 +238,7 @@ class TestArrayDefinitions(unittest.TestCase):
             x: int = 5
             arr: list[int] = [x] * 10
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(XsConversionError):
             convert(f)
 
     def test_size_is_variable(self):
@@ -472,7 +473,7 @@ class TestArrayAssignment(unittest.TestCase):
             x: int = 5
             a[0] = x
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(XsConversionError):
             convert(f)
 
     def test_no_indent(self):
@@ -1049,7 +1050,7 @@ class TestListLiterals(unittest.TestCase):
             b: int = 2
             arr = [a, b]
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(XsConversionError):
             convert(f)
 
     def test_all_variables_with_annotation(self):
@@ -1145,21 +1146,21 @@ class TestListLiterals(unittest.TestCase):
         def f() -> None:
             arr = [1, 2.0]
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(XsConversionError):
             convert(f)
 
     def test_mixed_int_bool_raises(self):
         def f() -> None:
             arr = [1, True]
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(XsConversionError):
             convert(f)
 
     def test_empty_list_raises(self):
         def f() -> None:
             arr = []
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(XsConversionError):
             convert(f)
 
     def test_no_indent(self):
@@ -1263,7 +1264,7 @@ class TestListLiterals(unittest.TestCase):
         def f() -> None:
             xs_chat_data([])
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(XsConversionError):
             convert(f)
 
 
