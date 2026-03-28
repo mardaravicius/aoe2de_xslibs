@@ -1,7 +1,10 @@
 import random
 import unittest
 
+import numpy as np
 from xs.int_int_dict2 import *
+
+np.seterr(over="ignore")
 
 
 class IntIntDictTest(unittest.TestCase):

@@ -2,6 +2,7 @@ import ast
 import inspect
 import re
 import textwrap
+from dataclasses import dataclass
 from ast import FunctionDef, Constant, Name, expr, arg, Expr, AnnAssign, Call, Assign, BinOp, Add, Sub, Mod, Mult, Div, \
     If, Compare, Eq, Gt, GtE, Lt, LtE, NotEq, For, While, AugAssign, Match, MatchValue, MatchAs, Return, Pass, \
     Subscript, stmt, Attribute, keyword, With, Tuple, UnaryOp, USub, JoinedStr, FormattedValue, Global, BoolOp, Or, And, \
@@ -12,6 +13,18 @@ from typing import Any, Callable, Iterable, Optional
 from xs_converter.context import XsContext
 from xs_converter.exceptions import XsConversionError
 from xs_converter.macro import macro_pass_value, macro_repeat_with_iterable
+
+
+@dataclass(frozen=True)
+class RenderedStatement:
+    text: str
+    is_function: bool = False
+
+
+@dataclass(frozen=True)
+class RenderedExpression:
+    value: str
+    prelude: str = ""
 
 
 class PythonToXsConverter:
@@ -102,6 +115,27 @@ class PythonToXsConverter:
         "str": '""',
     }
 
+    _ARRAY_LIST_NAMES = {"list", "List"}
+
+    def __init__(self, indent: bool, bindings: dict[str, Any]):
+        if indent:
+            self.sp = " "
+            self.nl = "\n"
+            self.indent = " " * 4
+        else:
+            self.sp = ""
+            self.nl = ""
+            self.indent = ""
+        self._vars = bindings
+        self._doc_strings = set()
+        self._temp_counter = 0
+        self._source: Optional[str] = None
+        self._source_name: Optional[str] = None
+        self._source_line_offset = 0
+        self._source_column_offset = 0
+        self._display_source_lines: list[str] = []
+
+    # Public API
     @staticmethod
     def to_xs_script(*functions: Callable[..., Any], indent: bool, root_flags: Optional[list[bool]] = None, **kwargs: Any) -> str:
         parts = []
@@ -118,21 +152,9 @@ class PythonToXsConverter:
     def to_xs_file(module: ModuleType, indent: bool, **kwargs) -> str:
         converter = PythonToXsConverter(indent, kwargs)
         source_name = inspect.getsourcefile(module) or getattr(module, "__file__", None)
-        try:
-            try:
-                source_lines, start_line = inspect.getsourcelines(module)
-            except (OSError, TypeError):
-                source = inspect.getsource(module)
-                source_lines = source.splitlines(keepends=True)
-                start_line = 1
-        except (OSError, TypeError) as exc:
-            raise converter._source_access_error(exc, source_name) from exc
-
+        source_lines, start_line = converter._read_source_lines(module, source_name)
         source = "".join(source_lines)
-        try:
-            module_ast = ast.parse(source, filename=source_name or "<unknown>")
-        except SyntaxError as exc:
-            raise converter._syntax_error(exc, source_name) from exc
+        module_ast = converter._parse_source(source, source_name)
 
         converter._set_source_context(
             source,
@@ -147,76 +169,55 @@ class PythonToXsConverter:
             if isinstance(node, (Import, ImportFrom)):
                 continue
             try:
-                if isinstance(node, FunctionDef):
-                    result = converter.to_xs_function_definition(node, ctx, root_function=not has_function)
-                    if result:
-                        parts.append((True, result))
-                        has_function = True
-                elif isinstance(node, AnnAssign) and isinstance(node.value, List):
-                    if not isinstance(node.target, Name):
-                        raise converter._error("Variable declaration must use a simple variable name.", node.target)
-                    element_type = converter._annotation_element_type(node.annotation)
-                    if element_type is None:
-                        element_type = converter._infer_list_literal_type(node.value.elts, node.value)
-                    stmt_xs = converter._to_xs_list_literal_stmts(
-                        converter._to_camel_case(node.target.id), node.value.elts, element_type, ctx)
-                    parts.append((False, converter._flush_pending() + stmt_xs))
-                elif isinstance(node, AnnAssign):
-                    nd_result = converter._try_to_xs_nd_array_init(node, ctx)
-                    stmt_xs = nd_result if nd_result is not None else converter._to_xs_variable_definition(node, ctx)
-                    parts.append((False, converter._flush_pending() + stmt_xs))
-                elif isinstance(node, Assign) and len(node.targets) == 1 and isinstance(node.targets[0], Subscript):
-                    stmt_xs = converter._to_xs_array_set(node.targets[0], node.value, ctx)
-                    parts.append((False, converter._flush_pending() + stmt_xs))
-                elif isinstance(node, Assign) and len(node.targets) == 1 and isinstance(node.targets[0], Name) and isinstance(
-                        node.value, List):
-                    element_type = converter._infer_list_literal_type(node.value.elts, node.value)
-                    stmt_xs = converter._to_xs_list_literal_stmts(
-                        converter._to_camel_case(node.targets[0].id), node.value.elts, element_type, ctx)
-                    parts.append((False, converter._flush_pending() + stmt_xs))
-                elif isinstance(node, Assign):
-                    stmt_xs = converter._to_xs_variable_assignment(node, ctx)
-                    parts.append((False, converter._flush_pending() + stmt_xs))
-                else:
-                    raise converter._error(f"Unsupported top-level statement: {type(node).__name__}.", node)
+                rendered = converter._render_module_statement(node, ctx, root_function=not has_function)
             except Exception as exc:
                 converter._raise_as_conversion_error(exc, node)
+            if not rendered.text:
+                continue
+            parts.append((rendered.is_function, rendered.text))
+            if rendered.is_function:
+                has_function = True
         return converter._format_parts(parts)
 
-    def _format_parts(self, parts: list[tuple[bool, str]]) -> str:
-        result = ""
-        for i, (is_func, text) in enumerate(parts):
-            if i > 0:
-                prev_is_func = parts[i - 1][0]
-                if is_func or prev_is_func:
-                    result += self.nl
-            result += text
-        return result
+    def to_xs_function_definition(self, function: FunctionDef, ctx: XsContext, root_function: bool = True) -> str:
+        try:
+            if self._has_xs_ignore(function):
+                return ""
+            xs_type = self._to_xs_function_type(function.returns)
+            name = self._to_camel_case(function.name)
 
-    def __init__(self, indent: bool, bindings: dict[str, Any]):
-        if indent:
-            self.sp = " "
-            self.nl = "\n"
-            self.indent = " " * 4
-        else:
-            self.sp = ""
-            self.nl = ""
-            self.indent = ""
-        self._vars = bindings
-        self._doc_strings = set()
-        self._pending_stmts: list[str] = []
-        self._temp_counter = 0
-        self._source: Optional[str] = None
-        self._source_name: Optional[str] = None
-        self._source_line_offset = 0
-        self._source_column_offset = 0
-        self._display_source_lines: list[str] = []
+            if len(function.args.args) != len(function.args.defaults):
+                raise self._error("All function arguments must have a default value.", function.args)
 
-    @staticmethod
-    def _common_indent(lines: list[str]) -> int:
-        indents = [len(line) - len(line.lstrip()) for line in lines if line.strip()]
-        return min(indents, default=0)
+            parameters_xs = self._to_xs_parameters(function, ctx)
+            has_parameters = len(parameters_xs) > 0
 
+            rule_modifier_xs = self._to_xs_rule_modifiers(function, root_function, has_parameters, xs_type)
+            has_rules = len(rule_modifier_xs) > 0
+            xs = ""
+            doc = ast.get_docstring(function)
+            if doc is not None:
+                self._doc_strings.add(doc.replace("\n", "").replace(" ", ""))
+            if doc is not None and len(self.indent) > 0:
+                doc = re.sub(r'`([a-zA-Z_][a-zA-Z0-9_]*)`',
+                             lambda m: '`' + self._to_camel_case(m.group(1)) + '`', doc)
+                doc = doc.replace(":param", "@param")
+                doc = doc.replace(":return:", "@return")
+                doc = doc.replace(":", " -")
+                doc = doc.replace("\n", f"\n{(ctx.depth + 1) * self.indent}")
+                xs += f"{ctx.depth * self.indent}/*\n{(ctx.depth + 1) * self.indent}"
+                xs += doc + "\n"
+                xs += f"{ctx.depth * self.indent}*/\n"
+            if has_rules:
+                header = f"rule {name} {rule_modifier_xs}"
+            else:
+                header = f"{xs_type} {name}({parameters_xs})"
+            xs += self._block(ctx.depth, header, self._to_xs_body(function.body, ctx))
+            return xs
+        except Exception as exc:
+            self._raise_as_conversion_error(exc, function)
+
+    # Source loading and error reporting
     @staticmethod
     def _syntax_error(exc: SyntaxError, source_name: Optional[str]) -> XsConversionError:
         return XsConversionError(
@@ -234,6 +235,22 @@ class PythonToXsConverter:
             f"Could not read Python source: {exc}",
             source_name=source_name,
         )
+
+    def _read_source_lines(self, source_object: Any, source_name: Optional[str]) -> tuple[list[str], int]:
+        try:
+            return inspect.getsourcelines(source_object)
+        except (OSError, TypeError):
+            try:
+                source = inspect.getsource(source_object)
+            except (OSError, TypeError) as exc:
+                raise self._source_access_error(exc, source_name) from exc
+            return source.splitlines(keepends=True), 1
+
+    def _parse_source(self, source: str, source_name: Optional[str]) -> ast.Module:
+        try:
+            return ast.parse(source, filename=source_name or "<unknown>")
+        except SyntaxError as exc:
+            raise self._syntax_error(exc, source_name) from exc
 
     def _set_source_context(
             self,
@@ -324,6 +341,26 @@ class PythonToXsConverter:
         message = str(exc) or exc.__class__.__name__
         raise self._error(message, node) from exc
 
+    # Formatting and naming
+    def _format_parts(self, parts: list[tuple[bool, str]]) -> str:
+        result = ""
+        for i, (is_func, text) in enumerate(parts):
+            if i > 0:
+                prev_is_func = parts[i - 1][0]
+                if is_func or prev_is_func:
+                    result += self.nl
+            result += text
+        return result
+
+    @staticmethod
+    def _combine_prelude(*expressions: RenderedExpression) -> str:
+        return "".join(expression.prelude for expression in expressions)
+
+    @staticmethod
+    def _common_indent(lines: list[str]) -> int:
+        indents = [len(line) - len(line.lstrip()) for line in lines if line.strip()]
+        return min(indents, default=0)
+
     def _wrap_parens(self, xs: str, enclosed: bool) -> str:
         if enclosed:
             return xs
@@ -334,6 +371,11 @@ class PythonToXsConverter:
 
     def _block(self, depth: int, header: str, body: str) -> str:
         return f"{depth * self.indent}{header}{self.sp}{{{self.nl}{body}{depth * self.indent}}}{self.nl}"
+
+    def _require_inline_expression(self, rendered: RenderedExpression, node: Optional[ast.AST] = None) -> str:
+        if rendered.prelude:
+            raise self._error("This expression form is not supported in this position.", node)
+        return rendered.value
 
     def _to_camel_case(self, s: str) -> str:
         prefix = ""
@@ -347,629 +389,18 @@ class PythonToXsConverter:
         s = re.sub(r'(?<!_)_(?!_)([a-zA-Z0-9])', lambda m: m.group(1).upper(), s)
         return prefix + s + suffix
 
-    def _to_xs_type(self, annotation: expr) -> str:
-        if not isinstance(annotation, Name):
-            raise self._error("Type annotations must be simple type names.", annotation)
-
-        python_type = annotation.id
-        xs_type = self._TYPE_MAP.get(python_type)
-        if xs_type is None:
-            raise self._error(f"Python type {python_type!r} cannot be converted to an XS type.", annotation)
-        return xs_type
-
-    def _to_xs_modifier(self, python_type: str, node: Optional[ast.AST] = None) -> str:
-        xs_mod = self._MODIFIER_MAP.get(python_type)
-        if xs_mod is None:
-            raise self._error(f"Python modifier {python_type!r} cannot be converted to an XS modifier.", node)
-        return xs_mod
-
-    def _to_xs_function_type(self, expression: expr) -> str:
-        if isinstance(expression, Constant) and expression.value is None:
-            return "void"
-        if isinstance(expression, Name):
-            return self._to_xs_type(expression)
-        raise self._error("Function return annotations must be a type name or None.", expression)
-
-    def _to_xs_arg(self, a: arg, default: Optional[expr], ctx: XsContext) -> str:
-        name = self._to_camel_case(a.arg)
-        type = self._to_xs_type(a.annotation)
-        xs = f"{type} {name}"
-        if default is not None:
-            xs += f"{self.sp}={self.sp}{self._to_xs_expression(default, ctx)}"
-        return xs
-
-    def _parse_cast_call(self, node: expr) -> Optional[tuple[str, expr]]:
-        if (isinstance(node, Call)
-                and isinstance(node.func, Name)
-                and node.func.id == "cast"
-                and len(node.args) == 2
-                and isinstance(node.args[0], Name)
-                and node.args[0].id in self._ARRAY_CREATE_MAP):
-            return node.args[0].id, node.args[1]
-        return None
-
-    def _infer_array_element_type(self, node: expr) -> str:
-        if isinstance(node, Call) and isinstance(node.func, Name):
-            func_name = node.func.id
-            if func_name in self._ARRAY_CREATE_MAP:
-                return func_name
-            if func_name == "vector":
-                return "XsVector"
-        cast_info = self._parse_cast_call(node)
-        if cast_info is not None:
-            return cast_info[0]
-        value = self._unpack_constant(node)
-        if value is not None:
-            if isinstance(value, bool):
-                return "bool"
-            if isinstance(value, int):
-                return "int"
-            if isinstance(value, float):
-                return "float"
-            if isinstance(value, str):
-                return "str"
-        raise self._error("Could not infer the array element type from this value.", node)
-
-    def _to_xs_array_create(self, element_type: str, default_node: expr, size_node: expr, ctx: XsContext) -> str:
-        create_func = self._ARRAY_CREATE_MAP.get(element_type)
-        if create_func is None:
-            raise self._error(f"Array creation does not support element type {element_type!r}.", default_node)
-
-        size_xs = self._to_xs_expression(size_node, ctx, enclosed=True)
-        default_xs = self._to_xs_expression(default_node, ctx, enclosed=True)
-
-        zero_xs = self._ARRAY_ZERO_XS.get(element_type)
-        if element_type == "XsVector":
-            zero_xs = f"vector(0.0,{self.sp}0.0,{self.sp}0.0)"
-
-        if zero_xs is not None and default_xs == zero_xs:
-            return f"{create_func}({size_xs})"
-        return f"{create_func}({size_xs},{self.sp}{default_xs})"
-
-    def _parse_array_literal(self, value: expr) -> tuple[expr, expr]:
-        if isinstance(value, List):
-            raise self._error("Array creation from list literals is not supported here; use [default] * size instead.", value)
-        if not (isinstance(value, BinOp) and isinstance(value.op, Mult) and isinstance(value.left, List)):
-            raise self._error("Arrays must be defined with [default_value] * size syntax.", value)
-
-        list_node = value.left
-        if len(list_node.elts) != 1:
-            raise self._error("Array defaults must be a single-element list.", list_node)
-
-        default_node = list_node.elts[0]
-        if self._unpack_constant(default_node) is None and not isinstance(default_node, Call):
-            raise self._error("Array default values must be literals or constructor calls.", default_node)
-        return default_node, value.right
-
-    _ARRAY_LIST_NAMES = {"list", "List"}
-
-    def _flush_pending(self) -> str:
-        if not self._pending_stmts:
-            return ""
-        result = "".join(self._pending_stmts)
-        self._pending_stmts.clear()
-        return result
-
     def _next_temp_name(self) -> str:
         name = f"temp{self._temp_counter:08x}"
         self._temp_counter += 1
         return name
 
-    def _annotation_element_type(self, annotation: expr) -> Optional[str]:
-        if (isinstance(annotation, Subscript)
-                and isinstance(annotation.value, Name)
-                and annotation.value.id in self._ARRAY_LIST_NAMES
-                and isinstance(annotation.slice, Name)
-                and annotation.slice.id in self._ARRAY_CREATE_MAP):
-            return annotation.slice.id
-        return None
-
-    def _infer_list_literal_type(self, elements: list[expr], node: Optional[ast.AST] = None) -> str:
-        inferred = set()
-        for elt in elements:
-            try:
-                t = self._infer_array_element_type(elt)
-                inferred.add(t)
-            except XsConversionError:
-                continue
-        error_node = node if node is not None else (elements[0] if elements else None)
-        if not inferred:
-            raise self._error(
-                "Could not infer the array type from this list literal: "
-                "at least one element must be a constant or typed cast.",
-                error_node,
-            )
-        create_funcs = {self._ARRAY_CREATE_MAP[t] for t in inferred}
-        if len(create_funcs) > 1:
-            raise self._error("Mixed constant types in a list literal are not supported.", error_node)
-        return sorted(inferred)[0]
-
-    def _to_xs_list_literal_stmts(self, var_name: str, elements: list[expr],
-                                  element_type: str, ctx: XsContext) -> str:
-        create_func = self._ARRAY_CREATE_MAP[element_type]
-        set_func = self._ARRAY_SET_MAP[element_type]
-        saved_pending = self._pending_stmts
-        self._pending_stmts = []
-        xs = self._stmt(ctx.depth, f"int {var_name}{self.sp}={self.sp}{create_func}({len(elements)})")
-        for i, elt in enumerate(elements):
-            value_xs = self._to_xs_expression(elt, ctx, enclosed=True)
-            xs += self._flush_pending()
-            xs += self._stmt(ctx.depth, f"{set_func}({var_name},{self.sp}{i},{self.sp}{value_xs})")
-        self._pending_stmts = saved_pending
-        return xs
-
-    def _to_xs_list_literal_expr(self, list_node: List, ctx: XsContext) -> str:
-        elements = list_node.elts
-        if not elements:
-            raise self._error("Cannot create an array from an empty list literal without a type annotation.", list_node)
-        element_type = self._infer_list_literal_type(elements, list_node)
-        temp_name = self._next_temp_name()
-        self._pending_stmts.append(
-            self._to_xs_list_literal_stmts(temp_name, elements, element_type, ctx)
-        )
-        return temp_name
-
-    def _to_xs_variable_definition(self, a: AnnAssign, ctx: XsContext) -> str:
-        if isinstance(a.annotation, Name):
-            modifier = ""
-            python_type = a.annotation.id
-            xs_type = self._to_xs_type(a.annotation)
-        elif isinstance(a.annotation, Subscript) and isinstance(a.annotation.value, Name):
-            python_type = None
-            if a.annotation.value.id in self._ARRAY_LIST_NAMES:
-                modifier = ""
-                xs_type = "int"
-            else:
-                modifier = self._to_xs_modifier(a.annotation.value.id, a.annotation.value) + " "
-                if isinstance(a.annotation.slice, Name):
-                    xs_type = self._to_xs_type(a.annotation.slice)
-                else:
-                    raise self._error("Variable declarations must include a supported type annotation.", a.annotation.slice)
-        else:
-            raise self._error("Variable declarations must include a supported type annotation.", a.annotation)
-
-        if isinstance(a.target, Name):
-            name = self._to_camel_case(a.target.id)
-        else:
-            raise self._error("Variable declarations must use a simple variable name.", a.target)
-
-        if isinstance(a.value, Subscript) and python_type is not None:
-            value_xs = self._to_xs_array_get(a.value, python_type, ctx)
-        elif isinstance(a.value, Subscript):
-            value_xs = self._to_xs_array_get(a.value, "int", ctx)
-        else:
-            value_xs = self._to_xs_expression(a.value, ctx, enclosed=True)
-        return self._stmt(ctx.depth, f"{modifier}{xs_type} {name}{self.sp}={self.sp}{value_xs}")
-
-    def _to_xs_array_get(self, subscript: Subscript, element_type: str, ctx: XsContext) -> str:
-        get_func = self._ARRAY_GET_MAP.get(element_type)
-        if get_func is None:
-            raise self._error(f"Array reads do not support element type {element_type!r}.", subscript)
-        index_xs = self._to_xs_expression(subscript.slice, ctx, enclosed=True)
-        if isinstance(subscript.value, Name):
-            array_xs = self._to_camel_case(subscript.value.id)
-        elif isinstance(subscript.value, Subscript):
-            array_xs = self._to_xs_array_get(subscript.value, "int", ctx)
-        else:
-            raise self._error("Array read targets must be variable names or nested array accesses.", subscript.value)
-        return f"{get_func}({array_xs},{self.sp}{index_xs})"
-
-    def _parse_nd_array_annotation(self, annotation: expr) -> Optional[tuple[int, str]]:
-        if not (isinstance(annotation, Subscript) and isinstance(annotation.value, Name)
-                and annotation.value.id in self._ARRAY_LIST_NAMES):
-            return None
-        depth = 1
-        current = annotation.slice
-        while True:
-            if isinstance(current, Name) and current.id in self._ARRAY_CREATE_MAP:
-                return (depth, current.id)
-            if (isinstance(current, Subscript) and isinstance(current.value, Name)
-                    and current.value.id in self._ARRAY_LIST_NAMES):
-                depth += 1
-                current = current.slice
-            else:
-                return None
-
-    def _parse_nd_array_value(self, value: expr, depth: int) -> Optional[tuple[list[expr], expr]]:
-        sizes = []
-        current = value
-        for _ in range(depth):
-            if not (isinstance(current, BinOp) and isinstance(current.op, Mult)
-                    and isinstance(current.left, List) and len(current.left.elts) == 1):
-                return None
-            sizes.append(current.right)
-            current = current.left.elts[0]
-        if self._unpack_constant(current) is None and not isinstance(current, Call):
-            return None
-        return sizes, current
-
-    def _try_to_xs_nd_array_init(self, e: AnnAssign, ctx: XsContext) -> Optional[str]:
-        ann_result = self._parse_nd_array_annotation(e.annotation)
-        if ann_result is None or ann_result[0] < 2:
-            return None
-        depth, inner_element_type = ann_result
-        if not isinstance(e.target, Name):
-            return None
-        val_result = self._parse_nd_array_value(e.value, depth)
-        if val_result is None:
-            return None
-        sizes, inner_default_node = val_result
-        var_name = self._to_camel_case(e.target.id)
-        return self._to_xs_nd_array_init_stmts(var_name, sizes, inner_element_type, inner_default_node, ctx)
-
-    def _to_xs_nd_array_init_stmts(self, var_name: str, sizes: list[expr], inner_element_type: str,
-                                   inner_default_node: expr, ctx: XsContext) -> str:
-        outer_size_xs = self._to_xs_expression(sizes[0], ctx, enclosed=True)
-        xs = self._stmt(ctx.depth, f"int {var_name}{self.sp}={self.sp}xsArrayCreateInt({outer_size_xs})")
-        xs += self._to_xs_nd_array_fill_loop(var_name, sizes[0], sizes[1:], inner_element_type, inner_default_node, ctx)
-        return xs
-
-    def _to_xs_nd_array_fill_loop(self, parent_var: str, parent_size_node: expr, sub_sizes: list[expr],
-                                  inner_element_type: str, inner_default_node: expr, ctx: XsContext) -> str:
-        loop_var = self._next_temp_name()
-        parent_size_xs = self._to_xs_expression(parent_size_node, ctx, enclosed=True)
-        header = f"for{self.sp}({loop_var}{self.sp}={self.sp}0;{self.sp}<{self.sp}{parent_size_xs})"
-        if len(sub_sizes) == 1:
-            create_xs = self._to_xs_array_create(inner_element_type, inner_default_node, sub_sizes[0], ctx)
-            body_xs = self._stmt(ctx.depth + 1, f"xsArraySetInt({parent_var},{self.sp}{loop_var},{self.sp}{create_xs})")
-        else:
-            temp_var = self._next_temp_name()
-            sub_size_xs = self._to_xs_expression(sub_sizes[0], ctx, enclosed=True)
-            body_xs = self._stmt(ctx.depth + 1, f"int {temp_var}{self.sp}={self.sp}xsArrayCreateInt({sub_size_xs})")
-            body_xs += self._stmt(ctx.depth + 1, f"xsArraySetInt({parent_var},{self.sp}{loop_var},{self.sp}{temp_var})")
-            body_xs += self._to_xs_nd_array_fill_loop(temp_var, sub_sizes[0], sub_sizes[1:], inner_element_type,
-                                                      inner_default_node, ctx.indented())
-        return self._block(ctx.depth, header, body_xs)
-
-    def _to_xs_variable_assignment(self, a: Assign, ctx: XsContext) -> str:
-        if len(a.targets) != 1:
-            raise self._error("Only single-target assignments are supported.", a)
-        target = a.targets[0]
-        if isinstance(target, Name):
-            name = self._to_camel_case(target.id)
-        else:
-            raise self._error("Assignment target must be a variable name.", target)
-        value_xs = self._to_xs_expression(a.value, ctx, enclosed=True)
-        return self._stmt(ctx.depth, f"{name}{self.sp}={self.sp}{value_xs}")
-
-    def _to_xs_array_set(self, target: Subscript, value: expr, ctx: XsContext) -> str:
-        index_xs = self._to_xs_expression(target.slice, ctx, enclosed=True)
-        if isinstance(target.value, Name):
-            array_xs = self._to_camel_case(target.value.id)
-        elif isinstance(target.value, Subscript):
-            array_xs = self._to_xs_array_get(target.value, "int", ctx)
-        else:
-            raise self._error("Array assignment target must be a variable name or nested array access.", target.value)
-        element_type = self._infer_array_element_type(value)
-        set_func = self._ARRAY_SET_MAP.get(element_type)
-        if set_func is None:
-            raise self._error(f"Array assignment does not support element type {element_type!r}.", value)
-        value_xs = self._to_xs_expression(value, ctx, enclosed=True)
-        return self._stmt(ctx.depth, f"{set_func}({array_xs},{self.sp}{index_xs},{self.sp}{value_xs})")
-
-    def _to_xs_variable_aug_assignment(self, a: AugAssign, ctx: XsContext) -> str:
-        if isinstance(a.target, Name):
-            name = self._to_camel_case(a.target.id)
-        else:
-            raise self._error("Assignment target must be a variable name.", a.target)
-        op = self._to_xs_binary_op(a.op, a)
-        aug_value = self._unpack_constant(a.value)
-        if aug_value == 1 and not isinstance(aug_value, bool) and op == "+":
-            return self._stmt(ctx.depth, f"{name}++")
-        if aug_value == 1 and not isinstance(aug_value, bool) and op == "-":
-            return self._stmt(ctx.depth, f"{name}--")
-        return self._stmt(ctx.depth,
-                          f"{name}{self.sp}={self.sp}{name}{self.sp}{op}{self.sp}{self._to_xs_expression(a.value, ctx)}")
-
-    def _to_xs_expression_top(self, e: Expr, ctx: XsContext) -> str:
-        if (isinstance(e.value, Constant) and isinstance(e.value.value, str)
-                and e.value.value.strip().replace("\n", "").replace(" ", "") in self._doc_strings):
-            return ""
-        return self._stmt(ctx.depth, self._to_xs_expression(e.value, ctx))
-
-    def _to_xs_binary_op(self, op: operator | cmpop | boolop, node: Optional[ast.AST] = None) -> str:
-        xs_op = self._OPERATOR_MAP.get(type(op))
-        if xs_op is None:
-            raise self._error(f"Unsupported binary operator: {op}.", node)
-        return xs_op
-
-    def _to_xs_expression(self, e: expr, ctx: XsContext, enclosed: bool = False) -> str:
-        try:
-            if isinstance(e, Constant):
-                return self._to_xs_constant(e.value, enclosed, e)
-            if isinstance(e, Name):
-                if e.id in ctx.replacements:
-                    return ctx.replacements[e.id]
-                return self._to_camel_case(e.id)
-            if isinstance(e, Call):
-                if isinstance(e.func, Name) and e.func.id in self._macro_functions:
-                    return self._to_xs_constant(self._eval_macro_function(e), enclosed, e)
-                return self._to_xs_call(e, ctx, enclosed)
-            if isinstance(e, BinOp) and isinstance(e.op, Mult) and isinstance(e.left, List):
-                default_node, size_node = self._parse_array_literal(e)
-                element_type = self._infer_array_element_type(default_node)
-                return self._to_xs_array_create(element_type, default_node, size_node, ctx)
-            if isinstance(e, BinOp):
-                left_xs = self._to_xs_expression(e.left, ctx)
-                op_xs = self._to_xs_binary_op(e.op, e)
-                right_xs = self._to_xs_expression(e.right, ctx)
-                return self._wrap_parens(f"{left_xs}{self.sp}{op_xs}{self.sp}{right_xs}", enclosed)
-            if isinstance(e, UnaryOp):
-                value = self._unpack_constant(e)
-                if value is not None:
-                    return self._to_xs_constant(value, enclosed, e)
-                if isinstance(e.op, Not):
-                    return self._wrap_parens(
-                        f"{self._to_xs_expression(e.operand, ctx)}{self.sp}=={self.sp}false", enclosed)
-                raise self._error(f"Unsupported unary operator: {e}.", e)
-            if isinstance(e, Compare):
-                if len(e.comparators) != 1 or len(e.ops) != 1:
-                    raise self._error("Comparisons must have exactly one operator and one comparator.", e)
-                left_xs = self._to_xs_expression(e.left, ctx)
-                op = self._to_xs_binary_op(e.ops[0], e)
-                right_xs = self._to_xs_expression(e.comparators[0], ctx)
-                return self._wrap_parens(f"{left_xs}{self.sp}{op}{self.sp}{right_xs}", enclosed)
-            if isinstance(e, Attribute) and isinstance(e.value, Name) and e.value.id == "XsConstants":
-                return self._to_camel_case(e.attr)
-            if isinstance(e, JoinedStr):
-                parts = [self._to_xs_expression(val, ctx) for val in e.values]
-                return f"({f'{self.sp}+{self.sp}'.join(parts)})"
-            if isinstance(e, FormattedValue):
-                source_segment = ast.get_source_segment(self._source, e) if self._source is not None else None
-                is_debug_expr = source_segment is not None and re.fullmatch(r"\{.+?=\s*\}", source_segment) is not None
-                if is_debug_expr and e.conversion == ord("r") and e.format_spec is None:
-                    return self._to_xs_expression(e.value, ctx)
-                if e.conversion != -1:
-                    raise self._error("f-string conversion is not supported.", e)
-                if e.format_spec is not None:
-                    raise self._error("f-string format spec is not supported.", e)
-                return self._to_xs_expression(e.value, ctx)
-            if isinstance(e, BoolOp):
-                op_xs = self._to_xs_binary_op(e.op, e)
-                parts = [self._to_xs_expression(v, ctx) for v in e.values]
-                return self._wrap_parens(f"{self.sp}{op_xs}{self.sp}".join(parts), enclosed)
-            if isinstance(e, List):
-                return self._to_xs_list_literal_expr(e, ctx)
-            raise self._error(f"Unsupported expression type: {type(e).__name__}.", e)
-        except Exception as exc:
-            self._raise_as_conversion_error(exc, e)
-
-    def _to_xs_constant(self, value: str | bool | int | float, enclosed: bool = False,
-                        node: Optional[ast.AST] = None) -> str:
-        if isinstance(value, str):
-            return '"' + value.replace('"', '\\"') + '"'
-        if isinstance(value, bool):
-            return str(value).lower()
-        if isinstance(value, int):
-            if value > 999_999_999:
-                if value > 2_147_483_647:
-                    raise self._error(f"XS ints cannot hold values larger than 2147483647: {value}.", node)
-                base = value // 10
-                remainder = value % 10
-                return self._wrap_parens(f"{base}{self.sp}*{self.sp}10{self.sp}+{self.sp}{remainder}", enclosed)
-            if value < -999_999_999:
-                if value < -2_147_483_648:
-                    raise self._error(f"XS ints cannot hold values smaller than -2147483648: {value}.", node)
-                value = value * -1
-                base = value // 10
-                remainder = value % 10
-                return self._wrap_parens(f"-{base}{self.sp}*{self.sp}10{self.sp}-{self.sp}{remainder}", enclosed)
-            return f"{value}"
-        if isinstance(value, float):
-            return f"{value}"
-        raise self._error(f"Unsupported literal value: {value!r}.", node)
-
-    def _unpack_constant(self, node: expr) -> Optional[Any]:
-        if isinstance(node, Constant):
-            return node.value
-        if isinstance(node, UnaryOp) and isinstance(node.op, USub):
-            inner = self._unpack_constant(node.operand)
-            if inner is not None:
-                return -inner
-        if (isinstance(node, Call) and isinstance(node.func, Name)
-                and node.func.id in self._NUMERIC_CAST_ZEROS and len(node.args) == 1):
-            return self._unpack_constant(node.args[0])
-        cast_info = self._parse_cast_call(node)
-        if cast_info is not None:
-            return self._unpack_constant(cast_info[1])
-        return None
-
-    def _to_xs_numeric_cast(self, zero: str, arg: expr, ctx: XsContext, enclosed: bool) -> str:
-        value = self._unpack_constant(arg)
-        if value is not None:
-            return self._to_xs_constant(value, enclosed, arg)
-        xs = f"{zero}{self.sp}+{self.sp}{self._to_xs_expression(arg, ctx)}"
-        return self._wrap_parens(xs, enclosed)
-
-    def _to_xs_call(self, e: Call, ctx: XsContext, enclosed: bool = False) -> str:
-        if not isinstance(e.func, Name):
-            raise self._error(f"Function calls must reference a name, not {e.func}.", e.func)
-        function_name = self._to_camel_case(e.func.id)
-        if function_name == "str":
-            xs = f'""{self.sp}+{self.sp}' + self._to_xs_expression(e.args[0], ctx)
-            return self._wrap_parens(xs, enclosed)
-        if function_name == "len":
-            arg_xs = self._to_xs_expression(e.args[0], ctx, enclosed=True)
-            return f"xsArrayGetSize({arg_xs})"
-        if function_name == "cast":
-            if len(e.args) != 2:
-                raise self._error("cast() requires exactly 2 arguments.", e)
-            inner = e.args[1]
-            if isinstance(inner, Subscript):
-                return self._to_xs_array_get(inner, e.args[0].id, ctx)
-            return self._to_xs_expression(inner, ctx, enclosed=enclosed)
-        zero = self._NUMERIC_CAST_ZEROS.get(function_name)
-        if zero is not None:
-            return self._to_xs_numeric_cast(zero, e.args[0], ctx, enclosed)
-        args_xs = f",{self.sp}".join(
-            [self._to_xs_expression(a, ctx, enclosed=True) for a in e.args])
-        return f"{function_name}({args_xs})"
-
-    def _to_xs_if(self, e: If, ctx: XsContext, els: bool = False) -> str:
-        xs = ""
-        cond_xs = self._to_xs_expression(e.test, ctx, enclosed=True)
-        if not els:
-            xs += f"{ctx.depth * self.indent}if{self.sp}({cond_xs}){self.sp}{{{self.nl}"
-        else:
-            xs += f"{ctx.depth * self.indent}}}{self.sp}else if{self.sp}({cond_xs}){self.sp}{{{self.nl}"
-        xs += self._to_xs_body(e.body, ctx)
-
-        if len(e.orelse) == 1 and isinstance(e.orelse[0], If):
-            xs += self._to_xs_if(e.orelse[0], ctx, True)
-        elif len(e.orelse) > 0:
-            xs += f"{ctx.depth * self.indent}}}{self.sp}else{self.sp}{{{self.nl}"
-            xs += self._to_xs_body(e.orelse, ctx)
-            xs += f"{ctx.depth * self.indent}}}{self.nl}"
-        else:
-            xs += f"{ctx.depth * self.indent}}}{self.nl}"
-        return xs
-
-    def _to_xs_for(self, e: For, ctx: XsContext) -> str:
-        if not (isinstance(e.iter, Call) and isinstance(e.iter.func, Name) and e.iter.func.id in {"range", "i32range"}):
-            raise self._error("For-loops are only supported over range(...) or i32range(...).", e.iter)
-        if not isinstance(e.target, Name):
-            raise self._error("For-loop targets must be simple variable names.", e.target)
-
-        loop_var = self._to_camel_case(e.target.id)
-        start_node, end_node, step = self._parse_range_args(e.iter.args, e.iter)
-
-        if step == 1 or step == -1:
-            positive = step > 0
-            start_xs = "0" if start_node is None else self._to_xs_expression(start_node, ctx, enclosed=True)
-            bound_xs = self._to_xs_for_bound(end_node, ctx, positive, True)
-            header = f"for{self.sp}({loop_var}{self.sp}={self.sp}{start_xs};{self.sp}{bound_xs})"
-            return self._block(ctx.depth, header, self._to_xs_body(e.body, ctx))
-
-        xs = self._stmt(ctx.depth,
-                        f"int {loop_var}{self.sp}={self.sp}{self._to_xs_expression(start_node, ctx, enclosed=True)}")
-        if isinstance(step, int):
-            positive = step > 0
-            op = "+" if positive else "-"
-            step_xs = self._to_xs_constant(abs(step))
-            bound_xs = self._to_xs_for_bound(end_node, ctx, positive, False)
-            body_xs = self._to_xs_body(e.body, ctx)
-            body_xs += self._stmt(ctx.depth + 1,
-                                  f"{loop_var}{self.sp}={self.sp}{loop_var}{self.sp}{op}{self.sp}{step_xs}")
-            xs += self._block(ctx.depth, f"while{self.sp}({loop_var}{self.sp}{bound_xs})", body_xs)
-            return xs
-
-        step_xs = self._to_xs_expression(step, ctx, enclosed=True)
-        if isinstance(step, Name):
-            step_ref = step_xs
-        else:
-            step_ref = self._next_temp_name()
-            xs += self._stmt(ctx.depth, f"int {step_ref}{self.sp}={self.sp}{step_xs}")
-
-        positive_body_xs = self._to_xs_body(e.body, ctx.indented())
-        positive_body_xs += self._stmt(ctx.depth + 2,
-                                       f"{loop_var}{self.sp}={self.sp}{loop_var}{self.sp}+{self.sp}{step_ref}")
-        positive_bound_xs = self._to_xs_for_bound(end_node, ctx, True, False)
-        positive_while_xs = self._block(
-            ctx.depth + 1,
-            f"while{self.sp}({loop_var}{self.sp}{positive_bound_xs})",
-            positive_body_xs,
-        )
-
-        negative_body_xs = self._to_xs_body(e.body, ctx.indented())
-        negative_body_xs += self._stmt(ctx.depth + 2,
-                                       f"{loop_var}{self.sp}={self.sp}{loop_var}{self.sp}+{self.sp}{step_ref}")
-        negative_bound_xs = self._to_xs_for_bound(end_node, ctx, False, False)
-        negative_while_xs = self._block(
-            ctx.depth + 1,
-            f"while{self.sp}({loop_var}{self.sp}{negative_bound_xs})",
-            negative_body_xs,
-        )
-
-        xs += f"{ctx.depth * self.indent}if{self.sp}({step_ref}{self.sp}>{self.sp}0){self.sp}{{{self.nl}"
-        xs += positive_while_xs
-        xs += f"{ctx.depth * self.indent}}}{self.sp}else if{self.sp}({step_ref}{self.sp}<{self.sp}0){self.sp}{{{self.nl}"
-        xs += negative_while_xs
-        xs += f"{ctx.depth * self.indent}}}{self.nl}"
-        return xs
-
-    def _parse_range_args(self, args: list[expr], node: Optional[ast.AST] = None) -> tuple[Optional[expr], expr, int | expr]:
-        if len(args) == 1:
-            return None, args[0], 1
-        if len(args) == 2:
-            return args[0], args[1], 1
-        if len(args) == 3:
-            step = self._unpack_int_constant(args[2])
-            if step is None:
-                return args[0], args[1], args[2]
-            if step == 0:
-                raise self._error("For-loop steps cannot be 0.", args[2])
-            return args[0], args[1], step
-        raise self._error("range() accepts 1 to 3 arguments.", node or (args[0] if args else None))
-
-    def _unpack_int_constant(self, expr: expr) -> Optional[int]:
-        value = self._unpack_constant(expr)
-        if not isinstance(value, int):
-            return None
-        return value
-
-    def _to_xs_while(self, e: While, ctx: XsContext) -> str:
-        header = f"while{self.sp}({self._to_xs_expression(e.test, ctx, enclosed=True)})"
-        return self._block(ctx.depth, header, self._to_xs_body(e.body, ctx))
-
-    def _to_xs_match(self, e: Match, ctx: XsContext) -> str:
-        inner = ctx.indented()
-        cases_xs = ""
-        for case in e.cases:
-            if isinstance(case.pattern, MatchValue):
-                xs_case = self._to_xs_expression(case.pattern.value, ctx)
-                cases_xs += self._block(inner.depth, f"case {xs_case}:", self._to_xs_body(case.body, inner))
-            elif isinstance(case.pattern, MatchAs) and case.pattern.name is None:
-                cases_xs += self._block(inner.depth, "default:", self._to_xs_body(case.body, inner))
-            else:
-                raise self._error(f"Match statements only support literal cases and `case _`; got {case.pattern}.",
-                                  case.pattern)
-        header = f"switch{self.sp}({self._to_xs_expression(e.subject, ctx, enclosed=True)})"
-        return self._block(ctx.depth, header, cases_xs)
-
+    # Function and statement rendering
     @staticmethod
     def _has_xs_ignore(node: FunctionDef) -> bool:
         return any(
             (isinstance(d, Name) and d.id == "xs_ignore")
             for d in node.decorator_list
         )
-
-    def to_xs_function_definition(self, function: FunctionDef, ctx: XsContext, root_function: bool = True) -> str:
-        try:
-            if self._has_xs_ignore(function):
-                return ""
-            xs_type = self._to_xs_function_type(function.returns)
-            name = self._to_camel_case(function.name)
-
-            if len(function.args.args) != len(function.args.defaults):
-                raise self._error("All function arguments must have a default value.", function.args)
-
-            parameters_xs = self._to_xs_parameters(function, ctx)
-            has_parameters = len(parameters_xs) > 0
-
-            rule_modifier_xs = self._to_xs_rule_modifiers(function, root_function, has_parameters, xs_type)
-            has_rules = len(rule_modifier_xs) > 0
-            xs = ""
-            doc = ast.get_docstring(function)
-            if doc is not None:
-                self._doc_strings.add(doc.replace("\n", "").replace(" ", ""))
-            if doc is not None and len(self.indent) > 0:
-                doc = re.sub(r'`([a-zA-Z_][a-zA-Z0-9_]*)`',
-                             lambda m: '`' + self._to_camel_case(m.group(1)) + '`', doc)
-                doc = doc.replace(":param", "@param")
-                doc = doc.replace(":return:", "@return")
-                doc = doc.replace(":", " -")
-                doc = doc.replace("\n", f"\n{(ctx.depth + 1) * self.indent}")
-                xs += f"{ctx.depth * self.indent}/*\n{(ctx.depth + 1) * self.indent}"
-                xs += doc + "\n"
-                xs += f"{ctx.depth * self.indent}*/\n"
-            if has_rules:
-                header = f"rule {name} {rule_modifier_xs}"
-            else:
-                header = f"{xs_type} {name}({parameters_xs})"
-            xs += self._block(ctx.depth, header, self._to_xs_body(function.body, ctx))
-            return xs
-        except Exception as exc:
-            self._raise_as_conversion_error(exc, function)
 
     def _to_xs_parameters(self, function: FunctionDef, ctx: XsContext) -> str:
         parameters = [self._to_xs_arg(a, default, ctx) for a, default in
@@ -1025,15 +456,7 @@ class PythonToXsConverter:
 
     def _to_xs_function(self, function: Callable[..., Any], root_function: bool = True) -> str:
         source_name = inspect.getsourcefile(function)
-        try:
-            source_lines, start_line = inspect.getsourcelines(function)
-        except (OSError, TypeError):
-            try:
-                source = inspect.getsource(function)
-                source_lines = source.splitlines(keepends=True)
-                start_line = 1
-            except (OSError, TypeError) as exc:
-                raise self._source_access_error(exc, source_name) from exc
+        source_lines, start_line = self._read_source_lines(function, source_name)
 
         original_source = "".join(source_lines)
         source = textwrap.dedent(original_source)
@@ -1044,10 +467,7 @@ class PythonToXsConverter:
             column_offset=self._common_indent(original_source.splitlines()),
             display_source_lines=original_source.splitlines(),
         )
-        try:
-            module_ast = ast.parse(source, filename=source_name or "<unknown>")
-        except SyntaxError as exc:
-            raise self._syntax_error(exc, source_name) from exc
+        module_ast = self._parse_source(source, source_name)
 
         if len(module_ast.body) != 1 or not isinstance(module_ast.body[0], FunctionDef):
             if module_ast.body:
@@ -1057,62 +477,758 @@ class PythonToXsConverter:
 
     def _to_xs_body(self, body: list[expr | stmt], ctx: XsContext) -> str:
         xs = ""
-        inner = ctx.indented()
-        for e in body:
+        for statement in body:
             try:
-                if isinstance(e, AnnAssign) and isinstance(e.value, List):
-                    if not isinstance(e.target, Name):
-                        raise self._error("Variable declaration must use a simple variable name.", e.target)
-                    element_type = self._annotation_element_type(e.annotation)
-                    if element_type is None:
-                        element_type = self._infer_list_literal_type(e.value.elts, e.value)
-                    stmt_xs = self._to_xs_list_literal_stmts(
-                        self._to_camel_case(e.target.id), e.value.elts, element_type, inner)
-                elif isinstance(e, AnnAssign):
-                    nd_result = self._try_to_xs_nd_array_init(e, inner)
-                    if nd_result is not None:
-                        stmt_xs = nd_result
-                    else:
-                        stmt_xs = self._to_xs_variable_definition(e, inner)
-                elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Subscript):
-                    stmt_xs = self._to_xs_array_set(e.targets[0], e.value, inner)
-                elif isinstance(e, Assign) and len(e.targets) == 1 and isinstance(e.targets[0], Name) and isinstance(
-                        e.value, List):
-                    element_type = self._infer_list_literal_type(e.value.elts, e.value)
-                    stmt_xs = self._to_xs_list_literal_stmts(
-                        self._to_camel_case(e.targets[0].id), e.value.elts, element_type, inner)
-                elif isinstance(e, Assign):
-                    stmt_xs = self._to_xs_variable_assignment(e, inner)
-                elif isinstance(e, AugAssign):
-                    stmt_xs = self._to_xs_variable_aug_assignment(e, inner)
-                elif isinstance(e, Expr):
-                    stmt_xs = self._to_xs_expression_top(e, inner)
-                elif isinstance(e, If):
-                    stmt_xs = self._to_xs_if(e, inner)
-                elif isinstance(e, For):
-                    stmt_xs = self._to_xs_for(e, inner)
-                elif isinstance(e, While):
-                    stmt_xs = self._to_xs_while(e, inner)
-                elif isinstance(e, Match):
-                    stmt_xs = self._to_xs_match(e, inner)
-                elif isinstance(e, With):
-                    stmt_xs = self._to_xs_macro_with(e, ctx)
-                elif isinstance(e, Return):
-                    stmt_xs = self._to_xs_return(e, inner)
-                elif isinstance(e, (Pass, Global)):
-                    stmt_xs = ""
-                else:
-                    raise self._error(f"Unsupported statement in function body: {type(e).__name__}.", e)
+                stmt_xs = self._render_body_statement(statement, ctx)
             except Exception as exc:
-                self._raise_as_conversion_error(exc, e)
-            xs += self._flush_pending() + stmt_xs
+                self._raise_as_conversion_error(exc, statement)
+            xs += stmt_xs
         return xs
 
-    def _to_xs_return(self, e: Return, ctx: XsContext) -> str:
-        if e.value is None:
+    def _to_xs_return(self, return_stmt: Return, ctx: XsContext) -> str:
+        if return_stmt.value is None:
             return self._stmt(ctx.depth, "return")
-        return self._stmt(ctx.depth, f"return{self.sp}({self._to_xs_expression(e.value, ctx, enclosed=True)})")
+        value_expr = self._render_expression(return_stmt.value, ctx, enclosed=True)
+        return value_expr.prelude + self._stmt(ctx.depth, f"return{self.sp}({value_expr.value})")
 
+    # Type and annotation helpers
+    def _to_xs_type(self, annotation: expr) -> str:
+        if not isinstance(annotation, Name):
+            raise self._error("Type annotations must be simple type names.", annotation)
+
+        python_type = annotation.id
+        xs_type = self._TYPE_MAP.get(python_type)
+        if xs_type is None:
+            raise self._error(f"Python type {python_type!r} cannot be converted to an XS type.", annotation)
+        return xs_type
+
+    def _to_xs_modifier(self, python_type: str, node: Optional[ast.AST] = None) -> str:
+        xs_mod = self._MODIFIER_MAP.get(python_type)
+        if xs_mod is None:
+            raise self._error(f"Python modifier {python_type!r} cannot be converted to an XS modifier.", node)
+        return xs_mod
+
+    def _to_xs_function_type(self, expression: expr) -> str:
+        if isinstance(expression, Constant) and expression.value is None:
+            return "void"
+        if isinstance(expression, Name):
+            return self._to_xs_type(expression)
+        raise self._error("Function return annotations must be a type name or None.", expression)
+
+    def _to_xs_arg(self, a: arg, default: Optional[expr], ctx: XsContext) -> str:
+        name = self._to_camel_case(a.arg)
+        type = self._to_xs_type(a.annotation)
+        xs = f"{type} {name}"
+        if default is not None:
+            default_xs = self._require_inline_expression(self._render_expression(default, ctx), default)
+            xs += f"{self.sp}={self.sp}{default_xs}"
+        return xs
+
+    # Array and assignment rendering
+    def _parse_cast_call(self, node: expr) -> Optional[tuple[str, expr]]:
+        if (isinstance(node, Call)
+                and isinstance(node.func, Name)
+                and node.func.id == "cast"
+                and len(node.args) == 2
+                and isinstance(node.args[0], Name)
+                and node.args[0].id in self._ARRAY_CREATE_MAP):
+            return node.args[0].id, node.args[1]
+        return None
+
+    def _infer_array_element_type(self, node: expr) -> str:
+        if isinstance(node, Call) and isinstance(node.func, Name):
+            func_name = node.func.id
+            if func_name in self._ARRAY_CREATE_MAP:
+                return func_name
+            if func_name == "vector":
+                return "XsVector"
+        cast_info = self._parse_cast_call(node)
+        if cast_info is not None:
+            return cast_info[0]
+        value = self._unpack_constant(node)
+        if value is not None:
+            if isinstance(value, bool):
+                return "bool"
+            if isinstance(value, int):
+                return "int"
+            if isinstance(value, float):
+                return "float"
+            if isinstance(value, str):
+                return "str"
+        raise self._error("Could not infer the array element type from this value.", node)
+
+    def _render_array_create(self, element_type: str, default_node: expr, size_node: expr,
+                             ctx: XsContext) -> RenderedExpression:
+        create_func = self._ARRAY_CREATE_MAP.get(element_type)
+        if create_func is None:
+            raise self._error(f"Array creation does not support element type {element_type!r}.", default_node)
+
+        size_expr = self._render_expression(size_node, ctx, enclosed=True)
+        default_expr = self._render_expression(default_node, ctx, enclosed=True)
+
+        zero_xs = self._ARRAY_ZERO_XS.get(element_type)
+        if element_type == "XsVector":
+            zero_xs = f"vector(0.0,{self.sp}0.0,{self.sp}0.0)"
+
+        prelude = self._combine_prelude(size_expr, default_expr)
+        if zero_xs is not None and default_expr.value == zero_xs:
+            return RenderedExpression(f"{create_func}({size_expr.value})", prelude)
+        return RenderedExpression(f"{create_func}({size_expr.value},{self.sp}{default_expr.value})", prelude)
+
+    def _to_xs_array_create(self, element_type: str, default_node: expr, size_node: expr, ctx: XsContext) -> str:
+        return self._render_array_create(element_type, default_node, size_node, ctx).value
+
+    def _parse_array_literal(self, value: expr) -> tuple[expr, expr]:
+        if isinstance(value, List):
+            raise self._error("Array creation from list literals is not supported here; use [default] * size instead.", value)
+        if not (isinstance(value, BinOp) and isinstance(value.op, Mult) and isinstance(value.left, List)):
+            raise self._error("Arrays must be defined with [default_value] * size syntax.", value)
+
+        list_node = value.left
+        if len(list_node.elts) != 1:
+            raise self._error("Array defaults must be a single-element list.", list_node)
+
+        default_node = list_node.elts[0]
+        if self._unpack_constant(default_node) is None and not isinstance(default_node, Call):
+            raise self._error("Array default values must be literals or constructor calls.", default_node)
+        return default_node, value.right
+
+    def _annotation_element_type(self, annotation: expr) -> Optional[str]:
+        if (isinstance(annotation, Subscript)
+                and isinstance(annotation.value, Name)
+                and annotation.value.id in self._ARRAY_LIST_NAMES
+                and isinstance(annotation.slice, Name)
+                and annotation.slice.id in self._ARRAY_CREATE_MAP):
+            return annotation.slice.id
+        return None
+
+    def _infer_list_literal_type(self, elements: list[expr], node: Optional[ast.AST] = None) -> str:
+        inferred = set()
+        for elt in elements:
+            try:
+                t = self._infer_array_element_type(elt)
+                inferred.add(t)
+            except XsConversionError:
+                continue
+        error_node = node if node is not None else (elements[0] if elements else None)
+        if not inferred:
+            raise self._error(
+                "Could not infer the array type from this list literal: "
+                "at least one element must be a constant or typed cast.",
+                error_node,
+            )
+        create_funcs = {self._ARRAY_CREATE_MAP[t] for t in inferred}
+        if len(create_funcs) > 1:
+            raise self._error("Mixed constant types in a list literal are not supported.", error_node)
+        return sorted(inferred)[0]
+
+    def _to_xs_list_literal_stmts(self, var_name: str, elements: list[expr],
+                                  element_type: str, ctx: XsContext) -> str:
+        create_func = self._ARRAY_CREATE_MAP[element_type]
+        set_func = self._ARRAY_SET_MAP[element_type]
+        xs = self._stmt(ctx.depth, f"int {var_name}{self.sp}={self.sp}{create_func}({len(elements)})")
+        for index, element in enumerate(elements):
+            value_expr = self._render_expression(element, ctx, enclosed=True)
+            xs += value_expr.prelude
+            xs += self._stmt(ctx.depth, f"{set_func}({var_name},{self.sp}{index},{self.sp}{value_expr.value})")
+        return xs
+
+    def _render_list_literal_expr(self, list_node: List, ctx: XsContext) -> RenderedExpression:
+        elements = list_node.elts
+        if not elements:
+            raise self._error("Cannot create an array from an empty list literal without a type annotation.", list_node)
+        element_type = self._infer_list_literal_type(elements, list_node)
+        temp_name = self._next_temp_name()
+        prelude = self._to_xs_list_literal_stmts(temp_name, elements, element_type, ctx)
+        return RenderedExpression(temp_name, prelude)
+
+    def _to_xs_list_literal_target(self, target: Name, elements: list[expr], element_type: str, ctx: XsContext) -> str:
+        return self._to_xs_list_literal_stmts(self._to_camel_case(target.id), elements, element_type, ctx)
+
+    def _render_annotated_assignment(self, assign: AnnAssign, ctx: XsContext) -> str:
+        if isinstance(assign.value, List):
+            if not isinstance(assign.target, Name):
+                raise self._error("Variable declaration must use a simple variable name.", assign.target)
+            element_type = self._annotation_element_type(assign.annotation)
+            if element_type is None:
+                element_type = self._infer_list_literal_type(assign.value.elts, assign.value)
+            return self._to_xs_list_literal_target(assign.target, assign.value.elts, element_type, ctx)
+
+        nd_result = self._try_to_xs_nd_array_init(assign, ctx)
+        if nd_result is not None:
+            return nd_result
+        return self._to_xs_variable_definition(assign, ctx)
+
+    def _to_xs_variable_definition(self, a: AnnAssign, ctx: XsContext) -> str:
+        if isinstance(a.annotation, Name):
+            modifier = ""
+            python_type = a.annotation.id
+            xs_type = self._to_xs_type(a.annotation)
+        elif isinstance(a.annotation, Subscript) and isinstance(a.annotation.value, Name):
+            python_type = None
+            if a.annotation.value.id in self._ARRAY_LIST_NAMES:
+                modifier = ""
+                xs_type = "int"
+            else:
+                modifier = self._to_xs_modifier(a.annotation.value.id, a.annotation.value) + " "
+                if isinstance(a.annotation.slice, Name):
+                    xs_type = self._to_xs_type(a.annotation.slice)
+                else:
+                    raise self._error("Variable declarations must include a supported type annotation.", a.annotation.slice)
+        else:
+            raise self._error("Variable declarations must include a supported type annotation.", a.annotation)
+
+        if isinstance(a.target, Name):
+            name = self._to_camel_case(a.target.id)
+        else:
+            raise self._error("Variable declarations must use a simple variable name.", a.target)
+
+        if isinstance(a.value, Subscript) and python_type is not None:
+            value_expr = self._render_array_get(a.value, python_type, ctx)
+        elif isinstance(a.value, Subscript):
+            value_expr = self._render_array_get(a.value, "int", ctx)
+        else:
+            value_expr = self._render_expression(a.value, ctx, enclosed=True)
+        return value_expr.prelude + self._stmt(ctx.depth, f"{modifier}{xs_type} {name}{self.sp}={self.sp}{value_expr.value}")
+
+    def _render_array_get(self, subscript: Subscript, element_type: str, ctx: XsContext) -> RenderedExpression:
+        get_func = self._ARRAY_GET_MAP.get(element_type)
+        if get_func is None:
+            raise self._error(f"Array reads do not support element type {element_type!r}.", subscript)
+        index_expr = self._render_expression(subscript.slice, ctx, enclosed=True)
+        if isinstance(subscript.value, Name):
+            array_expr = RenderedExpression(self._to_camel_case(subscript.value.id))
+        elif isinstance(subscript.value, Subscript):
+            array_expr = self._render_array_get(subscript.value, "int", ctx)
+        else:
+            raise self._error("Array read targets must be variable names or nested array accesses.", subscript.value)
+        prelude = self._combine_prelude(array_expr, index_expr)
+        return RenderedExpression(f"{get_func}({array_expr.value},{self.sp}{index_expr.value})", prelude)
+
+    def _to_xs_array_get(self, subscript: Subscript, element_type: str, ctx: XsContext) -> str:
+        return self._render_array_get(subscript, element_type, ctx).value
+
+    def _parse_nd_array_annotation(self, annotation: expr) -> Optional[tuple[int, str]]:
+        if not (isinstance(annotation, Subscript) and isinstance(annotation.value, Name)
+                and annotation.value.id in self._ARRAY_LIST_NAMES):
+            return None
+        depth = 1
+        current = annotation.slice
+        while True:
+            if isinstance(current, Name) and current.id in self._ARRAY_CREATE_MAP:
+                return (depth, current.id)
+            if (isinstance(current, Subscript) and isinstance(current.value, Name)
+                    and current.value.id in self._ARRAY_LIST_NAMES):
+                depth += 1
+                current = current.slice
+            else:
+                return None
+
+    def _parse_nd_array_value(self, value: expr, depth: int) -> Optional[tuple[list[expr], expr]]:
+        sizes = []
+        current = value
+        for _ in range(depth):
+            if not (isinstance(current, BinOp) and isinstance(current.op, Mult)
+                    and isinstance(current.left, List) and len(current.left.elts) == 1):
+                return None
+            sizes.append(current.right)
+            current = current.left.elts[0]
+        if self._unpack_constant(current) is None and not isinstance(current, Call):
+            return None
+        return sizes, current
+
+    def _try_to_xs_nd_array_init(self, e: AnnAssign, ctx: XsContext) -> Optional[str]:
+        ann_result = self._parse_nd_array_annotation(e.annotation)
+        if ann_result is None or ann_result[0] < 2:
+            return None
+        depth, inner_element_type = ann_result
+        if not isinstance(e.target, Name):
+            return None
+        val_result = self._parse_nd_array_value(e.value, depth)
+        if val_result is None:
+            return None
+        sizes, inner_default_node = val_result
+        var_name = self._to_camel_case(e.target.id)
+        return self._to_xs_nd_array_init_stmts(var_name, sizes, inner_element_type, inner_default_node, ctx)
+
+    def _to_xs_nd_array_init_stmts(self, var_name: str, sizes: list[expr], inner_element_type: str,
+                                   inner_default_node: expr, ctx: XsContext) -> str:
+        outer_size_expr = self._render_expression(sizes[0], ctx, enclosed=True)
+        xs = outer_size_expr.prelude
+        xs += self._stmt(ctx.depth, f"int {var_name}{self.sp}={self.sp}xsArrayCreateInt({outer_size_expr.value})")
+        xs += self._to_xs_nd_array_fill_loop(var_name, sizes[0], sizes[1:], inner_element_type, inner_default_node, ctx)
+        return xs
+
+    def _to_xs_nd_array_fill_loop(self, parent_var: str, parent_size_node: expr, sub_sizes: list[expr],
+                                  inner_element_type: str, inner_default_node: expr, ctx: XsContext) -> str:
+        loop_var = self._next_temp_name()
+        parent_size_expr = self._render_expression(parent_size_node, ctx, enclosed=True)
+        header = f"for{self.sp}({loop_var}{self.sp}={self.sp}0;{self.sp}<{self.sp}{parent_size_expr.value})"
+        if len(sub_sizes) == 1:
+            create_expr = self._render_array_create(inner_element_type, inner_default_node, sub_sizes[0], ctx)
+            body_xs = create_expr.prelude
+            body_xs += self._stmt(ctx.depth + 1, f"xsArraySetInt({parent_var},{self.sp}{loop_var},{self.sp}{create_expr.value})")
+        else:
+            temp_var = self._next_temp_name()
+            sub_size_expr = self._render_expression(sub_sizes[0], ctx, enclosed=True)
+            body_xs = sub_size_expr.prelude
+            body_xs += self._stmt(ctx.depth + 1, f"int {temp_var}{self.sp}={self.sp}xsArrayCreateInt({sub_size_expr.value})")
+            body_xs += self._stmt(ctx.depth + 1, f"xsArraySetInt({parent_var},{self.sp}{loop_var},{self.sp}{temp_var})")
+            body_xs += self._to_xs_nd_array_fill_loop(temp_var, sub_sizes[0], sub_sizes[1:], inner_element_type,
+                                                      inner_default_node, ctx.indented())
+        return parent_size_expr.prelude + self._block(ctx.depth, header, body_xs)
+
+    def _to_xs_variable_assignment(self, a: Assign, ctx: XsContext) -> str:
+        if len(a.targets) != 1:
+            raise self._error("Only single-target assignments are supported.", a)
+        target = a.targets[0]
+        if isinstance(target, Name):
+            name = self._to_camel_case(target.id)
+        else:
+            raise self._error("Assignment target must be a variable name.", target)
+        value_expr = self._render_expression(a.value, ctx, enclosed=True)
+        return value_expr.prelude + self._stmt(ctx.depth, f"{name}{self.sp}={self.sp}{value_expr.value}")
+
+    def _render_assignment(self, assign: Assign, ctx: XsContext) -> str:
+        if len(assign.targets) == 1 and isinstance(assign.targets[0], Subscript):
+            return self._to_xs_array_set(assign.targets[0], assign.value, ctx)
+        if len(assign.targets) == 1 and isinstance(assign.targets[0], Name) and isinstance(assign.value, List):
+            element_type = self._infer_list_literal_type(assign.value.elts, assign.value)
+            return self._to_xs_list_literal_target(assign.targets[0], assign.value.elts, element_type, ctx)
+        return self._to_xs_variable_assignment(assign, ctx)
+
+    def _to_xs_array_set(self, target: Subscript, value: expr, ctx: XsContext) -> str:
+        index_expr = self._render_expression(target.slice, ctx, enclosed=True)
+        if isinstance(target.value, Name):
+            array_expr = RenderedExpression(self._to_camel_case(target.value.id))
+        elif isinstance(target.value, Subscript):
+            array_expr = self._render_array_get(target.value, "int", ctx)
+        else:
+            raise self._error("Array assignment target must be a variable name or nested array access.", target.value)
+        element_type = self._infer_array_element_type(value)
+        set_func = self._ARRAY_SET_MAP.get(element_type)
+        if set_func is None:
+            raise self._error(f"Array assignment does not support element type {element_type!r}.", value)
+        value_expr = self._render_expression(value, ctx, enclosed=True)
+        prelude = self._combine_prelude(array_expr, index_expr, value_expr)
+        return prelude + self._stmt(
+            ctx.depth,
+            f"{set_func}({array_expr.value},{self.sp}{index_expr.value},{self.sp}{value_expr.value})",
+        )
+
+    def _to_xs_variable_aug_assignment(self, a: AugAssign, ctx: XsContext) -> str:
+        if isinstance(a.target, Name):
+            name = self._to_camel_case(a.target.id)
+        else:
+            raise self._error("Assignment target must be a variable name.", a.target)
+        op = self._to_xs_binary_op(a.op, a)
+        aug_value = self._unpack_constant(a.value)
+        if aug_value == 1 and not isinstance(aug_value, bool) and op == "+":
+            return self._stmt(ctx.depth, f"{name}++")
+        if aug_value == 1 and not isinstance(aug_value, bool) and op == "-":
+            return self._stmt(ctx.depth, f"{name}--")
+        value_expr = self._render_expression(a.value, ctx)
+        return value_expr.prelude + self._stmt(
+            ctx.depth,
+            f"{name}{self.sp}={self.sp}{name}{self.sp}{op}{self.sp}{value_expr.value}",
+        )
+
+    # Statement rendering
+    def _render_module_statement(self, node: stmt, ctx: XsContext, root_function: bool) -> RenderedStatement:
+        if isinstance(node, FunctionDef):
+            return RenderedStatement(
+                self.to_xs_function_definition(node, ctx, root_function=root_function),
+                is_function=True,
+            )
+        if isinstance(node, AnnAssign):
+            return RenderedStatement(self._render_annotated_assignment(node, ctx))
+        if isinstance(node, Assign):
+            return RenderedStatement(self._render_assignment(node, ctx))
+        raise self._error(f"Unsupported top-level statement: {type(node).__name__}.", node)
+
+    def _render_body_statement(self, node: stmt, ctx: XsContext) -> str:
+        inner = ctx.indented()
+        if isinstance(node, AnnAssign):
+            return self._render_annotated_assignment(node, inner)
+        if isinstance(node, Assign):
+            return self._render_assignment(node, inner)
+        if isinstance(node, AugAssign):
+            return self._to_xs_variable_aug_assignment(node, inner)
+        if isinstance(node, Expr):
+            return self._to_xs_expression_top(node, inner)
+        if isinstance(node, If):
+            return self._to_xs_if(node, inner)
+        if isinstance(node, For):
+            return self._to_xs_for(node, inner)
+        if isinstance(node, While):
+            return self._to_xs_while(node, inner)
+        if isinstance(node, Match):
+            return self._to_xs_match(node, inner)
+        if isinstance(node, With):
+            return self._to_xs_macro_with(node, ctx)
+        if isinstance(node, Return):
+            return self._to_xs_return(node, inner)
+        if isinstance(node, (Pass, Global)):
+            return ""
+        raise self._error(f"Unsupported statement in function body: {type(node).__name__}.", node)
+
+    def _to_xs_expression_top(self, e: Expr, ctx: XsContext) -> str:
+        if (isinstance(e.value, Constant) and isinstance(e.value.value, str)
+                and e.value.value.strip().replace("\n", "").replace(" ", "") in self._doc_strings):
+            return ""
+        value_expr = self._render_expression(e.value, ctx)
+        return value_expr.prelude + self._stmt(ctx.depth, value_expr.value)
+
+    # Expression rendering
+    def _to_xs_binary_op(self, op: operator | cmpop | boolop, node: Optional[ast.AST] = None) -> str:
+        xs_op = self._OPERATOR_MAP.get(type(op))
+        if xs_op is None:
+            raise self._error(f"Unsupported binary operator: {op}.", node)
+        return xs_op
+
+    def _to_xs_name_expr(self, node: Name, ctx: XsContext) -> RenderedExpression:
+        if node.id in ctx.replacements:
+            return RenderedExpression(ctx.replacements[node.id])
+        return RenderedExpression(self._to_camel_case(node.id))
+
+    def _to_xs_bin_op_expr(self, node: BinOp, ctx: XsContext, enclosed: bool) -> RenderedExpression:
+        if isinstance(node.op, Mult) and isinstance(node.left, List):
+            default_node, size_node = self._parse_array_literal(node)
+            element_type = self._infer_array_element_type(default_node)
+            return self._render_array_create(element_type, default_node, size_node, ctx)
+
+        left_expr = self._render_expression(node.left, ctx)
+        op_xs = self._to_xs_binary_op(node.op, node)
+        right_expr = self._render_expression(node.right, ctx)
+        prelude = self._combine_prelude(left_expr, right_expr)
+        value = self._wrap_parens(f"{left_expr.value}{self.sp}{op_xs}{self.sp}{right_expr.value}", enclosed)
+        return RenderedExpression(value, prelude)
+
+    def _to_xs_unary_expr(self, node: UnaryOp, ctx: XsContext, enclosed: bool) -> RenderedExpression:
+        value = self._unpack_constant(node)
+        if value is not None:
+            return RenderedExpression(self._to_xs_constant(value, enclosed, node))
+        if isinstance(node.op, Not):
+            operand_expr = self._render_expression(node.operand, ctx)
+            value = self._wrap_parens(
+                f"{operand_expr.value}{self.sp}=={self.sp}false",
+                enclosed,
+            )
+            return RenderedExpression(value, operand_expr.prelude)
+        raise self._error(f"Unsupported unary operator: {node}.", node)
+
+    def _to_xs_compare_expr(self, node: Compare, ctx: XsContext, enclosed: bool) -> RenderedExpression:
+        if len(node.comparators) != 1 or len(node.ops) != 1:
+            raise self._error("Comparisons must have exactly one operator and one comparator.", node)
+        left_expr = self._render_expression(node.left, ctx)
+        op_xs = self._to_xs_binary_op(node.ops[0], node)
+        right_expr = self._render_expression(node.comparators[0], ctx)
+        prelude = self._combine_prelude(left_expr, right_expr)
+        value = self._wrap_parens(f"{left_expr.value}{self.sp}{op_xs}{self.sp}{right_expr.value}", enclosed)
+        return RenderedExpression(value, prelude)
+
+    def _to_xs_attribute_expr(self, node: Attribute) -> RenderedExpression:
+        if isinstance(node.value, Name) and node.value.id == "XsConstants":
+            return RenderedExpression(self._to_camel_case(node.attr))
+        raise self._error(f"Unsupported expression type: {type(node).__name__}.", node)
+
+    def _to_xs_joined_str_expr(self, node: JoinedStr, ctx: XsContext) -> RenderedExpression:
+        parts = [self._render_expression(value, ctx) for value in node.values]
+        prelude = self._combine_prelude(*parts)
+        return RenderedExpression(f"({f'{self.sp}+{self.sp}'.join(part.value for part in parts)})", prelude)
+
+    def _to_xs_formatted_value_expr(self, node: FormattedValue, ctx: XsContext) -> RenderedExpression:
+        source_segment = ast.get_source_segment(self._source, node) if self._source is not None else None
+        is_debug_expr = source_segment is not None and re.fullmatch(r"\{.+?=\s*\}", source_segment) is not None
+        if is_debug_expr and node.conversion == ord("r") and node.format_spec is None:
+            return self._render_expression(node.value, ctx)
+        if node.conversion != -1:
+            raise self._error("f-string conversion is not supported.", node)
+        if node.format_spec is not None:
+            raise self._error("f-string format spec is not supported.", node)
+        return self._render_expression(node.value, ctx)
+
+    def _to_xs_bool_op_expr(self, node: BoolOp, ctx: XsContext, enclosed: bool) -> RenderedExpression:
+        op_xs = self._to_xs_binary_op(node.op, node)
+        parts = [self._render_expression(value, ctx) for value in node.values]
+        prelude = self._combine_prelude(*parts)
+        value = self._wrap_parens(f"{self.sp}{op_xs}{self.sp}".join(part.value for part in parts), enclosed)
+        return RenderedExpression(value, prelude)
+
+    def _render_expression(self, e: expr, ctx: XsContext, enclosed: bool = False) -> RenderedExpression:
+        try:
+            if isinstance(e, Constant):
+                return RenderedExpression(self._to_xs_constant(e.value, enclosed, e))
+            if isinstance(e, Name):
+                return self._to_xs_name_expr(e, ctx)
+            if isinstance(e, Call):
+                if isinstance(e.func, Name) and e.func.id in self._macro_functions:
+                    return RenderedExpression(self._to_xs_constant(self._eval_macro_function(e), enclosed, e))
+                return self._render_call(e, ctx, enclosed)
+            if isinstance(e, BinOp):
+                return self._to_xs_bin_op_expr(e, ctx, enclosed)
+            if isinstance(e, UnaryOp):
+                return self._to_xs_unary_expr(e, ctx, enclosed)
+            if isinstance(e, Compare):
+                return self._to_xs_compare_expr(e, ctx, enclosed)
+            if isinstance(e, Attribute):
+                return self._to_xs_attribute_expr(e)
+            if isinstance(e, JoinedStr):
+                return self._to_xs_joined_str_expr(e, ctx)
+            if isinstance(e, FormattedValue):
+                return self._to_xs_formatted_value_expr(e, ctx)
+            if isinstance(e, BoolOp):
+                return self._to_xs_bool_op_expr(e, ctx, enclosed)
+            if isinstance(e, List):
+                return self._render_list_literal_expr(e, ctx)
+            raise self._error(f"Unsupported expression type: {type(e).__name__}.", e)
+        except Exception as exc:
+            self._raise_as_conversion_error(exc, e)
+
+    def _to_xs_expression(self, e: expr, ctx: XsContext, enclosed: bool = False) -> str:
+        return self._render_expression(e, ctx, enclosed).value
+
+    def _to_xs_constant(self, value: str | bool | int | float, enclosed: bool = False,
+                        node: Optional[ast.AST] = None) -> str:
+        if isinstance(value, str):
+            return '"' + value.replace('"', '\\"') + '"'
+        if isinstance(value, bool):
+            return str(value).lower()
+        if isinstance(value, int):
+            if value > 999_999_999:
+                if value > 2_147_483_647:
+                    raise self._error(f"XS ints cannot hold values larger than 2147483647: {value}.", node)
+                base = value // 10
+                remainder = value % 10
+                return self._wrap_parens(f"{base}{self.sp}*{self.sp}10{self.sp}+{self.sp}{remainder}", enclosed)
+            if value < -999_999_999:
+                if value < -2_147_483_648:
+                    raise self._error(f"XS ints cannot hold values smaller than -2147483648: {value}.", node)
+                value = value * -1
+                base = value // 10
+                remainder = value % 10
+                return self._wrap_parens(f"-{base}{self.sp}*{self.sp}10{self.sp}-{self.sp}{remainder}", enclosed)
+            return f"{value}"
+        if isinstance(value, float):
+            return f"{value}"
+        raise self._error(f"Unsupported literal value: {value!r}.", node)
+
+    def _unpack_constant(self, node: expr) -> Optional[Any]:
+        if isinstance(node, Constant):
+            return node.value
+        if isinstance(node, UnaryOp) and isinstance(node.op, USub):
+            inner = self._unpack_constant(node.operand)
+            if inner is not None:
+                return -inner
+        if (isinstance(node, Call) and isinstance(node.func, Name)
+                and node.func.id in self._NUMERIC_CAST_ZEROS and len(node.args) == 1):
+            return self._unpack_constant(node.args[0])
+        cast_info = self._parse_cast_call(node)
+        if cast_info is not None:
+            return self._unpack_constant(cast_info[1])
+        return None
+
+    def _render_numeric_cast(self, zero: str, arg: expr, ctx: XsContext, enclosed: bool) -> RenderedExpression:
+        value = self._unpack_constant(arg)
+        if value is not None:
+            return RenderedExpression(self._to_xs_constant(value, enclosed, arg))
+        arg_expr = self._render_expression(arg, ctx)
+        value_xs = self._wrap_parens(f"{zero}{self.sp}+{self.sp}{arg_expr.value}", enclosed)
+        return RenderedExpression(value_xs, arg_expr.prelude)
+
+    def _to_xs_numeric_cast(self, zero: str, arg: expr, ctx: XsContext, enclosed: bool) -> str:
+        return self._render_numeric_cast(zero, arg, ctx, enclosed).value
+
+    def _render_special_call(self, function_name: str, call: Call, ctx: XsContext,
+                             enclosed: bool) -> Optional[RenderedExpression]:
+        if function_name == "str":
+            arg_expr = self._render_expression(call.args[0], ctx)
+            value = self._wrap_parens(f'""{self.sp}+{self.sp}{arg_expr.value}', enclosed)
+            return RenderedExpression(value, arg_expr.prelude)
+        if function_name == "len":
+            arg_expr = self._render_expression(call.args[0], ctx, enclosed=True)
+            return RenderedExpression(f"xsArrayGetSize({arg_expr.value})", arg_expr.prelude)
+        if function_name == "cast":
+            if len(call.args) != 2:
+                raise self._error("cast() requires exactly 2 arguments.", call)
+            inner = call.args[1]
+            if isinstance(inner, Subscript):
+                return self._render_array_get(inner, call.args[0].id, ctx)
+            return self._render_expression(inner, ctx, enclosed=enclosed)
+
+        zero = self._NUMERIC_CAST_ZEROS.get(function_name)
+        if zero is not None:
+            return self._render_numeric_cast(zero, call.args[0], ctx, enclosed)
+        return None
+
+    def _render_call(self, call: Call, ctx: XsContext, enclosed: bool = False) -> RenderedExpression:
+        if not isinstance(call.func, Name):
+            raise self._error(f"Function calls must reference a name, not {call.func}.", call.func)
+        function_name = self._to_camel_case(call.func.id)
+        special_expr = self._render_special_call(function_name, call, ctx, enclosed)
+        if special_expr is not None:
+            return special_expr
+        args_expr = [self._render_expression(arg, ctx, enclosed=True) for arg in call.args]
+        prelude = self._combine_prelude(*args_expr)
+        args_xs = f",{self.sp}".join(arg.value for arg in args_expr)
+        return RenderedExpression(f"{function_name}({args_xs})", prelude)
+
+    def _to_xs_call(self, e: Call, ctx: XsContext, enclosed: bool = False) -> str:
+        return self._render_call(e, ctx, enclosed).value
+
+    # Control-flow rendering
+    def _to_xs_if(self, if_stmt: If, ctx: XsContext, els: bool = False) -> str:
+        xs = ""
+        cond_expr = self._render_expression(if_stmt.test, ctx, enclosed=True)
+        if not els:
+            xs += cond_expr.prelude
+            xs += f"{ctx.depth * self.indent}if{self.sp}({cond_expr.value}){self.sp}{{{self.nl}"
+        else:
+            xs += f"{ctx.depth * self.indent}}}{self.sp}else if{self.sp}({cond_expr.value}){self.sp}{{{self.nl}"
+        xs += self._to_xs_body(if_stmt.body, ctx)
+
+        if len(if_stmt.orelse) == 1 and isinstance(if_stmt.orelse[0], If):
+            xs += self._to_xs_if(if_stmt.orelse[0], ctx, True)
+        elif len(if_stmt.orelse) > 0:
+            xs += f"{ctx.depth * self.indent}}}{self.sp}else{self.sp}{{{self.nl}"
+            xs += self._to_xs_body(if_stmt.orelse, ctx)
+            xs += f"{ctx.depth * self.indent}}}{self.nl}"
+        else:
+            xs += f"{ctx.depth * self.indent}}}{self.nl}"
+        return xs
+
+    def _to_xs_for(self, for_stmt: For, ctx: XsContext) -> str:
+        if not (
+                isinstance(for_stmt.iter, Call)
+                and isinstance(for_stmt.iter.func, Name)
+                and for_stmt.iter.func.id in {"range", "i32range"}
+        ):
+            raise self._error("For-loops are only supported over range(...) or i32range(...).", for_stmt.iter)
+        if not isinstance(for_stmt.target, Name):
+            raise self._error("For-loop targets must be simple variable names.", for_stmt.target)
+
+        loop_var = self._to_camel_case(for_stmt.target.id)
+        start_node, end_node, step = self._parse_range_args(for_stmt.iter.args, for_stmt.iter)
+
+        if step == 1 or step == -1:
+            positive = step > 0
+            start_expr = RenderedExpression("0") if start_node is None else self._render_expression(start_node, ctx, enclosed=True)
+            bound_expr = self._render_for_bound(end_node, ctx, positive, True)
+            header = f"for{self.sp}({loop_var}{self.sp}={self.sp}{start_expr.value};{self.sp}{bound_expr.value})"
+            return self._combine_prelude(start_expr, bound_expr) + self._block(ctx.depth, header, self._to_xs_body(for_stmt.body, ctx))
+
+        start_expr = self._render_expression(start_node, ctx, enclosed=True)
+        xs = start_expr.prelude
+        xs += self._stmt(ctx.depth, f"int {loop_var}{self.sp}={self.sp}{start_expr.value}")
+        if isinstance(step, int):
+            positive = step > 0
+            op = "+" if positive else "-"
+            step_xs = self._to_xs_constant(abs(step))
+            bound_expr = self._render_for_bound(end_node, ctx, positive, False)
+            body_xs = self._to_xs_body(for_stmt.body, ctx)
+            body_xs += self._stmt(ctx.depth + 1,
+                                  f"{loop_var}{self.sp}={self.sp}{loop_var}{self.sp}{op}{self.sp}{step_xs}")
+            xs += bound_expr.prelude
+            xs += self._block(ctx.depth, f"while{self.sp}({loop_var}{self.sp}{bound_expr.value})", body_xs)
+            return xs
+
+        step_expr = self._render_expression(step, ctx, enclosed=True)
+        xs += step_expr.prelude
+        if isinstance(step, Name):
+            step_ref = step_expr.value
+        else:
+            step_ref = self._next_temp_name()
+            xs += self._stmt(ctx.depth, f"int {step_ref}{self.sp}={self.sp}{step_expr.value}")
+
+        positive_body_xs = self._to_xs_body(for_stmt.body, ctx.indented())
+        positive_body_xs += self._stmt(ctx.depth + 2,
+                                       f"{loop_var}{self.sp}={self.sp}{loop_var}{self.sp}+{self.sp}{step_ref}")
+        positive_bound_expr = self._render_for_bound(end_node, ctx, True, False)
+        positive_while_xs = self._block(
+            ctx.depth + 1,
+            f"while{self.sp}({loop_var}{self.sp}{positive_bound_expr.value})",
+            positive_body_xs,
+        )
+
+        negative_body_xs = self._to_xs_body(for_stmt.body, ctx.indented())
+        negative_body_xs += self._stmt(ctx.depth + 2,
+                                       f"{loop_var}{self.sp}={self.sp}{loop_var}{self.sp}+{self.sp}{step_ref}")
+        negative_bound_expr = self._render_for_bound(end_node, ctx, False, False)
+        negative_while_xs = self._block(
+            ctx.depth + 1,
+            f"while{self.sp}({loop_var}{self.sp}{negative_bound_expr.value})",
+            negative_body_xs,
+        )
+
+        xs += positive_bound_expr.prelude + negative_bound_expr.prelude
+        xs += f"{ctx.depth * self.indent}if{self.sp}({step_ref}{self.sp}>{self.sp}0){self.sp}{{{self.nl}"
+        xs += positive_while_xs
+        xs += f"{ctx.depth * self.indent}}}{self.sp}else if{self.sp}({step_ref}{self.sp}<{self.sp}0){self.sp}{{{self.nl}"
+        xs += negative_while_xs
+        xs += f"{ctx.depth * self.indent}}}{self.nl}"
+        return xs
+
+    def _parse_range_args(self, args: list[expr], node: Optional[ast.AST] = None) -> tuple[Optional[expr], expr, int | expr]:
+        if len(args) == 1:
+            return None, args[0], 1
+        if len(args) == 2:
+            return args[0], args[1], 1
+        if len(args) == 3:
+            step = self._unpack_int_constant(args[2])
+            if step is None:
+                return args[0], args[1], args[2]
+            if step == 0:
+                raise self._error("For-loop steps cannot be 0.", args[2])
+            return args[0], args[1], step
+        raise self._error("range() accepts 1 to 3 arguments.", node or (args[0] if args else None))
+
+    def _unpack_int_constant(self, expr: expr) -> Optional[int]:
+        value = self._unpack_constant(expr)
+        if not isinstance(value, int):
+            return None
+        return value
+
+    def _render_for_bound(self, param: expr, ctx: XsContext, positive: bool, enclosed: bool) -> RenderedExpression:
+        expected_op = Add if positive else Sub
+        inclusive_sign = "<=" if positive else ">="
+        if isinstance(param, BinOp) and isinstance(param.op, expected_op):
+            pairs = [(param.left, param.right), (param.right, param.left)] if positive else [(param.left, param.right)]
+            for main, other in pairs:
+                other_value = self._unpack_constant(other)
+                if other_value == 1 and not isinstance(other_value, bool):
+                    main_expr = self._render_expression(main, ctx, enclosed=enclosed)
+                    return RenderedExpression(f"{inclusive_sign}{self.sp}{main_expr.value}", main_expr.prelude)
+        exclusive_sign = "<" if positive else ">"
+        param_expr = self._render_expression(param, ctx, enclosed=enclosed)
+        return RenderedExpression(f"{exclusive_sign}{self.sp}{param_expr.value}", param_expr.prelude)
+
+    def _to_xs_for_bound(self, param: expr, ctx: XsContext, positive: bool, enclosed: bool) -> str:
+        return self._render_for_bound(param, ctx, positive, enclosed).value
+
+    def _to_xs_while(self, while_stmt: While, ctx: XsContext) -> str:
+        condition_expr = self._render_expression(while_stmt.test, ctx, enclosed=True)
+        header = f"while{self.sp}({condition_expr.value})"
+        return condition_expr.prelude + self._block(ctx.depth, header, self._to_xs_body(while_stmt.body, ctx))
+
+    def _to_xs_match(self, match_stmt: Match, ctx: XsContext) -> str:
+        inner = ctx.indented()
+        cases_xs = ""
+        cases_prelude = ""
+        for case in match_stmt.cases:
+            if isinstance(case.pattern, MatchValue):
+                case_expr = self._render_expression(case.pattern.value, ctx)
+                cases_prelude += case_expr.prelude
+                cases_xs += self._block(inner.depth, f"case {case_expr.value}:", self._to_xs_body(case.body, inner))
+            elif isinstance(case.pattern, MatchAs) and case.pattern.name is None:
+                cases_xs += self._block(inner.depth, "default:", self._to_xs_body(case.body, inner))
+            else:
+                raise self._error(f"Match statements only support literal cases and `case _`; got {case.pattern}.",
+                                  case.pattern)
+        subject_expr = self._render_expression(match_stmt.subject, ctx, enclosed=True)
+        header = f"switch{self.sp}({subject_expr.value})"
+        return subject_expr.prelude + cases_prelude + self._block(ctx.depth, header, cases_xs)
+
+    # Macro expansion
     def _eval_macro_function(self, call: Call) -> Any:
         if not isinstance(call.func, Name):
             raise self._error("Macro call must reference a function name.", call.func)
@@ -1128,21 +1244,22 @@ class PythonToXsConverter:
                                   call.args[0]) from exc
         raise self._error("Macro calls must have a string constant as their first argument.", call)
 
-    def _to_xs_macro_with(self, w: With, ctx: XsContext) -> str:
-        if not (len(w.items) == 1 and isinstance(w.items[0].context_expr, Call)):
-            raise self._error("Macro repeat blocks must use a single call in the with-statement.", w)
+    def _to_xs_macro_with(self, with_stmt: With, ctx: XsContext) -> str:
+        if not (len(with_stmt.items) == 1 and isinstance(with_stmt.items[0].context_expr, Call)):
+            raise self._error("Macro repeat blocks must use a single call in the with-statement.", with_stmt)
 
-        if isinstance(w.items[0].optional_vars, Name):
-            names = [w.items[0].optional_vars.id]
-        elif isinstance(w.items[0].optional_vars, Tuple):
-            names = [n.id for n in w.items[0].optional_vars.elts if isinstance(n, Name)]
+        with_item = with_stmt.items[0]
+        if isinstance(with_item.optional_vars, Name):
+            names = [with_item.optional_vars.id]
+        elif isinstance(with_item.optional_vars, Tuple):
+            names = [node.id for node in with_item.optional_vars.elts if isinstance(node, Name)]
         else:
             raise self._error("Macro repeat blocks only support a single name or a destructured tuple target.",
-                              w.items[0].optional_vars)
-        iterable_value = self._eval_macro_function(w.items[0].context_expr)
+                              with_item.optional_vars)
+        iterable_value = self._eval_macro_function(with_item.context_expr)
         if not isinstance(iterable_value, Iterable):
             raise self._error("Macro repeat blocks require the macro call to evaluate to an iterable.",
-                              w.items[0].context_expr)
+                              with_item.context_expr)
         xs = ""
         for value in iterable_value:
             new_replacements = ctx.replacements.copy()
@@ -1152,17 +1269,5 @@ class PythonToXsConverter:
                 value_batch = [value]
             for name, val in zip(names, value_batch):
                 new_replacements[name] = self._to_xs_constant(val)
-            xs += self._to_xs_body(w.body, ctx.with_replacements(new_replacements))
+            xs += self._to_xs_body(with_stmt.body, ctx.with_replacements(new_replacements))
         return xs
-
-    def _to_xs_for_bound(self, param: expr, ctx: XsContext, positive: bool, enclosed: bool) -> str:
-        expected_op = Add if positive else Sub
-        inclusive_sign = "<=" if positive else ">="
-        if isinstance(param, BinOp) and isinstance(param.op, expected_op):
-            pairs = [(param.left, param.right), (param.right, param.left)] if positive else [(param.left, param.right)]
-            for main, other in pairs:
-                other_value = self._unpack_constant(other)
-                if other_value == 1 and not isinstance(other_value, bool):
-                    return f"{inclusive_sign}{self.sp}{self._to_xs_expression(main, ctx, enclosed=enclosed)}"
-        exclusive_sign = "<" if positive else ">"
-        return f"{exclusive_sign}{self.sp}{self._to_xs_expression(param, ctx, enclosed=enclosed)}"
