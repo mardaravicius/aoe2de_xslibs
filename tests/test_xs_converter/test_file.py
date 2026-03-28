@@ -107,16 +107,20 @@ class FileConversionTest(unittest.TestCase):
         )
         self.assertEqual(expected, convert_file(mod))
 
-    def test_first_function_stays_root_even_after_top_level_variables(self):
+    def test_rule_after_top_level_variables_is_converted(self):
         mod = module_from_source(
             "x: int = 1\n"
             "@xs_rule()\n"
             "def tick() -> None:\n"
             "    pass\n"
         )
-        with self.assertRaises(XsConversionError) as cm:
-            PythonToXsConverter.to_xs_file(mod, indent=True)
-        self.assertIn("default root function", str(cm.exception))
+        expected = (
+            "int x = 1;\n"
+            "\n"
+            "rule tick inactive {\n"
+            "}\n"
+        )
+        self.assertEqual(expected, convert_file(mod))
 
 
 if __name__ == "__main__":

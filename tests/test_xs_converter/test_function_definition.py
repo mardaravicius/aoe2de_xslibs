@@ -266,7 +266,7 @@ class TestXsRule(unittest.TestCase):
             "    xsSetPlayerAttribute(1, 20, 33.3);\n"
             "}\n"
         )
-        self.assertEqual(expected, convert(my_rule, root_flags=[False]))
+        self.assertEqual(expected, convert(my_rule))
 
     def test_inactive_rule(self):
         @xs_rule()
@@ -277,7 +277,7 @@ class TestXsRule(unittest.TestCase):
             "rule idleRule inactive {\n"
             "}\n"
         )
-        self.assertEqual(expected, convert(idle_rule, root_flags=[False]))
+        self.assertEqual(expected, convert(idle_rule))
 
     def test_high_frequency_rule(self):
         @xs_rule(active=True, high_frequency=True)
@@ -288,7 +288,7 @@ class TestXsRule(unittest.TestCase):
             "rule fastRule active highFrequency {\n"
             "}\n"
         )
-        self.assertEqual(expected, convert(fast_rule, root_flags=[False]))
+        self.assertEqual(expected, convert(fast_rule))
 
     def test_run_immediately_rule(self):
         @xs_rule(active=True, run_immediately=True)
@@ -299,7 +299,7 @@ class TestXsRule(unittest.TestCase):
             "rule initRule active runImmediately {\n"
             "}\n"
         )
-        self.assertEqual(expected, convert(init_rule, root_flags=[False]))
+        self.assertEqual(expected, convert(init_rule))
 
     def test_rule_with_group(self):
         @xs_rule(group="myGroup", active=True)
@@ -310,7 +310,7 @@ class TestXsRule(unittest.TestCase):
             "rule groupedRule group myGroup active {\n"
             "}\n"
         )
-        self.assertEqual(expected, convert(grouped_rule, root_flags=[False]))
+        self.assertEqual(expected, convert(grouped_rule))
 
 
 class TestXsIgnore(unittest.TestCase):

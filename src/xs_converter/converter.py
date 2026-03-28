@@ -137,13 +137,12 @@ class PythonToXsConverter:
 
     # Public API
     @staticmethod
-    def to_xs_script(*functions: Callable[..., Any], indent: bool, root_flags: Optional[list[bool]] = None, **kwargs: Any) -> str:
+    def to_xs_script(*functions: Callable[..., Any], indent: bool, **kwargs: Any) -> str:
         parts = []
         nl = "\n" if indent else ""
-        for i, f in enumerate(functions):
-            root_f = (i == 0) if root_flags is None else root_flags[i]
+        for f in functions:
             converter = PythonToXsConverter(indent, kwargs)
-            result = converter._to_xs_function(f, root_f)
+            result = converter._to_xs_function(f)
             if result:
                 parts.append(result)
         return nl.join(parts)
@@ -164,22 +163,19 @@ class PythonToXsConverter:
         )
         ctx = XsContext()
         parts: list[tuple[bool, str]] = []
-        has_function = False
         for node in module_ast.body:
             if isinstance(node, (Import, ImportFrom)):
                 continue
             try:
-                rendered = converter._render_module_statement(node, ctx, root_function=not has_function)
+                rendered = converter._render_module_statement(node, ctx)
             except Exception as exc:
                 converter._raise_as_conversion_error(exc, node)
             if not rendered.text:
                 continue
             parts.append((rendered.is_function, rendered.text))
-            if rendered.is_function:
-                has_function = True
         return converter._format_parts(parts)
 
-    def to_xs_function_definition(self, function: FunctionDef, ctx: XsContext, root_function: bool = True) -> str:
+    def to_xs_function_definition(self, function: FunctionDef, ctx: XsContext) -> str:
         try:
             if self._has_xs_ignore(function):
                 return ""
@@ -192,7 +188,7 @@ class PythonToXsConverter:
             parameters_xs = self._to_xs_parameters(function, ctx)
             has_parameters = len(parameters_xs) > 0
 
-            rule_modifier_xs = self._to_xs_rule_modifiers(function, root_function, has_parameters, xs_type)
+            rule_modifier_xs = self._to_xs_rule_modifiers(function, has_parameters, xs_type)
             has_rules = len(rule_modifier_xs) > 0
             xs = ""
             doc = ast.get_docstring(function)
@@ -407,13 +403,12 @@ class PythonToXsConverter:
                       zip(function.args.args, function.args.defaults)]
         return f",{self.sp}".join(parameters)
 
-    def _to_xs_rule_modifiers(self, function: FunctionDef, root_function: bool, has_parameters: bool, xs_type: str) -> str:
+    def _to_xs_rule_modifiers(self, function: FunctionDef, has_parameters: bool, xs_type: str) -> str:
         rule_decorator = [d for d in function.decorator_list if
                           isinstance(d, Call) and isinstance(d.func, Name) and d.func.id == "xs_rule"]
         is_rule = len(rule_decorator) > 0
-        if is_rule and (root_function or has_parameters or xs_type != "void"):
-            raise self._error("xs_rule functions cannot have parameters, return values, or be the default root function.",
-                              rule_decorator[0])
+        if is_rule and (has_parameters or xs_type != "void"):
+            raise self._error("xs_rule functions cannot have parameters or return values.", rule_decorator[0])
         if not is_rule:
             return ""
 
@@ -454,7 +449,7 @@ class PythonToXsConverter:
             modifiers.append(f"priority {rule_settings['priority']}")
         return " ".join(modifiers)
 
-    def _to_xs_function(self, function: Callable[..., Any], root_function: bool = True) -> str:
+    def _to_xs_function(self, function: Callable[..., Any]) -> str:
         source_name = inspect.getsourcefile(function)
         source_lines, start_line = self._read_source_lines(function, source_name)
 
@@ -473,7 +468,7 @@ class PythonToXsConverter:
             if module_ast.body:
                 raise self._error("Top-level source must contain a single function definition.", module_ast.body[0])
             raise self._build_source_start_error("Top-level source must contain a single function definition.")
-        return self.to_xs_function_definition(module_ast.body[0], XsContext(), root_function)
+        return self.to_xs_function_definition(module_ast.body[0], XsContext())
 
     def _to_xs_body(self, body: list[expr | stmt], ctx: XsContext) -> str:
         xs = ""
@@ -834,10 +829,10 @@ class PythonToXsConverter:
         )
 
     # Statement rendering
-    def _render_module_statement(self, node: stmt, ctx: XsContext, root_function: bool) -> RenderedStatement:
+    def _render_module_statement(self, node: stmt, ctx: XsContext) -> RenderedStatement:
         if isinstance(node, FunctionDef):
             return RenderedStatement(
-                self.to_xs_function_definition(node, ctx, root_function=root_function),
+                self.to_xs_function_definition(node, ctx),
                 is_function=True,
             )
         if isinstance(node, AnnAssign):

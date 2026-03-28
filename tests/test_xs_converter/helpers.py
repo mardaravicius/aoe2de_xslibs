@@ -38,12 +38,8 @@ def module_from_source(source: str) -> types.ModuleType:
     return mod
 
 
-def convert(*functions, indent=True, root_flags=None, **kwargs) -> str:
-    """Convert one or more Python functions to XS script and validate with xs-check.
-
-    By default the first function is treated as root (matching to_xs_script
-    behaviour).  Override per-function with ``root_flags``.
-    """
-    xs = PythonToXsConverter.to_xs_script(*functions, indent=indent, root_flags=root_flags, **kwargs)
+def convert(*functions, indent=True, **kwargs) -> str:
+    """Convert one or more Python functions to XS script and validate with xs-check."""
+    xs = PythonToXsConverter.to_xs_script(*functions, indent=indent, **kwargs)
     _xs_check(xs)
     return xs

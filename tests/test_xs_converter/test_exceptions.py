@@ -326,15 +326,15 @@ class ConverterDirectExceptionPathTest(unittest.TestCase):
         )
 
         self.assert_error(
-            lambda: converter.to_xs_function_definition(no_defaults, XsContext(), root_function=False),
+            lambda: converter.to_xs_function_definition(no_defaults, XsContext()),
             "default value",
         )
         self.assert_error(
-            lambda: converter._to_xs_rule_modifiers(invalid_rule_keyword, root_function=False, has_parameters=False, xs_type="void"),
+            lambda: converter._to_xs_rule_modifiers(invalid_rule_keyword, has_parameters=False, xs_type="void"),
             "constant keyword arguments",
         )
         self.assert_error(
-            lambda: converter._to_xs_rule_modifiers(conflicting_rule, root_function=False, has_parameters=False, xs_type="void"),
+            lambda: converter._to_xs_rule_modifiers(conflicting_rule, has_parameters=False, xs_type="void"),
             "cannot combine high_frequency",
         )
 
