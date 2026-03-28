@@ -4,6 +4,7 @@ import re
 import textwrap
 from collections.abc import Iterable
 from dataclasses import dataclass
+from itertools import count
 from ast import FunctionDef, Constant, Name, expr, arg, Expr, AnnAssign, Call, Assign, BinOp, Add, Sub, Mod, Mult, Div, \
     If, Compare, Eq, Gt, GtE, Lt, LtE, NotEq, For, While, AugAssign, Match, MatchValue, MatchAs, Return, Pass, \
     Subscript, stmt, Attribute, keyword, With, Tuple, UnaryOp, USub, JoinedStr, FormattedValue, Global, BoolOp, Or, And, \
@@ -29,6 +30,7 @@ class RenderedExpression:
 
 
 class PythonToXsConverter:
+    _generated_name_counter = count()
     _macro_functions = {
         macro_pass_value.__name__,
     }
@@ -129,7 +131,6 @@ class PythonToXsConverter:
             self.indent = ""
         self._vars = bindings
         self._doc_strings = set()
-        self._temp_counter = 0
         self._source: Optional[str] = None
         self._source_name: Optional[str] = None
         self._source_line_offset = 0
@@ -137,18 +138,28 @@ class PythonToXsConverter:
         self._display_source_lines: list[str] = []
 
     @staticmethod
-    def to_xs_script(*functions: Callable[..., Any], indent: bool, **kwargs: Any) -> str:
-        parts = []
-        nl = "\n" if indent else ""
+    def to_xs_script(*functions: Callable[..., Any], indent: bool, scrip_call_library: bool = False, **kwargs: Any) -> str:
+        formatter = PythonToXsConverter(indent, kwargs)
+        parts: list[tuple[bool, str]] = []
+        if scrip_call_library:
+            parts.append((True, formatter._to_xs_script_call_library_definition()))
         for f in functions:
             converter = PythonToXsConverter(indent, kwargs)
             result = converter._to_xs_function(f)
             if result:
-                parts.append(result)
-        return nl.join(parts)
+                parts.append((True, result))
+        return formatter._format_parts(parts)
 
     @staticmethod
-    def to_xs_file(module: ModuleType, indent: bool, **kwargs) -> str:
+    def to_xs_script_for_script_call(
+            function: Callable[..., Any], *, indent: bool, suffix: Optional[str] = None, **kwargs: Any
+    ) -> str:
+        converter = PythonToXsConverter(indent, kwargs)
+        result = converter._to_xs_function(function, function_name_suffix=suffix)
+        return converter._format_parts([(True, result)]) if result else ""
+
+    @staticmethod
+    def to_xs_file(module: ModuleType, indent: bool, scrip_call_library: bool = False, **kwargs) -> str:
         converter = PythonToXsConverter(indent, kwargs)
         source_name = inspect.getsourcefile(module) or getattr(module, "__file__", None)
         source_lines, start_line = converter._read_source_lines(module, source_name)
@@ -163,6 +174,8 @@ class PythonToXsConverter:
         )
         ctx = XsContext()
         parts: list[tuple[bool, str]] = []
+        if scrip_call_library:
+            parts.append((True, converter._to_xs_script_call_library_definition()))
         for node in module_ast.body:
             if isinstance(node, (Import, ImportFrom)):
                 continue
@@ -175,12 +188,19 @@ class PythonToXsConverter:
             parts.append((rendered.is_function, rendered.text))
         return converter._format_parts(parts)
 
-    def to_xs_function_definition(self, function: FunctionDef, ctx: XsContext) -> str:
+    def to_xs_function_definition(
+            self,
+            function: FunctionDef,
+            ctx: XsContext,
+            function_name_suffix: Optional[str] = None,
+    ) -> str:
         try:
             if self._has_xs_ignore(function):
                 return ""
             xs_type = self._to_xs_function_type(function.returns)
             name = self._to_camel_case(function.name)
+            if function_name_suffix:
+                name += function_name_suffix
 
             if len(function.args.args) != len(function.args.defaults):
                 raise self._error("All function arguments must have a default value.", function.args)
@@ -384,9 +404,14 @@ class PythonToXsConverter:
         return prefix + s + suffix
 
     def _next_temp_name(self) -> str:
-        name = f"temp{self._temp_counter:08x}"
-        self._temp_counter += 1
-        return name
+        return f"temp{next(type(self)._generated_name_counter):08x}"
+
+    @classmethod
+    def _next_temp_function_name(cls) -> str:
+        return f"header{next(cls._generated_name_counter):08x}"
+
+    def _to_xs_script_call_library_definition(self) -> str:
+        return self._block(0, f"void {self._next_temp_function_name()}()", "")
 
     @staticmethod
     def _has_xs_ignore(node: FunctionDef) -> bool:
@@ -446,7 +471,7 @@ class PythonToXsConverter:
             modifiers.append(f"priority {rule_settings['priority']}")
         return " ".join(modifiers)
 
-    def _to_xs_function(self, function: Callable[..., Any]) -> str:
+    def _to_xs_function(self, function: Callable[..., Any], function_name_suffix: Optional[str] = None) -> str:
         source_name = inspect.getsourcefile(function)
         source_lines, start_line = self._read_source_lines(function, source_name)
 
@@ -465,7 +490,7 @@ class PythonToXsConverter:
             if module_ast.body:
                 raise self._error("Top-level source must contain a single function definition.", module_ast.body[0])
             raise self._build_source_start_error("Top-level source must contain a single function definition.")
-        return self.to_xs_function_definition(module_ast.body[0], XsContext())
+        return self.to_xs_function_definition(module_ast.body[0], XsContext(), function_name_suffix=function_name_suffix)
 
     def _to_xs_body(self, body: list[expr | stmt], ctx: XsContext) -> str:
         xs = ""

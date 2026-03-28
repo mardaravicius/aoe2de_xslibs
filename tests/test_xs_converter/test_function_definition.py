@@ -3,7 +3,13 @@ import unittest
 from xs_converter.symbols import xs_rule, xs_ignore
 from xs_converter.functions import xs_set_player_attribute, xs_chat_data
 
-from tests.test_xs_converter.helpers import convert
+from tests.test_xs_converter.helpers import (
+    convert,
+    convert_for_script_call,
+    convert_raw,
+    extract_generated_names,
+    extract_script_call_library_name,
+)
 
 
 class TestEmptyFunction(unittest.TestCase):
@@ -196,6 +202,66 @@ class TestMultipleFunctions(unittest.TestCase):
             "}\n"
         )
         self.assertEqual(expected, convert(main_func, tick))
+
+    def test_script_call_library_prelude_is_added(self):
+        def my_func() -> None:
+            pass
+
+        expected = (
+            "void header00000000() {\n"
+            "}\n"
+            "\n"
+            "void myFunc() {\n"
+            "}\n"
+        )
+        self.assertEqual(expected, convert(my_func, scrip_call_library=True))
+
+    def test_script_call_library_prelude_name_is_unique_per_invocation(self):
+        def my_func() -> None:
+            pass
+
+        first = extract_script_call_library_name(convert_raw(my_func, scrip_call_library=True))
+        second = extract_script_call_library_name(convert_raw(my_func, scrip_call_library=True))
+        self.assertNotEqual(first, second)
+
+
+class TestScriptCallConversion(unittest.TestCase):
+
+    def test_single_function_uses_existing_name_by_default(self):
+        def my_func() -> None:
+            pass
+
+        expected = (
+            "void myFunc() {\n"
+            "}\n"
+        )
+        self.assertEqual(expected, convert_for_script_call(my_func))
+
+    def test_function_name_suffix_is_appended(self):
+        def my_func() -> None:
+            pass
+
+        expected = (
+            "void myFuncScriptCall() {\n"
+            "}\n"
+        )
+        self.assertEqual(
+            expected,
+            convert_for_script_call(my_func, suffix="ScriptCall"),
+        )
+
+    def test_script_call_library_uses_same_global_counter_as_temp_vars(self):
+        def my_func() -> None:
+            xs_set_player_attribute([1, 2], [3, 4])
+
+        xs = convert_raw(my_func, scrip_call_library=True)
+        generated_names = extract_generated_names(xs)
+        self.assertEqual(3, len(generated_names))
+        self.assertTrue(generated_names[0].startswith("header"))
+        self.assertTrue(generated_names[1].startswith("temp"))
+        self.assertTrue(generated_names[2].startswith("temp"))
+        self.assertEqual(int(generated_names[0][-8:], 16) + 1, int(generated_names[1][-8:], 16))
+        self.assertEqual(int(generated_names[1][-8:], 16) + 1, int(generated_names[2][-8:], 16))
 
 
 class TestDocstring(unittest.TestCase):

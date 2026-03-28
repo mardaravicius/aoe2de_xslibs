@@ -2,7 +2,14 @@ import unittest
 
 from xs_converter.converter import PythonToXsConverter
 from xs_converter.exceptions import XsConversionError
-from tests.test_xs_converter.helpers import convert_file, module_from_source
+from tests.test_xs_converter.helpers import (
+    convert,
+    convert_file,
+    convert_file_raw,
+    convert_raw,
+    extract_script_call_library_name,
+    module_from_source,
+)
 
 import tests.test_xs_converter.fixtures.imports_only as imports_only
 import tests.test_xs_converter.fixtures.imports_and_function as imports_and_function
@@ -136,6 +143,27 @@ class FileConversionTest(unittest.TestCase):
             "}\n"
         )
         self.assertEqual(expected, convert_file(mod))
+
+    def test_script_call_library_prelude_is_added_before_file_content(self):
+        mod = module_from_source("x: int = 1\n")
+        expected = (
+            "void header00000000() {\n"
+            "}\n"
+            "\n"
+            "int x = 1;\n"
+        )
+        self.assertEqual(expected, convert_file(mod, scrip_call_library=True))
+
+    def test_script_call_library_prelude_name_is_unique_across_supported_public_entry_points(self):
+        def my_func() -> None:
+            pass
+
+        mod = module_from_source("x: int = 1\n")
+        names = {
+            extract_script_call_library_name(convert_raw(my_func, scrip_call_library=True)),
+            extract_script_call_library_name(convert_file_raw(mod, scrip_call_library=True)),
+        }
+        self.assertEqual(2, len(names))
 
 
 if __name__ == "__main__":
