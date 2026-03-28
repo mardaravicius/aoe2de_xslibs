@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "numpy",
-    "aoe2de-xs-converter @ git+https://github.com/mardaravicius/aoe2de_xs_converter.git@main",
+    "aoe2de-xs-converter @ git+https://github.com/mardaravicius/aoe2de_xs_converter.git@master",
 ]
 
 [tool.setuptools.packages.find]
