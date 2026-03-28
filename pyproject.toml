@@ -1,8 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "xslibs"
 version = "0.1.0"
 description = "Various xs functions to make working with aoe2 de xs easier"
-dependencies = ["numpy"]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "aoe2de-xs-converter @ git+https://github.com/mardaravicius/aoe2de_xs_converter.git@main",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
