@@ -82,6 +82,21 @@ class FileConversionTest(unittest.TestCase):
             PythonToXsConverter.to_xs_file(mod, indent=True)
         self.assertIn("Expr", str(cm.exception))
 
+    def test_top_level_main_guard_is_converted_to_main_function(self):
+        mod = module_from_source(
+            "count: int = 1\n"
+            "if __name__ == \"__main__\":\n"
+            "    count = count + 1\n"
+        )
+        expected = (
+            "int count = 1;\n"
+            "\n"
+            "void main() {\n"
+            "    count = count + 1;\n"
+            "}\n"
+        )
+        self.assertEqual(expected, convert_file(mod))
+
     def test_xs_ignore_skips_function(self):
         expected = (
             "void converted() {\n"

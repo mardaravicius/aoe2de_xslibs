@@ -829,6 +829,11 @@ class PythonToXsConverter:
                 self.to_xs_function_definition(node, ctx),
                 is_function=True,
             )
+        if isinstance(node, If) and self._is_main_guard(node):
+            return RenderedStatement(
+                self._to_xs_main_definition(node, ctx),
+                is_function=True,
+            )
         if isinstance(node, AnnAssign):
             return RenderedStatement(self._render_annotated_assignment(node, ctx))
         if isinstance(node, Assign):
@@ -863,6 +868,30 @@ class PythonToXsConverter:
         if isinstance(node, (Pass, Global)):
             return ""
         raise self._error(f"Unsupported statement in function body: {type(node).__name__}.", node)
+
+    @staticmethod
+    def _is_main_guard(node: If) -> bool:
+        if not isinstance(node.test, Compare) or len(node.test.ops) != 1 or len(node.test.comparators) != 1:
+            return False
+
+        left = node.test.left
+        right = node.test.comparators[0]
+
+        def is_module_name(expr_node: expr) -> bool:
+            return isinstance(expr_node, Name) and expr_node.id == "__name__"
+
+        def is_main_name(expr_node: expr) -> bool:
+            return isinstance(expr_node, Constant) and expr_node.value == "__main__"
+
+        return (
+            isinstance(node.test.ops[0], Eq)
+            and ((is_module_name(left) and is_main_name(right)) or (is_main_name(left) and is_module_name(right)))
+        )
+
+    def _to_xs_main_definition(self, if_stmt: If, ctx: XsContext) -> str:
+        if if_stmt.orelse:
+            raise self._error("Top-level __name__ == '__main__' guard cannot have an else block.", if_stmt.orelse[0])
+        return self._block(ctx.depth, "void main()", self._to_xs_body(if_stmt.body, ctx))
 
     def _to_xs_expression_top(self, e: Expr, ctx: XsContext) -> str:
         if (isinstance(e.value, Constant) and isinstance(e.value.value, str)
