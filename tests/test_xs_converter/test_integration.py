@@ -9,7 +9,7 @@ from xs_converter.functions import (
     xs_get_player_civilization,
     xs_chat_data,
 )
-from xs_converter.macro import macro_pass_value, macro_repeat_with_iterable
+from xs_converter.macro import macro_pass_value, macro_repeat
 from xs_converter.symbols import XsConst, XsStatic, XsVector
 
 from tests.test_xs_converter.helpers import convert
@@ -26,12 +26,12 @@ class IntegrationTest(unittest.TestCase):
             string_var: str = "hello xs" + "asd"
             bool_var: bool = True
             vec: XsVector = vector(1.1, 2.2, 3.3)
-            resource_1: int = macro_pass_value("resource1", int)
+            resource_1: int = macro_pass_value("resource1")
             resource_2: int = 411
             long_int: int = -2_147_483_648
             s: str = f"{long_int=}, {ff=}, {bool_var=}, {string_var=}, {vec=}"
 
-            with macro_repeat_with_iterable("players", tuple[int, int]) as (player_number, res):
+            for player_number, res in macro_repeat("players"):
                 xs_set_player_attribute(player_number, resource_2, res)
 
             xs_set_player_attribute(1, resource_1, xs_player_attribute(1, resource_1) + 1.0)

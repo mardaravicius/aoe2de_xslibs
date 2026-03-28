@@ -2,17 +2,18 @@ import ast
 import inspect
 import re
 import textwrap
+from collections.abc import Iterable
 from dataclasses import dataclass
 from ast import FunctionDef, Constant, Name, expr, arg, Expr, AnnAssign, Call, Assign, BinOp, Add, Sub, Mod, Mult, Div, \
     If, Compare, Eq, Gt, GtE, Lt, LtE, NotEq, For, While, AugAssign, Match, MatchValue, MatchAs, Return, Pass, \
     Subscript, stmt, Attribute, keyword, With, Tuple, UnaryOp, USub, JoinedStr, FormattedValue, Global, BoolOp, Or, And, \
     Not, FloorDiv, List, Import, ImportFrom, operator, cmpop, boolop
 from types import ModuleType
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Optional
 
 from xs_converter.context import XsContext
 from xs_converter.exceptions import XsConversionError
-from xs_converter.macro import macro_pass_value, macro_repeat_with_iterable
+from xs_converter.macro import macro_pass_value, macro_repeat
 
 
 @dataclass(frozen=True)
@@ -32,7 +33,7 @@ class PythonToXsConverter:
         macro_pass_value.__name__,
     }
     _macro_repeat_functions = {
-        macro_repeat_with_iterable.__name__,
+        macro_repeat.__name__,
     }
 
     _TYPE_MAP = {
@@ -135,7 +136,6 @@ class PythonToXsConverter:
         self._source_column_offset = 0
         self._display_source_lines: list[str] = []
 
-    # Public API
     @staticmethod
     def to_xs_script(*functions: Callable[..., Any], indent: bool, **kwargs: Any) -> str:
         parts = []
@@ -213,7 +213,6 @@ class PythonToXsConverter:
         except Exception as exc:
             self._raise_as_conversion_error(exc, function)
 
-    # Source loading and error reporting
     @staticmethod
     def _syntax_error(exc: SyntaxError, source_name: Optional[str]) -> XsConversionError:
         return XsConversionError(
@@ -337,7 +336,6 @@ class PythonToXsConverter:
         message = str(exc) or exc.__class__.__name__
         raise self._error(message, node) from exc
 
-    # Formatting and naming
     def _format_parts(self, parts: list[tuple[bool, str]]) -> str:
         result = ""
         for i, (is_func, text) in enumerate(parts):
@@ -390,7 +388,6 @@ class PythonToXsConverter:
         self._temp_counter += 1
         return name
 
-    # Function and statement rendering
     @staticmethod
     def _has_xs_ignore(node: FunctionDef) -> bool:
         return any(
@@ -486,7 +483,6 @@ class PythonToXsConverter:
         value_expr = self._render_expression(return_stmt.value, ctx, enclosed=True)
         return value_expr.prelude + self._stmt(ctx.depth, f"return{self.sp}({value_expr.value})")
 
-    # Type and annotation helpers
     def _to_xs_type(self, annotation: expr) -> str:
         if not isinstance(annotation, Name):
             raise self._error("Type annotations must be simple type names.", annotation)
@@ -519,7 +515,6 @@ class PythonToXsConverter:
             xs += f"{self.sp}={self.sp}{default_xs}"
         return xs
 
-    # Array and assignment rendering
     def _parse_cast_call(self, node: expr) -> Optional[tuple[str, expr]]:
         if (isinstance(node, Call)
                 and isinstance(node.func, Name)
@@ -828,7 +823,6 @@ class PythonToXsConverter:
             f"{name}{self.sp}={self.sp}{name}{self.sp}{op}{self.sp}{value_expr.value}",
         )
 
-    # Statement rendering
     def _render_module_statement(self, node: stmt, ctx: XsContext) -> RenderedStatement:
         if isinstance(node, FunctionDef):
             return RenderedStatement(
@@ -860,7 +854,10 @@ class PythonToXsConverter:
         if isinstance(node, Match):
             return self._to_xs_match(node, inner)
         if isinstance(node, With):
-            return self._to_xs_macro_with(node, ctx)
+            raise self._error(
+                "With-statements are not supported. Use `for ... in macro_repeat(...)` for repeat macros.",
+                node,
+            )
         if isinstance(node, Return):
             return self._to_xs_return(node, inner)
         if isinstance(node, (Pass, Global)):
@@ -874,7 +871,6 @@ class PythonToXsConverter:
         value_expr = self._render_expression(e.value, ctx)
         return value_expr.prelude + self._stmt(ctx.depth, value_expr.value)
 
-    # Expression rendering
     def _to_xs_binary_op(self, op: operator | cmpop | boolop, node: Optional[ast.AST] = None) -> str:
         xs_op = self._OPERATOR_MAP.get(type(op))
         if xs_op is None:
@@ -1059,6 +1055,8 @@ class PythonToXsConverter:
     def _render_call(self, call: Call, ctx: XsContext, enclosed: bool = False) -> RenderedExpression:
         if not isinstance(call.func, Name):
             raise self._error(f"Function calls must reference a name, not {call.func}.", call.func)
+        if call.func.id in self._macro_repeat_functions:
+            raise self._error("macro_repeat() is only supported as the iterable in a for-loop.", call)
         function_name = self._to_camel_case(call.func.id)
         special_expr = self._render_special_call(function_name, call, ctx, enclosed)
         if special_expr is not None:
@@ -1071,7 +1069,6 @@ class PythonToXsConverter:
     def _to_xs_call(self, e: Call, ctx: XsContext, enclosed: bool = False) -> str:
         return self._render_call(e, ctx, enclosed).value
 
-    # Control-flow rendering
     def _to_xs_if(self, if_stmt: If, ctx: XsContext, els: bool = False) -> str:
         xs = ""
         cond_expr = self._render_expression(if_stmt.test, ctx, enclosed=True)
@@ -1093,12 +1090,21 @@ class PythonToXsConverter:
         return xs
 
     def _to_xs_for(self, for_stmt: For, ctx: XsContext) -> str:
+        if (
+                isinstance(for_stmt.iter, Call)
+                and isinstance(for_stmt.iter.func, Name)
+                and for_stmt.iter.func.id in self._macro_repeat_functions
+        ):
+            return self._to_xs_macro_repeat_for(for_stmt, ctx)
         if not (
                 isinstance(for_stmt.iter, Call)
                 and isinstance(for_stmt.iter.func, Name)
                 and for_stmt.iter.func.id in {"range", "i32range"}
         ):
-            raise self._error("For-loops are only supported over range(...) or i32range(...).", for_stmt.iter)
+            raise self._error(
+                "For-loops are only supported over range(...), i32range(...), or macro_repeat(...).",
+                for_stmt.iter,
+            )
         if not isinstance(for_stmt.target, Name):
             raise self._error("For-loop targets must be simple variable names.", for_stmt.target)
 
@@ -1163,6 +1169,61 @@ class PythonToXsConverter:
         xs += f"{ctx.depth * self.indent}}}{self.nl}"
         return xs
 
+    def _to_xs_macro_repeat_for(self, for_stmt: For, ctx: XsContext) -> str:
+        if not isinstance(for_stmt.iter, Call):
+            raise self._error("Macro repeat loops must iterate over a macro_repeat(...) call.", for_stmt.iter)
+
+        names, destructured = self._parse_macro_repeat_target(for_stmt.target)
+        iterable_value = self._eval_macro_repeat_iterable(for_stmt.iter)
+        if not isinstance(iterable_value, Iterable):
+            raise self._error(
+                "Macro repeat loops require the iterable expression to evaluate to an iterable.",
+                for_stmt.iter,
+            )
+
+        xs = ""
+        for value in iterable_value:
+            replacements = ctx.replacements.copy()
+            values = self._macro_repeat_values_for_target(value, len(names), destructured, for_stmt.target)
+            for name, val in zip(names, values):
+                replacements[name] = self._to_xs_constant(val, node=for_stmt.iter)
+            body_ctx = XsContext(ctx.depth - 1, replacements)
+            xs += self._to_xs_body(for_stmt.body, body_ctx)
+        return xs
+
+    def _parse_macro_repeat_target(self, target: expr) -> tuple[list[str], bool]:
+        if isinstance(target, Name):
+            return [target.id], False
+        if isinstance(target, Tuple):
+            if not all(isinstance(node, Name) for node in target.elts):
+                raise self._error(
+                    "Macro repeat loop targets must be a simple variable name or a destructured tuple of names.",
+                    target,
+                )
+            return [node.id for node in target.elts], True
+        raise self._error(
+            "Macro repeat loop targets must be a simple variable name or a destructured tuple of names.",
+            target,
+        )
+
+    def _macro_repeat_values_for_target(self, value: Any, expected_count: int, destructured: bool,
+                                        node: ast.AST) -> list[Any]:
+        if not destructured:
+            return [value]
+        try:
+            values = list(value)
+        except TypeError as exc:
+            raise self._error(
+                "Macro repeat tuple targets require each iterated value to be iterable.",
+                node,
+            ) from exc
+        if len(values) != expected_count:
+            raise self._error(
+                "Macro repeat tuple targets must match the number of values produced by the iterable.",
+                node,
+            )
+        return values
+
     def _parse_range_args(self, args: list[expr], node: Optional[ast.AST] = None) -> tuple[Optional[expr], expr, int | expr]:
         if len(args) == 1:
             return None, args[0], 1
@@ -1223,46 +1284,32 @@ class PythonToXsConverter:
         header = f"switch{self.sp}({subject_expr.value})"
         return subject_expr.prelude + cases_prelude + self._block(ctx.depth, header, cases_xs)
 
-    # Macro expansion
     def _eval_macro_function(self, call: Call) -> Any:
         if not isinstance(call.func, Name):
             raise self._error("Macro call must reference a function name.", call.func)
         return self._eval_macro_var(call)
 
     def _eval_macro_var(self, call: Call) -> Any:
-        if 1 <= len(call.args) <= 2 and isinstance(call.args[0], Constant) and isinstance(
-                call.args[0].value, str):
-            try:
-                return eval(call.args[0].value, self._vars)
-            except Exception as exc:
-                raise self._error(f"Failed to evaluate macro expression {call.args[0].value!r}: {exc}",
-                                  call.args[0]) from exc
+        if len(call.args) == 1 and isinstance(call.args[0], Constant) and isinstance(call.args[0].value, str):
+            reference = call.args[0].value
+            if reference in self._vars:
+                return self._vars[reference]
+            raise self._error(f"Macro reference {reference!r} is not bound in converter bindings.", call.args[0])
         raise self._error("Macro calls must have a string constant as their first argument.", call)
 
-    def _to_xs_macro_with(self, with_stmt: With, ctx: XsContext) -> str:
-        if not (len(with_stmt.items) == 1 and isinstance(with_stmt.items[0].context_expr, Call)):
-            raise self._error("Macro repeat blocks must use a single call in the with-statement.", with_stmt)
+    def _macro_reference_name(self, call: Call) -> str:
+        if not (call.args and isinstance(call.args[0], Constant) and isinstance(call.args[0].value, str)):
+            raise self._error("Macro calls must have a string constant as their first argument.", call)
+        return call.args[0].value
 
-        with_item = with_stmt.items[0]
-        if isinstance(with_item.optional_vars, Name):
-            names = [with_item.optional_vars.id]
-        elif isinstance(with_item.optional_vars, Tuple):
-            names = [node.id for node in with_item.optional_vars.elts if isinstance(node, Name)]
-        else:
-            raise self._error("Macro repeat blocks only support a single name or a destructured tuple target.",
-                              with_item.optional_vars)
-        iterable_value = self._eval_macro_function(with_item.context_expr)
-        if not isinstance(iterable_value, Iterable):
-            raise self._error("Macro repeat blocks require the macro call to evaluate to an iterable.",
-                              with_item.context_expr)
-        xs = ""
-        for value in iterable_value:
-            new_replacements = ctx.replacements.copy()
-            if isinstance(value, tuple):
-                value_batch = list(value)
-            else:
-                value_batch = [value]
-            for name, val in zip(names, value_batch):
-                new_replacements[name] = self._to_xs_constant(val)
-            xs += self._to_xs_body(with_stmt.body, ctx.with_replacements(new_replacements))
-        return xs
+    def _eval_macro_repeat_iterable(self, call: Call) -> Any:
+        if len(call.args) != 1:
+            raise self._error("macro_repeat() requires a string reference.", call)
+        value = self._eval_macro_var(call)
+        if not isinstance(value, Iterable):
+            raise self._error(
+                f"macro_repeat reference {self._macro_reference_name(call)!r} resolved to {value!r} "
+                f"({type(value).__name__}), expected an iterable.",
+                call,
+            )
+        return value

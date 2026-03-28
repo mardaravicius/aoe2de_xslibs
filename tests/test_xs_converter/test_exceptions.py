@@ -137,7 +137,7 @@ class ConverterExceptionInfrastructureTest(unittest.TestCase):
         self.assertIn("^", message)
 
     def test_error_and_enrich_conversion_errors_without_ast_nodes(self):
-        converter = make_converter()
+        converter = make_converter(value=1, players=[(1,)])
 
         error = converter._error("boom")
         self.assertEqual("boom", error.message)
@@ -283,7 +283,7 @@ class ConverterDirectExceptionPathTest(unittest.TestCase):
             """
         )
         cases = [
-            ("for_invalid_iter", lambda: converter._to_xs_for(invalid_iter, ctx), "range(...) or i32range"),
+            ("for_invalid_iter", lambda: converter._to_xs_for(invalid_iter, ctx), "range(...), i32range(...), or macro_repeat(...)"),
             ("for_invalid_target", lambda: converter._to_xs_for(invalid_target, ctx), "simple variable names"),
             ("range_zero_step", lambda: converter._parse_range_args([expr_from_source("0"), expr_from_source("3"), expr_from_source("0")]), "cannot be 0"),
             ("range_wrong_arity", lambda: converter._parse_range_args([expr_from_source("0"), expr_from_source("1"), expr_from_source("2"), expr_from_source("3")]), "1 to 3 arguments"),
@@ -339,23 +339,30 @@ class ConverterDirectExceptionPathTest(unittest.TestCase):
         )
 
     def test_macro_exception_paths(self):
-        converter = make_converter()
+        converter = make_converter(value=1, players=[(1,)])
         ctx = XsContext()
-        invalid_repeat_shape = stmt_from_source(
+        legacy_repeat_with = stmt_from_source(
             """
-            with foo(), bar():
+            with macro_repeat("[]"):
                 pass
             """
         )
         invalid_repeat_target = stmt_from_source(
             """
-            with macro_repeat_with_iterable("[]", int) as obj.x:
+            for obj.x in macro_repeat("[]"):
                 pass
             """
         )
         non_iterable_repeat = stmt_from_source(
             """
-            with macro_repeat_with_iterable("1", int) as value:
+            for value in macro_repeat("value"):
+                pass
+            """
+        )
+        invalid_repeat_usage = expr_from_source('macro_repeat("players")')
+        mismatched_repeat_target = stmt_from_source(
+            """
+            for a, b in macro_repeat("players"):
                 pass
             """
         )
@@ -363,10 +370,12 @@ class ConverterDirectExceptionPathTest(unittest.TestCase):
         cases = [
             ("macro_function_requires_name", lambda: converter._eval_macro_function(expr_from_source("(lambda: 1)()")), "function name"),
             ("macro_var_requires_string", lambda: converter._eval_macro_var(expr_from_source("macro_pass_value(1)")), "string constant"),
-            ("macro_var_eval_failure", lambda: converter._eval_macro_var(expr_from_source("macro_pass_value(\"missing_name\", int)")), "Failed to evaluate macro expression"),
-            ("macro_with_invalid_shape", lambda: converter._to_xs_macro_with(invalid_repeat_shape, ctx), "single call in the with-statement"),
-            ("macro_with_invalid_target", lambda: converter._to_xs_macro_with(invalid_repeat_target, ctx), "single name or a destructured tuple"),
-            ("macro_with_non_iterable", lambda: converter._to_xs_macro_with(non_iterable_repeat, ctx), "evaluate to an iterable"),
+            ("macro_var_missing_binding", lambda: converter._eval_macro_var(expr_from_source("macro_pass_value(\"missing_name\")")), "not bound in converter bindings"),
+            ("macro_with_is_no_longer_supported", lambda: converter._render_body_statement(legacy_repeat_with, ctx), "Use `for ... in macro_repeat(...)`"),
+            ("macro_repeat_invalid_target", lambda: converter._to_xs_for(invalid_repeat_target, ctx), "simple variable name or a destructured tuple"),
+            ("macro_repeat_non_iterable", lambda: converter._to_xs_for(non_iterable_repeat, ctx), "expected an iterable"),
+            ("macro_repeat_outside_for", lambda: converter._render_expression(invalid_repeat_usage, ctx), "only supported as the iterable in a for-loop"),
+            ("macro_repeat_unpack_mismatch", lambda: converter._to_xs_for(mismatched_repeat_target, ctx), "must match the number of values"),
         ]
         for name, fn, message in cases:
             with self.subTest(name=name):
