@@ -5,8 +5,8 @@ extern const int cIntListResizeFailedError = -3;
 extern const int cIntListMaxCapacityError = -4;
 extern const int cIntListMaxCapacity = 999999999;
 extern const int cIntListEmptyParam = -999999999;
-int _cIntListIntMax = 214748364 * 10 + 7;
-int _cIntListIntMin = -214748364 * 10 - 8;
+int _cIntListIntMax = -1;
+int _cIntListIntMin = -1;
 int _intListLastOperationStatus = cIntListSuccess;
 
 /*
@@ -116,6 +116,10 @@ int _xsIntListIntAbs(int n = 0) {
     @return created list id, or `cIntListGenericError` on error
 */
 int xsIntListFromRange(int start = 0, int stop = 0, int step = 1) {
+    if (_cIntListIntMin == -1) {
+        _cIntListIntMin = -214748364 * 10 - 8;
+        _cIntListIntMax = 214748364 * 10 + 7;
+    }
     if ((step == 0) || (step == _cIntListIntMin)) {
         return (cIntListGenericError);
     }

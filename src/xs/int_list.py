@@ -11,8 +11,8 @@ c_int_list_resize_failed_error: XsExternConst[int32] = int32(-3)
 c_int_list_max_capacity_error: XsExternConst[int32] = int32(-4)
 c_int_list_max_capacity: XsExternConst[int32] = int32(999999999)
 c_int_list_empty_param: XsExternConst[int32] = int32(-999999999)
-_c_int_list_int_max: int32 = int32(2147483647)
-_c_int_list_int_min: int32 = int32(-2147483648)
+_c_int_list_int_max: int32 = int32(-1)
+_c_int_list_int_min: int32 = int32(-1)
 _int_list_last_operation_status: int32 = c_int_list_success
 
 
@@ -120,6 +120,10 @@ def xs_int_list_from_range(start: int32 = int32(0), stop: int32 = int32(0), step
     :param step: increment between values (positive or negative, must not be zero)
     :return: created list id, or `c_int_list_generic_error` on error
     """
+    global _c_int_list_int_min, _c_int_list_int_max
+    if _c_int_list_int_min == int32(-1):
+        _c_int_list_int_min = -2147483648
+        _c_int_list_int_max = 2147483647
     if step == 0 or step == _c_int_list_int_min:
         return c_int_list_generic_error
     distance: int32 = int32(0)
