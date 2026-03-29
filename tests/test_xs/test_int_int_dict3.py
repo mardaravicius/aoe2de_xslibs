@@ -1,11 +1,11 @@
 import random
 import unittest
 
+import numpy as np
+
 from xs.int_int_dict3 import *
 
-pytestmark = __import__("pytest").mark.filterwarnings(
-    "ignore:overflow encountered in scalar multiply:RuntimeWarning"
-)
+np.seterr(over="ignore")
 
 
 class IntIntDictTest(unittest.TestCase):

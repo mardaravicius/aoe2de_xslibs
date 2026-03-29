@@ -28,7 +28,6 @@ void main() {
     xsIntListAppend(scores, 310);
     xsIntIntDictPut(budget, 7, 700);
 
-    xsMtSeed(xsGetGameTime());
     int roll = xsMtRandomUniformRange(1, 100);
 
     int cFlagActive = xsBitShiftLeft(1, 1);
