@@ -613,8 +613,6 @@ int  xsMtRandomUniformRange(int start, int end)   // uniform int in [start, end)
 
 ```cpp
 void randomTeams() {
-    xsMtSeed(xsGetGameTime());
-
     int numPlayers = 4;
     int i = 0;
     while (i < numPlayers) {
@@ -640,7 +638,6 @@ void main() {
     int flagsByPlayer = xsIntIntDict();
 
     int cFlagElite = xsBitShiftLeft(1, 0);
-    xsMtSeed(xsGetGameTime());
 
     int i = 0;
     while (i < xsIntListSize(players)) {
