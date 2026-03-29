@@ -465,6 +465,22 @@ class VectorListTest(unittest.TestCase):
         self.assertEqual(vstr(lst1), xs_vector_list_to_string(xs_lst))
         self.assertEqual(len(lst1), xs_vector_list_size(xs_lst))
 
+    def test_xs_vector_list_extend_with_array_copies_raw_array_values_in_order(self):
+        lst1 = [vector(1.0, 0.0, 0.0), vector(2.0, 0.0, 0.0)]
+        arr_values = [
+            vector(3.0, 3.0, 3.0),
+            vector(4.0, 4.0, 4.0),
+            vector(5.0, 5.0, 5.0),
+        ]
+        xs_lst = xs_vector_list(*tuple(lst1))
+        xs_arr = xs_array_create_vector(len(arr_values))
+        for i, value in enumerate(arr_values):
+            xs_array_set_vector(xs_arr, i, value)
+        self.assertEqual(c_vector_list_success, xs_vector_list_extend_with_array(xs_lst, xs_arr))
+        lst1.extend(arr_values)
+        self.assertEqual(vstr(lst1), xs_vector_list_to_string(xs_lst))
+        self.assertEqual(len(lst1), xs_vector_list_size(xs_lst))
+
     def test_xs_vector_list_extend_with_array_at_exact_capacity_boundary(self):
         lst1 = [vector(float(i), 0.0, 0.0) for i in range(12)]
         xs_lst = xs_vector_list(*lst1)

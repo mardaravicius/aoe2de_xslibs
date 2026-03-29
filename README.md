@@ -60,6 +60,7 @@ You do not need the Python tooling for that.
 |---|---|
 | `intList.xs` | Dynamic list of `int` values |
 | `floatList.xs` | Dynamic list of `float` values |
+| `boolList.xs` | Dynamic list of `bool` values |
 | `stringList.xs` | Dynamic list of `string` values |
 | `vectorList.xs` | Dynamic list of `vector` values |
 | `intIntDict.xs` | Hash map from `int` keys to `int` values |
@@ -88,10 +89,9 @@ Copy the contents of the generated `.xs` files you want and paste them above you
 
 ## 3. A few rules to remember
 
-- `xsIntList`, `xsFloatList`, `xsStringList`, `xsVectorList`, and `xsIntIntDict` return an `int` handle.
+- The list creation helpers and `xsIntIntDict` return an `int` handle.
 - `xsIntIntDictKeys` and `xsIntIntDictValues` return raw XS `int` arrays, not list handles.
 - There is no global initialization function for these libraries. You can use them immediately.
-- The convenience constructors stop at the first internal default or sentinel value. If you need to store one of those values as initial data, create the container first and then populate it with `Append`, `Set`, or `Put`.
 - `xsIntIntDict` cannot store `cIntIntDictEmptyKey` as a key at all.
 
 ## 4. Int List
@@ -254,7 +254,81 @@ void trackRates() {
 }
 ```
 
-## 6. String List
+## 6. Bool List
+
+`boolList.xs` provides a dynamic array of booleans.
+It largely mirrors String List, but it intentionally has no `xsBoolList` convenience constructor, and bool-returning error cases use `false` plus `xsBoolListLastError()` because `false` is also a valid stored value.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cBoolListSuccess` | `0` | Operation succeeded |
+| `cBoolListGenericError` | `-1` | General failure |
+| `cBoolListIndexOutOfRangeError` | `-2` | Index out of bounds |
+| `cBoolListResizeFailedError` | `-3` | Array allocation failed |
+| `cBoolListMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cBoolListMaxCapacity` | `999999999` | Hard upper limit |
+| `cBoolListEmptyIntParam` | `-999999999` | Internal optional-int sentinel |
+
+### API
+
+```cpp
+// Creation
+int  xsBoolListCreate(int capacity)
+int  xsBoolListFromRepeatedVal(bool value, int times)
+int  xsBoolListFromRepeatedList(int lst, int times)
+int  xsBoolListFromArray(int arr)
+int  xsBoolListUseArrayAsSource(int arr)          // wrap existing bool array without copying
+
+// Access
+bool xsBoolListGet(int lst, int idx)
+int  xsBoolListSet(int lst, int idx, bool value)
+int  xsBoolListSize(int lst)
+
+// Modification
+int  xsBoolListAppend(int lst, bool value)
+int  xsBoolListInsert(int lst, int idx, bool value)
+bool xsBoolListPop(int lst, int idx)
+int  xsBoolListRemove(int lst, bool value)
+int  xsBoolListClear(int lst)
+void xsBoolListReverse(int lst)
+void xsBoolListSort(int lst, bool reverse)
+
+// Search
+bool xsBoolListContains(int lst, bool value)
+int  xsBoolListIndex(int lst, bool value, int start, int stop)
+int  xsBoolListCount(int lst, bool value)
+
+// Bulk operations
+int  xsBoolListCopy(int lst, int start, int end)
+int  xsBoolListExtend(int source, int lst)
+int  xsBoolListExtendWithArray(int source, int arr)
+int  xsBoolListCompare(int lst1, int lst2)
+
+// Diagnostics
+string xsBoolListToString(int lst)
+int    xsBoolListLastError()
+```
+
+### Example
+
+```cpp
+void syncFlags() {
+    int flags = xsBoolListCreate(4);
+    xsBoolListAppend(flags, true);
+    xsBoolListAppend(flags, false);
+    xsBoolListAppend(flags, true);
+    xsBoolListAppend(flags, false);
+    xsBoolListSort(flags, true);
+
+    if (!xsBoolListGet(flags, 0) && xsBoolListLastError() != cBoolListSuccess) {
+        xsChatData("flag lookup failed");
+    }
+}
+```
+
+## 7. String List
 
 `stringList.xs` provides a dynamic array of strings.
 It mostly mirrors Int List, but there is no `Sum`, and `xsStringListUseArrayAsSource` wraps an existing string array without copying it.
@@ -328,7 +402,7 @@ void announceNames() {
 }
 ```
 
-## 7. Vector List
+## 8. Vector List
 
 `vectorList.xs` provides a dynamic array of `vector` values.
 Unlike the scalar list types, it only exposes operations that make sense for vectors, so there is no sort, compare, sum, min, or max API.
@@ -404,7 +478,7 @@ void spawnUnitsAlongPath() {
 }
 ```
 
-## 8. Int to Int Dictionary
+## 9. Int to Int Dictionary
 
 `intIntDict.xs` provides a hash map from `int` keys to `int` values.
 The exported implementation uses open addressing with linear probing and resizes automatically when the load factor grows past `cIntIntDictMaxLoadFactor`.
@@ -490,7 +564,7 @@ void distributeResources() {
 }
 ```
 
-## 9. Binary Operations
+## 10. Binary Operations
 
 `binaryFunctions.xs` provides software implementations of common 32-bit bitwise operations.
 Use these when you need flags, masking, shifting, or packed integer values in XS.
@@ -523,7 +597,7 @@ int unpackLow(int packed) {
 }
 ```
 
-## 10. Random Numbers
+## 11. Random Numbers
 
 `binaryFunctions.xs` also includes a Mersenne Twister (`MT19937`) pseudo-random number generator.
 Seed it once with `xsMtSeed`, then draw values with `xsMtRandom` or `xsMtRandomUniformRange`.
@@ -552,7 +626,7 @@ void randomTeams() {
 }
 ```
 
-## 11. Larger example
+## 12. Larger example
 
 The example below shows `Int List`, `IntIntDict`, bitwise flags, and the MT RNG working together in one script.
 

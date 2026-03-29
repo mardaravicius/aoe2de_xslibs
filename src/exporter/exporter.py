@@ -3,6 +3,7 @@ from pathlib import Path
 from types import ModuleType
 
 import xs.binary_functions as binary_functions
+import xs.bool_list as bool_list
 import xs.float_list as float_list
 # import xs.int_int_dict as int_int_dict_v1
 # import xs.int_int_dict2 as int_int_dict_v2
@@ -17,6 +18,7 @@ def main() -> None:
     xs_modules: list[tuple[ModuleType, str]] = [
         (int_list, "intList"),
         (float_list, "floatList"),
+        (bool_list, "boolList"),
         (string_list, "stringList"),
         (int_int_dict, "intIntDict"),
         # (int_int_dict_v1, "intIntDict"),

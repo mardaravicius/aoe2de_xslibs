@@ -516,6 +516,18 @@ class IntListTest(unittest.TestCase):
         self.assertEqual(istr(lst1), xs_int_list_to_string(xs_lst))
         self.assertEqual(len(lst1), xs_int_list_size(xs_lst))
 
+    def test_xs_int_list_extend_with_array_copies_raw_array_values_in_order(self):
+        lst1 = [10, 20]
+        arr_values = [7, 11, 13]
+        xs_lst = xs_int_list(*[int32(x) for x in lst1])
+        xs_arr = xs_array_create_int(len(arr_values))
+        for i, value in enumerate(arr_values):
+            xs_array_set_int(xs_arr, i, value)
+        self.assertEqual(c_int_list_success, xs_int_list_extend_with_array(xs_lst, xs_arr))
+        lst1.extend(arr_values)
+        self.assertEqual(istr(lst1), xs_int_list_to_string(xs_lst))
+        self.assertEqual(len(lst1), xs_int_list_size(xs_lst))
+
     def test_xs_int_list_extend_with_array_at_exact_capacity_boundary(self):
         lst1 = list(range(12))
         xs_lst = xs_int_list(*[int32(x) for x in lst1])

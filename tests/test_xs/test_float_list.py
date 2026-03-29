@@ -488,6 +488,18 @@ class FloatListTest(unittest.TestCase):
         self.assertEqual(fstr(lst1), xs_float_list_to_string(xs_lst))
         self.assertEqual(len(lst1), xs_float_list_size(xs_lst))
 
+    def test_xs_float_list_extend_with_array_copies_raw_array_values_in_order(self):
+        lst1 = [float32(1.25), float32(2.5)]
+        arr_values = [float32(5.5), float32(6.6), float32(7.7)]
+        xs_lst = xs_float_list(*tuple(lst1))
+        xs_arr = xs_array_create_float(len(arr_values))
+        for i, value in enumerate(arr_values):
+            xs_array_set_float(xs_arr, i, value)
+        self.assertEqual(c_float_list_success, xs_float_list_extend_with_array(xs_lst, xs_arr))
+        lst1.extend(arr_values)
+        self.assertEqual(fstr(lst1), xs_float_list_to_string(xs_lst))
+        self.assertEqual(len(lst1), xs_float_list_size(xs_lst))
+
     def test_xs_float_list_extend_with_array_at_exact_capacity_boundary(self):
         lst1 = [float32(i) for i in range(12)]
         xs_lst = xs_float_list(*lst1)

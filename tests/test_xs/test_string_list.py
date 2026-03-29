@@ -481,6 +481,18 @@ class StringListTest(unittest.TestCase):
         self.assertEqual(to_str(lst1), xs_string_list_to_string(xs_lst))
         self.assertEqual(len(lst1), xs_string_list_size(xs_lst))
 
+    def test_xs_string_list_extend_with_array_copies_raw_array_values_in_order(self):
+        lst1 = ["aa", "bb"]
+        arr_values = ["one", "two", "three"]
+        xs_lst = xs_string_list(*lst1)
+        xs_arr = xs_array_create_string(len(arr_values))
+        for i, value in enumerate(arr_values):
+            xs_array_set_string(xs_arr, i, value)
+        self.assertEqual(c_string_list_success, xs_string_list_extend_with_array(xs_lst, xs_arr))
+        lst1.extend(arr_values)
+        self.assertEqual(to_str(lst1), xs_string_list_to_string(xs_lst))
+        self.assertEqual(len(lst1), xs_string_list_size(xs_lst))
+
     def test_xs_string_list_extend_with_array_at_exact_capacity_boundary(self):
         lst1 = [str(i) for i in range(12)]
         xs_lst = xs_string_list(*lst1)
