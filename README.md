@@ -7,10 +7,10 @@ It adds growable lists, an `int -> int` dictionary, bitwise helpers, and a Merse
 
 XS gives you arrays, vectors, and primitive types, but larger scripts quickly run into a few missing building blocks:
 
-- dynamic lists
-- reusable dictionary-like storage
-- bitwise operations
-- a convenient pseudo-random number generator
+- dynamic array with an api inspired by python list
+- hash table with an api inspired by python dictionary
+- bitwise operations as xs functions
+- a pseudo-random number generator with good random distribution based on the mersenne twister algorithm
 
 This repo packages those missing pieces as drop-in `.xs` files.
 If you only want to use the libraries in a scenario, the generated files in [`xs/`](xs/) are the ones you need.
@@ -67,7 +67,7 @@ You do not need the Python tooling for that.
 
 ## 2. Add them to your script
 
-There are two straightforward ways to use the libraries.
+There are three straightforward ways to use the libraries.
 
 ### Option A - Using `include`
 
@@ -85,6 +85,12 @@ There are two straightforward ways to use the libraries.
 ### Option B - Copy and paste the file contents
 
 Copy the contents of the generated `.xs` files you want and paste them above your `void main()` function.
+
+### Option C - Copy and paste them into a `Script Call` Effect
+
+Copy the contents of the generated `.xs` files into a disabled `Script Call`. 
+Make sure that effect starts with some function definition (eg: `void header123(){}`) otherwise it will show up as 
+red but still work.
 
 ## 3. A few rules to remember
 
