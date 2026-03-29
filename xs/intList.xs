@@ -5,6 +5,8 @@ extern const int cIntListResizeFailedError = -3;
 extern const int cIntListMaxCapacityError = -4;
 extern const int cIntListMaxCapacity = 999999999;
 extern const int cIntListEmptyParam = -999999999;
+int _cIntListIntMax = 214748364 * 10 + 7;
+int _cIntListIntMin = -214748364 * 10 - 8;
 int _intListLastOperationStatus = cIntListSuccess;
 
 /*
@@ -114,23 +116,33 @@ int _xsIntListIntAbs(int n = 0) {
     @return created list id, or `cIntListGenericError` on error
 */
 int xsIntListFromRange(int start = 0, int stop = 0, int step = 1) {
-    if (step == 0) {
+    if ((step == 0) || (step == _cIntListIntMin)) {
         return (cIntListGenericError);
     }
-    if ((step > 0) && (start > stop)) {
-        return (cIntListGenericError);
+    int distance = 0;
+    if (step > 0) {
+        if (start > stop) {
+            return (cIntListGenericError);
+        }
+        if ((start < 0) && (stop >= 0) && (stop > (_cIntListIntMax + start))) {
+            return (cIntListGenericError);
+        }
+        distance = stop - start;
+    } else {
+        if (start < stop) {
+            return (cIntListGenericError);
+        }
+        if ((start >= 0) && (stop < 0) && (start > (_cIntListIntMax + stop))) {
+            return (cIntListGenericError);
+        }
+        distance = start - stop;
     }
-    if ((step < 0) && (start < stop)) {
-        return (cIntListGenericError);
-    }
-    int distance = _xsIntListIntAbs(stop - start);
     int stepa = _xsIntListIntAbs(step);
     int size = distance / stepa;
     if (size >= cIntListMaxCapacity) {
         return (cIntListGenericError);
     }
-    int remain = distance % stepa;
-    if (remain > 0) {
+    if ((distance % stepa) > 0) {
         size++;
     }
     int lst = xsArrayCreateInt(size + 1);
@@ -138,18 +150,13 @@ int xsIntListFromRange(int start = 0, int stop = 0, int step = 1) {
         return (cIntListGenericError);
     }
     int i = 1;
-    if (step > 0) {
-        while (start < stop) {
-            xsArraySetInt(lst, i, start);
-            start = start + step;
-            i++;
+    int current = start;
+    while (i <= size) {
+        xsArraySetInt(lst, i, current);
+        if (i < size) {
+            current = current + step;
         }
-    } else {
-        while (start > stop) {
-            xsArraySetInt(lst, i, start);
-            start = start + step;
-            i++;
-        }
+        i++;
     }
     xsArraySetInt(lst, 0, size);
     return (lst);

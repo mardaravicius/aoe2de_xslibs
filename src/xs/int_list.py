@@ -11,6 +11,8 @@ c_int_list_resize_failed_error: XsExternConst[int32] = int32(-3)
 c_int_list_max_capacity_error: XsExternConst[int32] = int32(-4)
 c_int_list_max_capacity: XsExternConst[int32] = int32(999999999)
 c_int_list_empty_param: XsExternConst[int32] = int32(-999999999)
+_c_int_list_int_max: int32 = int32(2147483647)
+_c_int_list_int_min: int32 = int32(-2147483648)
 _int_list_last_operation_status: int32 = c_int_list_success
 
 
@@ -118,34 +120,37 @@ def xs_int_list_from_range(start: int32 = int32(0), stop: int32 = int32(0), step
     :param step: increment between values (positive or negative, must not be zero)
     :return: created list id, or `c_int_list_generic_error` on error
     """
-    if step == 0:
+    if step == 0 or step == _c_int_list_int_min:
         return c_int_list_generic_error
-    if step > 0 and start > stop:
-        return c_int_list_generic_error
-    if step < 0 and start < stop:
-        return c_int_list_generic_error
-    distance: int32 = _xs_int_list_int_abs(stop - start)
+    distance: int32 = int32(0)
+    if step > 0:
+        if start > stop:
+            return c_int_list_generic_error
+        if start < 0 and stop >= 0 and stop > _c_int_list_int_max + start:
+            return c_int_list_generic_error
+        distance = stop - start
+    else:
+        if start < stop:
+            return c_int_list_generic_error
+        if start >= 0 and stop < 0 and start > _c_int_list_int_max + stop:
+            return c_int_list_generic_error
+        distance = start - stop
     stepa: int32 = _xs_int_list_int_abs(step)
     size: int32 = distance // stepa
     if size >= c_int_list_max_capacity:
         return c_int_list_generic_error
-    remain: int32 = distance % stepa
-    if remain > 0:
-        size += 1
+    if distance % stepa > 0:
+        size += int32(1)
     lst: int32 = xs_array_create_int(size + 1)
     if lst < 0:
         return c_int_list_generic_error
     i: int32 = int32(1)
-    if step > 0:
-        while start < stop:
-            xs_array_set_int(lst, i, start)
-            start += step
-            i += 1
-    else:
-        while start > stop:
-            xs_array_set_int(lst, i, start)
-            start += step
-            i += 1
+    current: int32 = start
+    while i <= size:
+        xs_array_set_int(lst, i, current)
+        if i < size:
+            current += step
+        i += 1
     xs_array_set_int(lst, 0, size)
     return lst
 

@@ -68,6 +68,15 @@ class IntListTest(unittest.TestCase):
         self.assertEqual(c_int_list_generic_error, xs_lst)
         xs_int_list_clear(xs_lst)
 
+    def test_xs_int_list_range_rejects_int32_wrap_boundary(self):
+        xs_lst = xs_int_list_from_range(int32(-2147483648), int32(2147483647), int32(2147483647))
+        self.assertEqual(c_int_list_generic_error, xs_lst)
+
+    def test_xs_int_list_range_does_not_loop_when_last_increment_overflows(self):
+        xs_lst = xs_int_list_from_range(int32(2147483640), int32(2147483647), int32(10))
+        self.assertEqual(1, xs_int_list_size(xs_lst))
+        self.assertEqual("[2147483640]", xs_int_list_to_string(xs_lst))
+
     def test_xs_int_list_from_repeated_val(self):
         xs_lst = xs_int_list_from_repeated_val(int32(5), int32(7))
         self.assertEqual(7, xs_int_list_size(xs_lst), 7)

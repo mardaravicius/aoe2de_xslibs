@@ -169,6 +169,21 @@ class IntIntDictTest(unittest.TestCase):
         self.assertEqual(c_int_int_dict_success, xs_int_int_dict_update(xs_dct1, xs_dct2))
         self._assert_dicts_equal(xs_dct1, dct)
 
+    def test_rehash_past_max_capacity_reports_max_capacity_error(self):
+        import xs.int_int_dict3 as _d3
+
+        orig = _d3.c_int_int_dict_max_capacity
+        _d3.c_int_int_dict_max_capacity = int32(33)
+        try:
+            xs_dct = xs_int_int_dict_create()
+            for key in range(12):
+                xs_int_int_dict_put(xs_dct, int32(key), int32(key))
+                self.assertEqual(c_int_int_dict_no_key_error, xs_int_int_dict_last_error())
+            self.assertEqual(c_int_int_dict_generic_error, xs_int_int_dict_put(xs_dct, int32(12), int32(12)))
+            self.assertEqual(c_int_int_dict_max_capacity_error, xs_int_int_dict_last_error())
+        finally:
+            _d3.c_int_int_dict_max_capacity = orig
+
     def test_empty_dict_size(self):
         xs_dct = xs_int_int_dict_create()
         self.assertEqual(0, xs_int_int_dict_size(xs_dct))

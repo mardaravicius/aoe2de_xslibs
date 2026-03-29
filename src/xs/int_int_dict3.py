@@ -131,7 +131,7 @@ def _xs_int_int_dict_rehash_if_needed(dct: int32 = int32(-1), size: int32 = int3
             return c_int_int_dict_generic_error
         new_capacity: int32 = (capacity - 1) * 2 + 1
         if new_capacity > c_int_int_dict_max_capacity:
-            _int_int_dict_last_operation_status = c_int_int_dict_resize_failed_error
+            _int_int_dict_last_operation_status = c_int_int_dict_max_capacity_error
             return c_int_int_dict_generic_error
         r: int32 = xs_array_resize_int(dct, new_capacity)
         if r != 1:

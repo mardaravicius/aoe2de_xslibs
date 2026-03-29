@@ -140,7 +140,7 @@ int _xsIntIntDictRehashIfNeeded(int dct = -1, int size = 0, int capacity = 0) {
         }
         int newCapacity = ((capacity - 1) * 2) + 1;
         if (newCapacity > cIntIntDictMaxCapacity) {
-            _intIntDictLastOperationStatus = cIntIntDictResizeFailedError;
+            _intIntDictLastOperationStatus = cIntIntDictMaxCapacityError;
             return (cIntIntDictGenericError);
         }
         int r = xsArrayResizeInt(dct, newCapacity);
