@@ -23,23 +23,24 @@ The example below shows the libraries working together in a small script.
 ```cpp
 void main() {
     int scores = xsIntList(120, 85, 200, 145);
-    int budget = xsIntIntDict(1, 500, 3, 300);
-
     xsIntListAppend(scores, 310);
-    xsIntIntDictPut(budget, 7, 700);
+    xsIntListAppend(scores, 25);
+    
+    int civUnits = xsIntIntDict(
+      cBritons, 8, 
+      cTeutons, 25,
+      cSaracens, 282,
+    );
+    int unit = xsIntIntDictGet(civUnits, xsGetPlayerCivilization(1), 38);
 
     int roll = xsMtRandomUniformRange(1, 100);
 
-    int cFlagActive = xsBitShiftLeft(1, 1);
-    int state = xsBitOr(0, cFlagActive);
+    int bitFlag = xsBitShiftLeft(1, 8);
 
-    xsChatData("Top score: " + xsIntListMax(scores));
-    xsChatData("Player 3 budget: " + xsIntIntDictGet(budget, 3, 0));
+    xsChatData("List: " + xsIntListToString(scores));
+    xsChatData("Dict: " + xsIntIntDictToString(civUnits));
     xsChatData("Roll: " + roll);
-
-    if (xsBitAnd(state, cFlagActive) != 0) {
-        xsChatData("active!");
-    }
+    xsChatData("Bit Flag: " + bitFlag);
 }
 ```
 
