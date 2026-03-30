@@ -479,7 +479,7 @@ string xsVectorStringDictToString(int dct = -1) {
             } else {
                 s = s + ", ";
             }
-            s = s + (key + ": \"" + _xsVectorStringDictGetStoredValue(dct, i) + "\"");
+            s = s + (("" + key) + ": \"" + _xsVectorStringDictGetStoredValue(dct, i) + "\"");
         }
         i = i + 3;
     }

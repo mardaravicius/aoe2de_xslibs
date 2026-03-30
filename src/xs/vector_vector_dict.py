@@ -423,7 +423,7 @@ def xs_vector_vector_dict_to_string(dct: int32 = int32(-1)) -> str:
                 first = False
             else:
                 s += ", "
-            s += f"{key}: {_xs_vector_vector_dict_get_stored_value(dct, i)}"
+            s += f"{str(key)}: {_xs_vector_vector_dict_get_stored_value(dct, i)}"
     s += "}"
     return s
 

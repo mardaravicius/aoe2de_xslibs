@@ -431,7 +431,7 @@ string xsVectorVectorDictToString(int dct = -1) {
             } else {
                 s = s + ", ";
             }
-            s = s + (key + ": " + _xsVectorVectorDictGetStoredValue(dct, i));
+            s = s + (("" + key) + ": " + _xsVectorVectorDictGetStoredValue(dct, i));
         }
         i = i + 6;
     }

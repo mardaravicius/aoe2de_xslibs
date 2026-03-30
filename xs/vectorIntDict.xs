@@ -423,7 +423,7 @@ string xsVectorIntDictToString(int dct = -1) {
             } else {
                 s = s + ", ";
             }
-            s = s + (key + ": " + _xsVectorIntDictGetStoredValue(dct, i));
+            s = s + (("" + key) + ": " + _xsVectorIntDictGetStoredValue(dct, i));
         }
         i = i + 4;
     }
