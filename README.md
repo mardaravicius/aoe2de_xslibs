@@ -1,7 +1,7 @@
 # aoe2de_xslibs
 
 A reusable XS library pack for Age of Empires II: Definitive Edition.
-It adds growable lists, an `int -> int` dictionary, bitwise helpers, and a Mersenne Twister random number generator.
+It adds growable lists, `int`/`vector` dictionary variants, bitwise helpers, and a Mersenne Twister random number generator.
 
 ## Why these libraries?
 
@@ -64,6 +64,9 @@ You do not need the Python tooling for that.
 | `stringList.xs` | Dynamic list of `string` values |
 | `vectorList.xs` | Dynamic list of `vector` values |
 | `intIntDict.xs` | Hash map from `int` keys to `int` values |
+| `intVectorDict.xs` | Hash map from `int` keys to `vector` values |
+| `vectorIntDict.xs` | Hash map from `vector` keys to `int` values |
+| `vectorVectorDict.xs` | Hash map from `vector` keys to `vector` values |
 | `binaryFunctions.xs` | Bitwise helpers and MT19937 random number functions |
 
 ## 2. Add them to your script
@@ -95,10 +98,15 @@ red but still work.
 
 ## 3. A few rules to remember
 
-- The list creation helpers and `xsIntIntDict` return an `int` handle.
-- `xsIntIntDictKeys` and `xsIntIntDictValues` return raw XS `int` arrays, not list handles.
+- The list creation helpers and all dictionary constructors return an `int` handle.
+- The dictionary `Keys` and `Values` helpers return raw XS arrays, not list handles.
+- `xsIntIntDictKeys`/`Values` return `int[]` / `int[]`.
+- `xsIntVectorDictKeys`/`Values` return `int[]` / `vector[]`.
+- `xsVectorIntDictKeys`/`Values` return `vector[]` / `int[]`.
+- `xsVectorVectorDictKeys`/`Values` return `vector[]` / `vector[]`.
 - There is no global initialization function for these libraries. You can use them immediately.
-- `xsIntIntDict` cannot store `cIntIntDictEmptyKey` as a key at all.
+- `xsIntIntDict` and `xsIntVectorDict` cannot store their reserved `...EmptyKey` int sentinel as a key.
+- `xsVectorIntDict` and `xsVectorVectorDict` cannot store their reserved `...EmptyKey` vector sentinel as a key.
 
 ## 4. Int List
 
@@ -570,7 +578,207 @@ void distributeResources() {
 }
 ```
 
-## 10. Binary Operations
+## 10. Int to Vector Dictionary
+
+`intVectorDict.xs` provides a hash map from `int` keys to `vector` values.
+It uses the same open-addressed layout as `intIntDict.xs`, but stores vectors as raw float components.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cIntVectorDictSuccess` | `0` | Operation succeeded |
+| `cIntVectorDictGenericError` | `-1` | General failure |
+| `cIntVectorDictNoKeyError` | `-2` | Key not found, or new key inserted for `Put`/`PutIfAbsent` |
+| `cIntVectorDictResizeFailedError` | `-3` | Resize allocation failed |
+| `cIntVectorDictMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cIntVectorDictGenericErrorVector` | `vector(-1.0, -1.0, -1.0)` | Error return for vector-valued operations |
+| `cIntVectorDictMaxCapacity` | `999999997` | Hard upper limit |
+| `cIntVectorDictMaxLoadFactor` | `0.75` | Resize trigger threshold |
+| `cIntVectorDictEmptyKey` | `-999999999` | Reserved empty-slot sentinel; cannot be used as a key |
+
+### API
+
+```cpp
+// Creation
+int    xsIntVectorDictCreate()
+int    xsIntVectorDict(int k1, vector v1, ..., int k6, vector v6)
+
+// Access
+vector xsIntVectorDictGet(int dct, int key, vector dft)
+bool   xsIntVectorDictContains(int dct, int key)
+int    xsIntVectorDictSize(int dct)
+
+// Modification
+vector xsIntVectorDictPut(int dct, int key, vector val)
+vector xsIntVectorDictPutIfAbsent(int dct, int key, vector val)
+vector xsIntVectorDictRemove(int dct, int key)
+int    xsIntVectorDictClear(int dct)
+
+// Bulk operations
+int    xsIntVectorDictUpdate(int source, int dct)
+int    xsIntVectorDictCopy(int dct)
+int    xsIntVectorDictKeys(int dct)              // returns a raw XS int array
+int    xsIntVectorDictValues(int dct)            // returns a raw XS vector array
+bool   xsIntVectorDictEquals(int a, int b)
+
+// Iteration
+bool   xsIntVectorDictHasNext(int dct, bool isFirst, int prevKey)
+int    xsIntVectorDictNextKey(int dct, bool isFirst, int prevKey)
+
+// Diagnostics
+string xsIntVectorDictToString(int dct)
+int    xsIntVectorDictLastError()
+```
+
+### Example
+
+```cpp
+void placeCamps() {
+    int camps = xsIntVectorDict(
+        1, vector(12.0, 0.0, 18.0),
+        2, vector(40.0, 0.0, 26.0)
+    );
+
+    vector camp = xsIntVectorDictGet(camps, 2, vector(-1.0, -1.0, -1.0));
+    xsChatData("Player 2 camp: " + camp);
+}
+```
+
+## 11. Vector to Int Dictionary
+
+`vectorIntDict.xs` provides a hash map from `vector` keys to `int` values.
+It uses direct vector equality for key lookup and reserves `cVectorIntDictEmptyKey` as the empty-slot sentinel.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cVectorIntDictSuccess` | `0` | Operation succeeded |
+| `cVectorIntDictGenericError` | `-1` | General failure |
+| `cVectorIntDictNoKeyError` | `-2` | Key not found, or new key inserted for `Put`/`PutIfAbsent` |
+| `cVectorIntDictResizeFailedError` | `-3` | Resize allocation failed |
+| `cVectorIntDictMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cVectorIntDictGenericErrorVector` | `vector(-1.0, -1.0, -1.0)` | Error return for vector-key iteration operations |
+| `cVectorIntDictMaxCapacity` | `999999997` | Hard upper limit |
+| `cVectorIntDictMaxLoadFactor` | `0.75` | Resize trigger threshold |
+| `cVectorIntDictEmptyKey` | `vector(-9999999.0, -9999999.0, -9999999.0)` | Reserved empty-slot sentinel; cannot be used as a key |
+
+### API
+
+```cpp
+// Creation
+int    xsVectorIntDictCreate()
+int    xsVectorIntDict(vector k1, int v1, ..., vector k6, int v6)
+
+// Access
+int    xsVectorIntDictGet(int dct, vector key, int dft)
+bool   xsVectorIntDictContains(int dct, vector key)
+int    xsVectorIntDictSize(int dct)
+
+// Modification
+int    xsVectorIntDictPut(int dct, vector key, int val)
+int    xsVectorIntDictPutIfAbsent(int dct, vector key, int val)
+int    xsVectorIntDictRemove(int dct, vector key)
+int    xsVectorIntDictClear(int dct)
+
+// Bulk operations
+int    xsVectorIntDictUpdate(int source, int dct)
+int    xsVectorIntDictCopy(int dct)
+int    xsVectorIntDictKeys(int dct)              // returns a raw XS vector array
+int    xsVectorIntDictValues(int dct)            // returns a raw XS int array
+bool   xsVectorIntDictEquals(int a, int b)
+
+// Iteration
+bool   xsVectorIntDictHasNext(int dct, bool isFirst, vector prevKey)
+vector xsVectorIntDictNextKey(int dct, bool isFirst, vector prevKey)
+
+// Diagnostics
+string xsVectorIntDictToString(int dct)
+int    xsVectorIntDictLastError()
+```
+
+### Example
+
+```cpp
+void markDangerZones() {
+    int danger = xsVectorIntDict();
+    xsVectorIntDictPut(danger, vector(20.0, 0.0, 20.0), 3);
+    xsVectorIntDictPut(danger, vector(40.0, 0.0, 35.0), 5);
+
+    int level = xsVectorIntDictGet(danger, vector(20.0, 0.0, 20.0), 0);
+    xsChatData("Danger level: " + level);
+}
+```
+
+## 12. Vector to Vector Dictionary
+
+`vectorVectorDict.xs` provides a hash map from `vector` keys to `vector` values.
+It mirrors the other dictionary variants, but both keys and values are vectors.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cVectorVectorDictSuccess` | `0` | Operation succeeded |
+| `cVectorVectorDictGenericError` | `-1` | General failure |
+| `cVectorVectorDictNoKeyError` | `-2` | Key not found, or new key inserted for `Put`/`PutIfAbsent` |
+| `cVectorVectorDictResizeFailedError` | `-3` | Resize allocation failed |
+| `cVectorVectorDictMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cVectorVectorDictGenericErrorVector` | `vector(-1.0, -1.0, -1.0)` | Error return for vector-valued operations |
+| `cVectorVectorDictMaxCapacity` | `999999997` | Hard upper limit |
+| `cVectorVectorDictMaxLoadFactor` | `0.75` | Resize trigger threshold |
+| `cVectorVectorDictEmptyKey` | `vector(-9999999.0, -9999999.0, -9999999.0)` | Reserved empty-slot sentinel; cannot be used as a key |
+
+### API
+
+```cpp
+// Creation
+int    xsVectorVectorDictCreate()
+int    xsVectorVectorDict(vector k1, vector v1, ..., vector k6, vector v6)
+
+// Access
+vector xsVectorVectorDictGet(int dct, vector key, vector dft)
+bool   xsVectorVectorDictContains(int dct, vector key)
+int    xsVectorVectorDictSize(int dct)
+
+// Modification
+vector xsVectorVectorDictPut(int dct, vector key, vector val)
+vector xsVectorVectorDictPutIfAbsent(int dct, vector key, vector val)
+vector xsVectorVectorDictRemove(int dct, vector key)
+int    xsVectorVectorDictClear(int dct)
+
+// Bulk operations
+int    xsVectorVectorDictUpdate(int source, int dct)
+int    xsVectorVectorDictCopy(int dct)
+int    xsVectorVectorDictKeys(int dct)           // returns a raw XS vector array
+int    xsVectorVectorDictValues(int dct)         // returns a raw XS vector array
+bool   xsVectorVectorDictEquals(int a, int b)
+
+// Iteration
+bool   xsVectorVectorDictHasNext(int dct, bool isFirst, vector prevKey)
+vector xsVectorVectorDictNextKey(int dct, bool isFirst, vector prevKey)
+
+// Diagnostics
+string xsVectorVectorDictToString(int dct)
+int    xsVectorVectorDictLastError()
+```
+
+### Example
+
+```cpp
+void remapTargets() {
+    int fallback = xsVectorVectorDict(
+        vector(10.0, 0.0, 10.0), vector(12.0, 0.0, 18.0),
+        vector(30.0, 0.0, 15.0), vector(45.0, 0.0, 22.0)
+    );
+
+    vector next = xsVectorVectorDictGet(fallback, vector(10.0, 0.0, 10.0), vector(-1.0, -1.0, -1.0));
+    xsChatData("Fallback target: " + next);
+}
+```
+
+## 13. Binary Operations
 
 `binaryFunctions.xs` provides software implementations of common 32-bit bitwise operations.
 Use these when you need flags, masking, shifting, or packed integer values in XS.
@@ -603,7 +811,7 @@ int unpackLow(int packed) {
 }
 ```
 
-## 11. Random Numbers
+## 14. Random Numbers
 
 `binaryFunctions.xs` also includes a Mersenne Twister (`MT19937`) pseudo-random number generator.
 Seed it once with `xsMtSeed`, then draw values with `xsMtRandom` or `xsMtRandomUniformRange`.
@@ -630,7 +838,7 @@ void randomTeams() {
 }
 ```
 
-## 12. Larger example
+## 15. Larger example
 
 The example below shows `Int List`, `IntIntDict`, bitwise flags, and the MT RNG working together in one script.
 

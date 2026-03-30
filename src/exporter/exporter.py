@@ -8,9 +8,12 @@ import xs.float_list as float_list
 # import xs.int_int_dict as int_int_dict_v1
 # import xs.int_int_dict2 as int_int_dict_v2
 import xs.int_int_dict3 as int_int_dict
+import xs.int_vector_dict as int_vector_dict
 import xs.int_list as int_list
 import xs.string_list as string_list
+import xs.vector_int_dict as vector_int_dict
 import xs.vector_list as vector_list
+import xs.vector_vector_dict as vector_vector_dict
 from xs_converter.converter import PythonToXsConverter
 
 
@@ -20,10 +23,13 @@ def main() -> None:
         (float_list, "floatList"),
         (bool_list, "boolList"),
         (string_list, "stringList"),
+        (vector_list, "vectorList"),
         (int_int_dict, "intIntDict"),
+        (int_vector_dict, "intVectorDict"),
+        (vector_int_dict, "vectorIntDict"),
+        (vector_vector_dict, "vectorVectorDict"),
         # (int_int_dict_v1, "intIntDict"),
         # (int_int_dict_v2, "intIntDict"),
-        (vector_list, "vectorList"),
         (binary_functions, "binaryFunctions"),
     ]
     for module, name in xs_modules:

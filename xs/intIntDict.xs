@@ -113,7 +113,6 @@ int _xsIntIntDictMoveToTempArray(int dct = -1, int size = 0, int capacity = 0) {
         if (storedKey != cIntIntDictEmptyKey) {
             xsArraySetInt(_intIntDictTempArray, t, storedKey);
             xsArraySetInt(_intIntDictTempArray, t + 1, xsArrayGetInt(dct, i + 1));
-            xsArraySetInt(dct, i, cIntIntDictEmptyKey);
             t = t + 2;
         }
         i = i + 2;
@@ -121,26 +120,29 @@ int _xsIntIntDictMoveToTempArray(int dct = -1, int size = 0, int capacity = 0) {
     return (tempDataSize);
 }
 
-void _xsIntIntDictClearNewSlots(int dct = -1, int oldCapacity = -1, int newCapacity = -1) {
-    int j = oldCapacity;
-    while (j < newCapacity) {
+void _xsIntIntDictClearSlots(int dct = -1, int capacity = -1) {
+    int j = 1;
+    while (j < capacity) {
         xsArraySetInt(dct, j, cIntIntDictEmptyKey);
         j = j + 2;
     }
 }
 
-int _xsIntIntDictRehashIfNeeded(int dct = -1, int size = 0, int capacity = 0) {
-    float loadFactor = (0.0 + size) / ((capacity - 1) / 2);
+int _xsIntIntDictRehashIfNeeded(int dct = -1, int size = 0, int capacity = 0, int requiredSize = -1) {
+    if (requiredSize < 0) {
+        requiredSize = size;
+    }
+    float loadFactor = (0.0 + requiredSize) / ((capacity - 1) / 2);
     if (loadFactor > cIntIntDictMaxLoadFactor) {
         int storeStatus = _intIntDictLastOperationStatus;
-        int tempDataSize = _xsIntIntDictMoveToTempArray(dct, size, capacity);
-        if (tempDataSize < 0) {
-            _intIntDictLastOperationStatus = tempDataSize;
-            return (cIntIntDictGenericError);
-        }
         int newCapacity = ((capacity - 1) * 2) + 1;
         if (newCapacity > cIntIntDictMaxCapacity) {
             _intIntDictLastOperationStatus = cIntIntDictMaxCapacityError;
+            return (cIntIntDictGenericError);
+        }
+        int tempDataSize = _xsIntIntDictMoveToTempArray(dct, size, capacity);
+        if (tempDataSize < 0) {
+            _intIntDictLastOperationStatus = tempDataSize;
             return (cIntIntDictGenericError);
         }
         int r = xsArrayResizeInt(dct, newCapacity);
@@ -148,7 +150,7 @@ int _xsIntIntDictRehashIfNeeded(int dct = -1, int size = 0, int capacity = 0) {
             _intIntDictLastOperationStatus = cIntIntDictResizeFailedError;
             return (cIntIntDictGenericError);
         }
-        _xsIntIntDictClearNewSlots(dct, capacity, newCapacity);
+        _xsIntIntDictClearSlots(dct, newCapacity);
         int t = 0;
         while (t < tempDataSize) {
             _xsIntIntDictUpsert(dct, xsArrayGetInt(_intIntDictTempArray, t), xsArrayGetInt(_intIntDictTempArray, t + 1), newCapacity);
@@ -182,21 +184,27 @@ int xsIntIntDictPut(int dct = -1, int key = -1, int val = 0) {
     }
     int size = xsArrayGetInt(dct, 0);
     int capacity = xsArrayGetSize(dct);
-    int previousValue = _xsIntIntDictUpsert(dct, key, val, capacity);
-    if (_intIntDictLastOperationStatus == cIntIntDictNoKeyError) {
-        size++;
-        xsArraySetInt(dct, 0, size);
-    } else if (_intIntDictLastOperationStatus == cIntIntDictSuccess) {
-        return (previousValue);
-    } else {
-        return (cIntIntDictGenericError);
+    int slot = _xsIntIntDictFindSlot(dct, key, capacity);
+    if (slot >= 0) {
+        int oldVal = xsArrayGetInt(dct, slot + 1);
+        xsArraySetInt(dct, slot + 1, val);
+        _intIntDictLastOperationStatus = cIntIntDictSuccess;
+        return (oldVal);
     }
-    int r = _xsIntIntDictRehashIfNeeded(dct, size, capacity);
+    int r = _xsIntIntDictRehashIfNeeded(dct, size, capacity, size + 1);
     if (r != cIntIntDictSuccess) {
         return (cIntIntDictGenericError);
     }
-    _intIntDictLastOperationStatus = cIntIntDictNoKeyError;
-    return (cIntIntDictGenericError);
+    capacity = xsArrayGetSize(dct);
+    int previousValue = _xsIntIntDictUpsert(dct, key, val, capacity);
+    if (_intIntDictLastOperationStatus == cIntIntDictNoKeyError) {
+        xsArraySetInt(dct, 0, size + 1);
+        return (cIntIntDictGenericError);
+    }
+    if (_intIntDictLastOperationStatus != cIntIntDictSuccess) {
+        return (cIntIntDictGenericError);
+    }
+    return (previousValue);
 }
 
 /*
@@ -509,37 +517,27 @@ int xsIntIntDictPutIfAbsent(int dct = -1, int key = -1, int val = 0) {
         _intIntDictLastOperationStatus = cIntIntDictGenericError;
         return (cIntIntDictGenericError);
     }
+    int size = xsArrayGetInt(dct, 0);
     int capacity = xsArrayGetSize(dct);
-    int numSlots = (capacity - 1) / 2;
-    int home = _xsIntIntDictHash(key, capacity);
-    int slot = home;
-    int steps = 0;
-    while (steps < numSlots) {
-        int storedKey = xsArrayGetInt(dct, slot);
-        if (storedKey == cIntIntDictEmptyKey) {
-            xsArraySetInt(dct, slot, key);
-            xsArraySetInt(dct, slot + 1, val);
-            int size = xsArrayGetInt(dct, 0) + 1;
-            xsArraySetInt(dct, 0, size);
-            int r = _xsIntIntDictRehashIfNeeded(dct, size, capacity);
-            if (r != cIntIntDictSuccess) {
-                return (cIntIntDictGenericError);
-            }
-            _intIntDictLastOperationStatus = cIntIntDictNoKeyError;
-            return (cIntIntDictGenericError);
-        }
-        if (storedKey == key) {
-            _intIntDictLastOperationStatus = cIntIntDictSuccess;
-            return (xsArrayGetInt(dct, slot + 1));
-        }
-        slot = slot + 2;
-        if (slot >= capacity) {
-            slot = 1;
-        }
-        steps++;
+    int slot = _xsIntIntDictFindSlot(dct, key, capacity);
+    if (slot >= 0) {
+        _intIntDictLastOperationStatus = cIntIntDictSuccess;
+        return (xsArrayGetInt(dct, slot + 1));
     }
-    _intIntDictLastOperationStatus = cIntIntDictMaxCapacityError;
-    return (cIntIntDictGenericError);
+    int r = _xsIntIntDictRehashIfNeeded(dct, size, capacity, size + 1);
+    if (r != cIntIntDictSuccess) {
+        return (cIntIntDictGenericError);
+    }
+    capacity = xsArrayGetSize(dct);
+    int result = _xsIntIntDictUpsert(dct, key, val, capacity);
+    if (_intIntDictLastOperationStatus == cIntIntDictNoKeyError) {
+        xsArraySetInt(dct, 0, size + 1);
+        return (cIntIntDictGenericError);
+    }
+    if (_intIntDictLastOperationStatus != cIntIntDictSuccess) {
+        return (cIntIntDictGenericError);
+    }
+    return (result);
 }
 
 /*

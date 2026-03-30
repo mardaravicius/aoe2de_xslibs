@@ -4,16 +4,16 @@ from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_arr
     xs_array_get_size
 from xs_converter.symbols import XsExternConst, i32range
 
-c_int_int_dict_success: XsExternConst[int] = int32(0)
-c_int_int_dict_generic_error: XsExternConst[int] = int32(-1)
-c_int_int_dict_no_key_error: XsExternConst[int] = int32(-2)
-c_int_int_dict_resize_failed_error: XsExternConst[int] = int32(-3)
-c_int_int_dict_max_capacity_error: XsExternConst[int] = int32(-4)
-c_int_int_dict_max_capacity: XsExternConst[int] = int32(999999999)
+c_int_int_dict_success: XsExternConst[int32] = int32(0)
+c_int_int_dict_generic_error: XsExternConst[int32] = int32(-1)
+c_int_int_dict_no_key_error: XsExternConst[int32] = int32(-2)
+c_int_int_dict_resize_failed_error: XsExternConst[int32] = int32(-3)
+c_int_int_dict_max_capacity_error: XsExternConst[int32] = int32(-4)
+c_int_int_dict_max_capacity: XsExternConst[int32] = int32(999999999)
 c_int_int_dict_max_load_factor: XsExternConst[float32] = float32(0.75)
-c_int_int_dict_empty_key: XsExternConst[int] = int32(-999999999)
-c_int_int_dict_initial_capacity: XsExternConst[int] = int32(33)
-c_int_int_dict_hash_constant: XsExternConst[int] = int32(16777619)
+c_int_int_dict_empty_key: XsExternConst[int32] = int32(-999999999)
+c_int_int_dict_initial_capacity: XsExternConst[int32] = int32(33)
+c_int_int_dict_hash_constant: XsExternConst[int32] = int32(16777619)
 _int_int_dict_last_operation_status: int32 = c_int_int_dict_success
 _int_int_dict_temp_array: int32 = int32(-1)
 
@@ -108,36 +108,37 @@ def _xs_int_int_dict_move_to_temp_array(dct: int32 = int32(-1), size: int32 = in
         if stored_key != c_int_int_dict_empty_key:
             xs_array_set_int(_int_int_dict_temp_array, t, stored_key)
             xs_array_set_int(_int_int_dict_temp_array, t + 1, xs_array_get_int(dct, i + 1))
-            xs_array_set_int(dct, i, c_int_int_dict_empty_key)
             t += 2
     return temp_data_size
 
 
-def _xs_int_int_dict_clear_new_slots(dct: int32 = int32(-1), old_capacity: int32 = int32(-1),
-                                      new_capacity: int32 = int32(-1)) -> None:
-    for j in i32range(old_capacity, new_capacity, 2):
+def _xs_int_int_dict_clear_slots(dct: int32 = int32(-1), capacity: int32 = int32(-1)) -> None:
+    for j in i32range(1, capacity, 2):
         xs_array_set_int(dct, j, c_int_int_dict_empty_key)
 
 
 def _xs_int_int_dict_rehash_if_needed(dct: int32 = int32(-1), size: int32 = int32(0),
-                                       capacity: int32 = int32(0)) -> int32:
+                                       capacity: int32 = int32(0),
+                                       required_size: int32 = int32(-1)) -> int32:
     global _int_int_dict_temp_array, _int_int_dict_last_operation_status
-    load_factor: float = float(size) / ((capacity - 1) // 2)
+    if required_size < 0:
+        required_size = size
+    load_factor: float = float(required_size) / ((capacity - 1) // 2)
     if load_factor > c_int_int_dict_max_load_factor:
         store_status: int32 = _int_int_dict_last_operation_status
-        temp_data_size: int32 = _xs_int_int_dict_move_to_temp_array(dct, size, capacity)
-        if temp_data_size < 0:
-            _int_int_dict_last_operation_status = temp_data_size
-            return c_int_int_dict_generic_error
         new_capacity: int32 = (capacity - 1) * 2 + 1
         if new_capacity > c_int_int_dict_max_capacity:
             _int_int_dict_last_operation_status = c_int_int_dict_max_capacity_error
+            return c_int_int_dict_generic_error
+        temp_data_size: int32 = _xs_int_int_dict_move_to_temp_array(dct, size, capacity)
+        if temp_data_size < 0:
+            _int_int_dict_last_operation_status = temp_data_size
             return c_int_int_dict_generic_error
         r: int32 = xs_array_resize_int(dct, new_capacity)
         if r != 1:
             _int_int_dict_last_operation_status = c_int_int_dict_resize_failed_error
             return c_int_int_dict_generic_error
-        _xs_int_int_dict_clear_new_slots(dct, capacity, new_capacity)
+        _xs_int_int_dict_clear_slots(dct, new_capacity)
         for t in i32range(0, temp_data_size, 2):
             _xs_int_int_dict_upsert(dct, xs_array_get_int(_int_int_dict_temp_array, t),
                                      xs_array_get_int(_int_int_dict_temp_array, t + 1), new_capacity)
@@ -167,21 +168,25 @@ def xs_int_int_dict_put(dct: int32 = int32(-1), key: int32 = int32(-1), val: int
         return c_int_int_dict_generic_error
     size: int32 = xs_array_get_int(dct, 0)
     capacity: int32 = xs_array_get_size(dct)
+    slot: int32 = _xs_int_int_dict_find_slot(dct, key, capacity)
+    if slot >= 0:
+        old_val: int32 = xs_array_get_int(dct, slot + 1)
+        xs_array_set_int(dct, slot + 1, val)
+        _int_int_dict_last_operation_status = c_int_int_dict_success
+        return old_val
 
-    previous_value: int32 = _xs_int_int_dict_upsert(dct, key, val, capacity)
-    if _int_int_dict_last_operation_status == c_int_int_dict_no_key_error:
-        size += 1
-        xs_array_set_int(dct, 0, size)
-    elif _int_int_dict_last_operation_status == c_int_int_dict_success:
-        return previous_value
-    else:
-        return c_int_int_dict_generic_error
-
-    r: int32 = _xs_int_int_dict_rehash_if_needed(dct, size, capacity)
+    r: int32 = _xs_int_int_dict_rehash_if_needed(dct, size, capacity, size + 1)
     if r != c_int_int_dict_success:
         return c_int_int_dict_generic_error
-    _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
-    return c_int_int_dict_generic_error
+
+    capacity = xs_array_get_size(dct)
+    previous_value: int32 = _xs_int_int_dict_upsert(dct, key, val, capacity)
+    if _int_int_dict_last_operation_status == c_int_int_dict_no_key_error:
+        xs_array_set_int(dct, 0, size + 1)
+        return c_int_int_dict_generic_error
+    if _int_int_dict_last_operation_status != c_int_int_dict_success:
+        return c_int_int_dict_generic_error
+    return previous_value
 
 
 def xs_int_int_dict(
@@ -477,32 +482,25 @@ def xs_int_int_dict_put_if_absent(dct: int32 = int32(-1), key: int32 = int32(-1)
     if key == c_int_int_dict_empty_key:
         _int_int_dict_last_operation_status = c_int_int_dict_generic_error
         return c_int_int_dict_generic_error
+    size: int32 = xs_array_get_int(dct, 0)
     capacity: int32 = xs_array_get_size(dct)
-    num_slots: int32 = (capacity - 1) // 2
-    home: int32 = _xs_int_int_dict_hash(key, capacity)
-    slot: int32 = home
-    steps: int32 = int32(0)
-    while steps < num_slots:
-        stored_key: int32 = xs_array_get_int(dct, slot)
-        if stored_key == c_int_int_dict_empty_key:
-            xs_array_set_int(dct, slot, key)
-            xs_array_set_int(dct, slot + 1, val)
-            size: int32 = xs_array_get_int(dct, 0) + 1
-            xs_array_set_int(dct, 0, size)
-            r: int32 = _xs_int_int_dict_rehash_if_needed(dct, size, capacity)
-            if r != c_int_int_dict_success:
-                return c_int_int_dict_generic_error
-            _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
-            return c_int_int_dict_generic_error
-        if stored_key == key:
-            _int_int_dict_last_operation_status = c_int_int_dict_success
-            return xs_array_get_int(dct, slot + 1)
-        slot += 2
-        if slot >= capacity:
-            slot = int32(1)
-        steps += 1
-    _int_int_dict_last_operation_status = c_int_int_dict_max_capacity_error
-    return c_int_int_dict_generic_error
+    slot: int32 = _xs_int_int_dict_find_slot(dct, key, capacity)
+    if slot >= 0:
+        _int_int_dict_last_operation_status = c_int_int_dict_success
+        return xs_array_get_int(dct, slot + 1)
+
+    r: int32 = _xs_int_int_dict_rehash_if_needed(dct, size, capacity, size + 1)
+    if r != c_int_int_dict_success:
+        return c_int_int_dict_generic_error
+
+    capacity = xs_array_get_size(dct)
+    result: int32 = _xs_int_int_dict_upsert(dct, key, val, capacity)
+    if _int_int_dict_last_operation_status == c_int_int_dict_no_key_error:
+        xs_array_set_int(dct, 0, size + 1)
+        return c_int_int_dict_generic_error
+    if _int_int_dict_last_operation_status != c_int_int_dict_success:
+        return c_int_int_dict_generic_error
+    return result
 
 
 def xs_int_int_dict_keys(dct: int32 = int32(-1)) -> int32:
