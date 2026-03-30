@@ -26,8 +26,12 @@ int xsStringListCreate(int capacity = 7) {
         return (cStringListGenericError);
     }
     int lst = xsArrayCreateInt(2, 0);
+    if (lst < 0) {
+        return (cStringListGenericError);
+    }
     int strLst = xsArrayCreateString(capacity);
-    if ((lst < 0) || (strLst < 0)) {
+    if (strLst < 0) {
+        xsArrayResizeInt(lst, 0);
         return (cStringListGenericError);
     }
     xsArraySetInt(lst, 1, strLst);
@@ -42,8 +46,12 @@ int xsStringListCreate(int capacity = 7) {
 */
 int xsStringList(string v0 = "!<[empty", string v1 = "!<[empty", string v2 = "!<[empty", string v3 = "!<[empty", string v4 = "!<[empty", string v5 = "!<[empty", string v6 = "!<[empty", string v7 = "!<[empty", string v8 = "!<[empty", string v9 = "!<[empty", string v10 = "!<[empty", string v11 = "!<[empty") {
     int strLst = xsArrayCreateString(12);
+    if (strLst < 0) {
+        return (cStringListGenericError);
+    }
     int lst = xsArrayCreateInt(2, strLst);
-    if ((strLst < 0) || (lst < 0)) {
+    if (lst < 0) {
+        xsArrayResizeString(strLst, 0);
         return (cStringListGenericError);
     }
     if (v0 == "!<[empty") {
@@ -121,8 +129,12 @@ int xsStringListFromRepeatedVal(string value = "", int times = 0) {
         return (cStringListGenericError);
     }
     int lst = xsArrayCreateInt(2, times);
+    if (lst < 0) {
+        return (cStringListGenericError);
+    }
     int strLst = xsArrayCreateString(times, value);
-    if ((strLst < 0) || (lst < 0)) {
+    if (strLst < 0) {
+        xsArrayResizeInt(lst, 0);
         return (cStringListGenericError);
     }
     xsArraySetInt(lst, 1, strLst);
@@ -148,8 +160,12 @@ int xsStringListFromRepeatedList(int lst = -1, int times = 0) {
         return (cStringListMaxCapacityError);
     }
     int newStrLst = xsArrayCreateString(newCapacity);
+    if (newStrLst < 0) {
+        return (cStringListGenericError);
+    }
     int newLst = xsArrayCreateInt(2, newCapacity);
-    if ((newStrLst < 0) || (newLst < 0)) {
+    if (newLst < 0) {
+        xsArrayResizeString(newStrLst, 0);
         return (cStringListGenericError);
     }
     int strLst = xsArrayGetInt(lst, 1);
@@ -176,8 +192,12 @@ int xsStringListFromArray(int arr = -1) {
         return (cStringListMaxCapacityError);
     }
     int newStrLst = xsArrayCreateString(arrSize);
+    if (newStrLst < 0) {
+        return (cStringListGenericError);
+    }
     int lst = xsArrayCreateInt(2, arrSize);
-    if ((lst < 0) || (newStrLst < 0)) {
+    if (lst < 0) {
+        xsArrayResizeString(newStrLst, 0);
         return (cStringListGenericError);
     }
     for (i = 0; < arrSize) {
@@ -537,8 +557,12 @@ int xsStringListCopy(int lst = -1, int start = 0, int end = cStringListMaxCapaci
         newSize = 0;
     }
     int newLst = xsArrayCreateInt(2, newSize);
+    if (newLst < 0) {
+        return (cStringListGenericError);
+    }
     int newStrLst = xsArrayCreateString(newSize);
-    if ((newLst < 0) || (newStrLst < 0)) {
+    if (newStrLst < 0) {
+        xsArrayResizeInt(newLst, 0);
         return (cStringListGenericError);
     }
     xsArraySetInt(newLst, 1, newStrLst);

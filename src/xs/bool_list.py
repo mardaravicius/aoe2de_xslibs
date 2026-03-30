@@ -1,7 +1,8 @@
 from numpy import int32
 
 from xs_converter.functions import xs_array_get_size, xs_array_get_int, xs_array_create_bool, \
-    xs_array_create_int, xs_array_set_bool, xs_array_set_int, xs_array_get_bool, xs_array_resize_bool
+    xs_array_create_int, xs_array_set_bool, xs_array_set_int, xs_array_get_bool, xs_array_resize_int, \
+    xs_array_resize_bool
 from xs_converter.symbols import XsExternConst, i32range
 
 c_bool_list_success: XsExternConst[int32] = int32(0)
@@ -12,12 +13,6 @@ c_bool_list_max_capacity_error: XsExternConst[int32] = int32(-4)
 c_bool_list_max_capacity: XsExternConst[int32] = int32(999999999)
 c_bool_list_empty_int_param: XsExternConst[int32] = int32(-999999999)
 _bool_list_last_operation_status: int32 = c_bool_list_success
-
-
-def _xs_bool_list_bool_to_string(value: bool = False) -> str:
-    if value:
-        return "true"
-    return "false"
 
 
 def xs_bool_list_size(lst: int32 = int32(-1)) -> int32:
@@ -38,8 +33,11 @@ def xs_bool_list_create(capacity: int32 = int32(7)) -> int32:
     if capacity < 0 or capacity >= c_bool_list_max_capacity:
         return c_bool_list_generic_error
     lst: int32 = xs_array_create_int(2, 0)
+    if lst < 0:
+        return c_bool_list_generic_error
     bool_lst: int32 = xs_array_create_bool(capacity)
-    if lst < 0 or bool_lst < 0:
+    if bool_lst < 0:
+        xs_array_resize_int(lst, 0)
         return c_bool_list_generic_error
     xs_array_set_int(lst, 1, bool_lst)
     return lst
@@ -55,8 +53,11 @@ def xs_bool_list_from_repeated_val(value: bool = False, times: int32 = int32(0))
     if times < 0 or times > c_bool_list_max_capacity:
         return c_bool_list_generic_error
     lst: int32 = xs_array_create_int(2, times)
+    if lst < 0:
+        return c_bool_list_generic_error
     bool_lst: int32 = xs_array_create_bool(times, value)
-    if bool_lst < 0 or lst < 0:
+    if bool_lst < 0:
+        xs_array_resize_int(lst, 0)
         return c_bool_list_generic_error
     xs_array_set_int(lst, 1, bool_lst)
     return lst
@@ -78,8 +79,11 @@ def xs_bool_list_from_repeated_list(lst: int32 = int32(-1), times: int32 = int32
     if new_capacity > c_bool_list_max_capacity:
         return c_bool_list_max_capacity_error
     new_bool_lst: int32 = xs_array_create_bool(new_capacity)
+    if new_bool_lst < 0:
+        return c_bool_list_generic_error
     new_lst: int32 = xs_array_create_int(2, new_capacity)
-    if new_bool_lst < 0 or new_lst < 0:
+    if new_lst < 0:
+        xs_array_resize_bool(new_bool_lst, 0)
         return c_bool_list_generic_error
     bool_lst: int32 = xs_array_get_int(lst, 1)
     for i in i32range(0, size):
@@ -102,8 +106,11 @@ def xs_bool_list_from_array(arr: int32 = int32(-1)) -> int32:
     if arr_size > c_bool_list_max_capacity:
         return c_bool_list_max_capacity_error
     new_bool_lst: int32 = xs_array_create_bool(arr_size)
+    if new_bool_lst < 0:
+        return c_bool_list_generic_error
     lst: int32 = xs_array_create_int(2, arr_size)
-    if lst < 0 or new_bool_lst < 0:
+    if lst < 0:
+        xs_array_resize_bool(new_bool_lst, 0)
         return c_bool_list_generic_error
     for i in i32range(0, arr_size):
         xs_array_set_bool(new_bool_lst, i, xs_array_get_bool(arr, i))
@@ -385,7 +392,10 @@ def xs_bool_list_to_string(lst: int32 = int32(-1)) -> str:
         return "[]"
     s: str = "["
     for i in i32range(0, size):
-        s += _xs_bool_list_bool_to_string(xs_array_get_bool(bool_lst, i))
+        if xs_array_get_bool(bool_lst, i):
+            s += "true"
+        else:
+            s += "false"
         if i < size - 1:
             s += ", "
     s += "]"
@@ -420,8 +430,11 @@ def xs_bool_list_copy(lst: int32 = int32(-1), start: int32 = int32(0),
     if new_size < 0:
         new_size = int32(0)
     new_lst: int32 = xs_array_create_int(2, new_size)
+    if new_lst < 0:
+        return c_bool_list_generic_error
     new_bool_lst: int32 = xs_array_create_bool(new_size)
-    if new_lst < 0 or new_bool_lst < 0:
+    if new_bool_lst < 0:
+        xs_array_resize_int(new_lst, 0)
         return c_bool_list_generic_error
     xs_array_set_int(new_lst, 1, new_bool_lst)
     bool_lst: int32 = xs_array_get_int(lst, 1)

@@ -7,13 +7,6 @@ extern const int cBoolListMaxCapacity = 999999999;
 extern const int cBoolListEmptyIntParam = -999999999;
 int _boolListLastOperationStatus = cBoolListSuccess;
 
-string _xsBoolListBoolToString(bool value = false) {
-    if (value) {
-        return ("true");
-    }
-    return ("false");
-}
-
 /*
     Returns the number of elements in the list.
     @param lst - list id
@@ -33,8 +26,12 @@ int xsBoolListCreate(int capacity = 7) {
         return (cBoolListGenericError);
     }
     int lst = xsArrayCreateInt(2, 0);
+    if (lst < 0) {
+        return (cBoolListGenericError);
+    }
     int boolLst = xsArrayCreateBool(capacity);
-    if ((lst < 0) || (boolLst < 0)) {
+    if (boolLst < 0) {
+        xsArrayResizeInt(lst, 0);
         return (cBoolListGenericError);
     }
     xsArraySetInt(lst, 1, boolLst);
@@ -52,8 +49,12 @@ int xsBoolListFromRepeatedVal(bool value = false, int times = 0) {
         return (cBoolListGenericError);
     }
     int lst = xsArrayCreateInt(2, times);
+    if (lst < 0) {
+        return (cBoolListGenericError);
+    }
     int boolLst = xsArrayCreateBool(times, value);
-    if ((boolLst < 0) || (lst < 0)) {
+    if (boolLst < 0) {
+        xsArrayResizeInt(lst, 0);
         return (cBoolListGenericError);
     }
     xsArraySetInt(lst, 1, boolLst);
@@ -79,8 +80,12 @@ int xsBoolListFromRepeatedList(int lst = -1, int times = 0) {
         return (cBoolListMaxCapacityError);
     }
     int newBoolLst = xsArrayCreateBool(newCapacity);
+    if (newBoolLst < 0) {
+        return (cBoolListGenericError);
+    }
     int newLst = xsArrayCreateInt(2, newCapacity);
-    if ((newBoolLst < 0) || (newLst < 0)) {
+    if (newLst < 0) {
+        xsArrayResizeBool(newBoolLst, 0);
         return (cBoolListGenericError);
     }
     int boolLst = xsArrayGetInt(lst, 1);
@@ -107,8 +112,12 @@ int xsBoolListFromArray(int arr = -1) {
         return (cBoolListMaxCapacityError);
     }
     int newBoolLst = xsArrayCreateBool(arrSize);
+    if (newBoolLst < 0) {
+        return (cBoolListGenericError);
+    }
     int lst = xsArrayCreateInt(2, arrSize);
-    if ((lst < 0) || (newBoolLst < 0)) {
+    if (lst < 0) {
+        xsArrayResizeBool(newBoolLst, 0);
         return (cBoolListGenericError);
     }
     for (i = 0; < arrSize) {
@@ -425,7 +434,11 @@ string xsBoolListToString(int lst = -1) {
     }
     string s = "[";
     for (i = 0; < size) {
-        s = s + _xsBoolListBoolToString(xsArrayGetBool(boolLst, i));
+        if (xsArrayGetBool(boolLst, i)) {
+            s = s + "true";
+        } else {
+            s = s + "false";
+        }
         if (i < (size - 1)) {
             s = s + ", ";
         }
@@ -466,8 +479,12 @@ int xsBoolListCopy(int lst = -1, int start = 0, int end = cBoolListMaxCapacity) 
         newSize = 0;
     }
     int newLst = xsArrayCreateInt(2, newSize);
+    if (newLst < 0) {
+        return (cBoolListGenericError);
+    }
     int newBoolLst = xsArrayCreateBool(newSize);
-    if ((newLst < 0) || (newBoolLst < 0)) {
+    if (newBoolLst < 0) {
+        xsArrayResizeInt(newLst, 0);
         return (cBoolListGenericError);
     }
     xsArraySetInt(newLst, 1, newBoolLst);

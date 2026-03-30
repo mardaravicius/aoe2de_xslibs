@@ -574,6 +574,132 @@ class StringListTest(unittest.TestCase):
         self.assertEqual(c_string_list_index_out_of_range_error, xs_string_list_last_error())
 
 
+class StringListAllocationCleanupTest(unittest.TestCase):
+    def setUp(self):
+        self.orig_create_int = _sl.xs_array_create_int
+        self.orig_create_string = _sl.xs_array_create_string
+        self.orig_resize_int = _sl.xs_array_resize_int
+        self.orig_resize_string = _sl.xs_array_resize_string
+
+    def tearDown(self):
+        _sl.xs_array_create_int = self.orig_create_int
+        _sl.xs_array_create_string = self.orig_create_string
+        _sl.xs_array_resize_int = self.orig_resize_int
+        _sl.xs_array_resize_string = self.orig_resize_string
+
+    def test_create_shrinks_int_array_when_string_array_allocation_fails(self):
+        created: dict[str, int32] = {}
+
+        def _create_int(*args, **kwargs):
+            arr = self.orig_create_int(*args, **kwargs)
+            created["arr"] = arr
+            return arr
+
+        def _create_string(*args, **kwargs):
+            return int32(-1)
+
+        def _resize_int(arr_id, new_size):
+            self.orig_resize_int(arr_id, new_size)
+            return int32(0)
+
+        _sl.xs_array_create_int = _create_int
+        _sl.xs_array_create_string = _create_string
+        _sl.xs_array_resize_int = _resize_int
+
+        self.assertEqual(c_string_list_generic_error, xs_string_list_create())
+        self.assertEqual(0, xs_array_get_size(created["arr"]))
+
+    def test_create_returns_without_allocating_string_array_when_int_array_allocation_fails(self):
+        calls: dict[str, int32] = {"create_string": int32(0), "resize_string": int32(0)}
+
+        def _create_int(*args, **kwargs):
+            return int32(-1)
+
+        def _create_string(*args, **kwargs):
+            calls["create_string"] += 1
+            return self.orig_create_string(*args, **kwargs)
+
+        def _resize_string(arr_id, new_size):
+            calls["resize_string"] += 1
+            return int32(0)
+
+        _sl.xs_array_create_int = _create_int
+        _sl.xs_array_create_string = _create_string
+        _sl.xs_array_resize_string = _resize_string
+
+        self.assertEqual(c_string_list_generic_error, xs_string_list_create())
+        self.assertEqual(0, calls["create_string"])
+        self.assertEqual(0, calls["resize_string"])
+
+    def test_constructor_shrinks_string_array_when_int_array_allocation_fails(self):
+        created: dict[str, int32] = {}
+
+        def _create_int(*args, **kwargs):
+            return int32(-1)
+
+        def _create_string(*args, **kwargs):
+            arr = self.orig_create_string(*args, **kwargs)
+            created["arr"] = arr
+            return arr
+
+        def _resize_string(arr_id, new_size):
+            self.orig_resize_string(arr_id, new_size)
+            return int32(0)
+
+        _sl.xs_array_create_int = _create_int
+        _sl.xs_array_create_string = _create_string
+        _sl.xs_array_resize_string = _resize_string
+
+        self.assertEqual(c_string_list_generic_error, xs_string_list("aa"))
+        self.assertEqual(0, xs_array_get_size(created["arr"]))
+
+    def test_copy_shrinks_int_array_when_string_array_allocation_fails(self):
+        created: dict[str, int32] = {}
+        xs_lst = xs_string_list("aa", "bb")
+
+        def _create_int(*args, **kwargs):
+            arr = self.orig_create_int(*args, **kwargs)
+            created["arr"] = arr
+            return arr
+
+        def _create_string(*args, **kwargs):
+            return int32(-1)
+
+        def _resize_int(arr_id, new_size):
+            self.orig_resize_int(arr_id, new_size)
+            return int32(0)
+
+        _sl.xs_array_create_int = _create_int
+        _sl.xs_array_create_string = _create_string
+        _sl.xs_array_resize_int = _resize_int
+
+        self.assertEqual(c_string_list_generic_error, xs_string_list_copy(xs_lst))
+        self.assertEqual(0, xs_array_get_size(created["arr"]))
+
+    def test_from_repeated_list_shrinks_string_array_when_int_array_allocation_fails(self):
+        created: dict[str, int32] = {}
+        xs_lst = xs_string_list("aa", "bb")
+
+        def _create_int(*args, **kwargs):
+            return int32(-1)
+
+        def _create_string(*args, **kwargs):
+            arr = self.orig_create_string(*args, **kwargs)
+            created["arr"] = arr
+            return arr
+
+        def _resize_string(arr_id, new_size):
+            self.orig_resize_string(arr_id, new_size)
+            return int32(0)
+
+        _sl.xs_array_create_int = _create_int
+        _sl.xs_array_create_string = _create_string
+        _sl.xs_array_resize_string = _resize_string
+
+        self.assertEqual(c_string_list_generic_error, xs_string_list_from_repeated_list(xs_lst, int32(2)))
+        self.assertEqual(0, xs_array_get_size(created["arr"]))
+
+
 def to_str_lst(lst) -> list[str]:
     return [str(x) for x in lst]
 

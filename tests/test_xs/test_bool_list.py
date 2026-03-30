@@ -62,9 +62,11 @@ class BoolListTest(unittest.TestCase):
     def setUp(self):
         _impl.ARRAYS.clear()
         _impl.ARRAY_NAMES.clear()
+        self.orig_create_int = _bl.xs_array_create_int
         self.orig_create_bool = _bl.xs_array_create_bool
         self.orig_set_bool = _bl.xs_array_set_bool
         self.orig_get_bool = _bl.xs_array_get_bool
+        self.orig_resize_int = _bl.xs_array_resize_int
         self.orig_resize_bool = _bl.xs_array_resize_bool
         _bl.xs_array_create_bool = _create_bool_array_impl
         _bl.xs_array_set_bool = _set_bool_array_impl
@@ -72,9 +74,11 @@ class BoolListTest(unittest.TestCase):
         _bl.xs_array_resize_bool = _resize_bool_array_impl
 
     def tearDown(self):
+        _bl.xs_array_create_int = self.orig_create_int
         _bl.xs_array_create_bool = self.orig_create_bool
         _bl.xs_array_set_bool = self.orig_set_bool
         _bl.xs_array_get_bool = self.orig_get_bool
+        _bl.xs_array_resize_int = self.orig_resize_int
         _bl.xs_array_resize_bool = self.orig_resize_bool
 
     def _create_bool_array(self, values: list[bool]) -> int32:
@@ -524,6 +528,121 @@ class BoolListTest(unittest.TestCase):
     def test_xs_bool_list_count_on_empty(self):
         xs_lst = xs_bool_list_create()
         self.assertEqual(0, xs_bool_list_count(xs_lst, True))
+
+    def test_create_shrinks_int_array_when_bool_array_allocation_fails(self):
+        created: dict[str, int32] = {}
+
+        def _create_int(*args, **kwargs):
+            arr = self.orig_create_int(*args, **kwargs)
+            created["arr"] = arr
+            return arr
+
+        def _create_bool(*args, **kwargs):
+            return int32(-1)
+
+        def _resize_int(arr_id, new_size):
+            self.orig_resize_int(arr_id, new_size)
+            return int32(0)
+
+        _bl.xs_array_create_int = _create_int
+        _bl.xs_array_create_bool = _create_bool
+        _bl.xs_array_resize_int = _resize_int
+
+        self.assertEqual(c_bool_list_generic_error, xs_bool_list_create())
+        self.assertEqual(0, xs_array_get_size(created["arr"]))
+
+    def test_create_returns_without_allocating_bool_array_when_int_array_allocation_fails(self):
+        calls: dict[str, int32] = {"create_bool": int32(0), "resize_bool": int32(0)}
+
+        def _create_int(*args, **kwargs):
+            return int32(-1)
+
+        def _create_bool(*args, **kwargs):
+            calls["create_bool"] += 1
+            return _create_bool_array_impl(*args, **kwargs)
+
+        def _resize_bool(arr_id, new_size):
+            calls["resize_bool"] += 1
+            return int32(0)
+
+        _bl.xs_array_create_int = _create_int
+        _bl.xs_array_create_bool = _create_bool
+        _bl.xs_array_resize_bool = _resize_bool
+
+        self.assertEqual(c_bool_list_generic_error, xs_bool_list_create())
+        self.assertEqual(0, calls["create_bool"])
+        self.assertEqual(0, calls["resize_bool"])
+
+    def test_from_repeated_list_shrinks_bool_array_when_int_array_allocation_fails(self):
+        created: dict[str, int32] = {}
+        xs_lst = self._create_bool_list([True, False])
+
+        def _create_int(*args, **kwargs):
+            return int32(-1)
+
+        def _create_bool(*args, **kwargs):
+            arr = _create_bool_array_impl(*args, **kwargs)
+            created["arr"] = arr
+            return arr
+
+        def _resize_bool(arr_id, new_size):
+            _resize_bool_array_impl(arr_id, new_size)
+            return int32(0)
+
+        _bl.xs_array_create_int = _create_int
+        _bl.xs_array_create_bool = _create_bool
+        _bl.xs_array_resize_bool = _resize_bool
+
+        self.assertEqual(c_bool_list_generic_error, xs_bool_list_from_repeated_list(xs_lst, int32(2)))
+        self.assertEqual(0, xs_array_get_size(created["arr"]))
+
+    def test_copy_shrinks_int_array_when_bool_array_allocation_fails(self):
+        created: dict[str, int32] = {}
+        xs_lst = self._create_bool_list([True, False])
+
+        def _create_int(*args, **kwargs):
+            arr = self.orig_create_int(*args, **kwargs)
+            created["arr"] = arr
+            return arr
+
+        def _create_bool(*args, **kwargs):
+            return int32(-1)
+
+        def _resize_int(arr_id, new_size):
+            self.orig_resize_int(arr_id, new_size)
+            return int32(0)
+
+        _bl.xs_array_create_int = _create_int
+        _bl.xs_array_create_bool = _create_bool
+        _bl.xs_array_resize_int = _resize_int
+
+        self.assertEqual(c_bool_list_generic_error, xs_bool_list_copy(xs_lst))
+        self.assertEqual(0, xs_array_get_size(created["arr"]))
+
+    def test_from_array_shrinks_bool_array_when_int_array_allocation_fails(self):
+        created: dict[str, int32] = {}
+        xs_arr = self._create_bool_array([True, False])
+
+        def _create_int(*args, **kwargs):
+            return int32(-1)
+
+        def _create_bool(*args, **kwargs):
+            arr = _create_bool_array_impl(*args, **kwargs)
+            created["arr"] = arr
+            return arr
+
+        def _resize_bool(arr_id, new_size):
+            _resize_bool_array_impl(arr_id, new_size)
+            return int32(0)
+
+        _bl.xs_array_create_int = _create_int
+        _bl.xs_array_create_bool = _create_bool
+        _bl.xs_array_resize_bool = _resize_bool
+
+        self.assertEqual(c_bool_list_generic_error, xs_bool_list_from_array(xs_arr))
+        self.assertEqual(0, xs_array_get_size(created["arr"]))
+
+
 def bstr(lst: list[bool]) -> str:
     r = "["
     for i, value in enumerate(lst):

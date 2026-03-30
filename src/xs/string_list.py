@@ -1,7 +1,8 @@
 from numpy import int32, float32
 
 from xs_converter.functions import xs_array_get_size, xs_array_get_int, xs_array_create_string, \
-    xs_array_create_int, xs_array_set_string, xs_array_set_int, xs_array_get_string, xs_array_resize_string
+    xs_array_create_int, xs_array_set_string, xs_array_set_int, xs_array_get_string, xs_array_resize_int, \
+    xs_array_resize_string
 from xs_converter.symbols import XsExternConst, i32range
 
 c_string_list_success: XsExternConst[int32] = int32(0)
@@ -32,8 +33,11 @@ def xs_string_list_create(capacity: int32 = int32(7)) -> int32:
     if capacity < 0 or capacity >= c_string_list_max_capacity:
         return c_string_list_generic_error
     lst: int32 = xs_array_create_int(2, 0)
+    if lst < 0:
+        return c_string_list_generic_error
     str_lst: int32 = xs_array_create_string(capacity)
-    if lst < 0 or str_lst < 0:
+    if str_lst < 0:
+        xs_array_resize_int(lst, 0)
         return c_string_list_generic_error
     xs_array_set_int(lst, 1, str_lst)
     return lst
@@ -60,8 +64,11 @@ def xs_string_list(
     :return: created list id, or `c_string_list_generic_error` on error
     """
     str_lst: int32 = xs_array_create_string(12)
+    if str_lst < 0:
+        return c_string_list_generic_error
     lst: int32 = xs_array_create_int(2, str_lst)
-    if str_lst < 0 or lst < 0:
+    if lst < 0:
+        xs_array_resize_string(str_lst, 0)
         return c_string_list_generic_error
     if v0 == "!<[empty":
         xs_array_set_int(lst, 0, int32(0))
@@ -127,8 +134,11 @@ def xs_string_list_from_repeated_val(value: str = "", times: int32 = int32(0)) -
     if times < 0 or times > c_string_list_max_capacity:
         return c_string_list_generic_error
     lst: int32 = xs_array_create_int(2, times)
+    if lst < 0:
+        return c_string_list_generic_error
     str_lst: int32 = xs_array_create_string(times, value)
-    if str_lst < 0 or lst < 0:
+    if str_lst < 0:
+        xs_array_resize_int(lst, 0)
         return c_string_list_generic_error
     xs_array_set_int(lst, 1, str_lst)
     return lst
@@ -150,8 +160,11 @@ def xs_string_list_from_repeated_list(lst: int32 = int32(-1), times: int32 = int
     if new_capacity > c_string_list_max_capacity:
         return c_string_list_max_capacity_error
     new_str_lst: int32 = xs_array_create_string(new_capacity)
+    if new_str_lst < 0:
+        return c_string_list_generic_error
     new_lst: int32 = xs_array_create_int(2, new_capacity)
-    if new_str_lst < 0 or new_lst < 0:
+    if new_lst < 0:
+        xs_array_resize_string(new_str_lst, 0)
         return c_string_list_generic_error
     str_lst: int32 = xs_array_get_int(lst, 1)
     for i in i32range(0, size):
@@ -174,8 +187,11 @@ def xs_string_list_from_array(arr: int32 = int32(-1)) -> int32:
     if arr_size > c_string_list_max_capacity:
         return c_string_list_max_capacity_error
     new_str_lst: int32 = xs_array_create_string(arr_size)
+    if new_str_lst < 0:
+        return c_string_list_generic_error
     lst: int32 = xs_array_create_int(2, arr_size)
-    if lst < 0 or new_str_lst < 0:
+    if lst < 0:
+        xs_array_resize_string(new_str_lst, 0)
         return c_string_list_generic_error
     for i in i32range(0, arr_size):
         xs_array_set_string(new_str_lst, i, xs_array_get_string(arr, i))
@@ -495,8 +511,11 @@ def xs_string_list_copy(lst: int32 = int32(-1), start: int32 = int32(0),
     if new_size < 0:
         new_size = int32(0)
     new_lst: int32 = xs_array_create_int(2, new_size)
+    if new_lst < 0:
+        return c_string_list_generic_error
     new_str_lst: int32 = xs_array_create_string(new_size)
-    if new_lst < 0 or new_str_lst < 0:
+    if new_str_lst < 0:
+        xs_array_resize_int(new_lst, 0)
         return c_string_list_generic_error
     xs_array_set_int(new_lst, 1, new_str_lst)
     str_lst: int32 = xs_array_get_int(lst, 1)
