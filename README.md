@@ -411,13 +411,12 @@ int    xsStringListLastError()
 
 ```cpp
 void announceNames() {
-    int names = xsStringList("Alice", "Bob", "Carol");
+    int names = xsStringList("Carol", "Alice", "Bob");
     xsStringListSort(names, false);
 
-    int i = 0;
-    while (i < xsStringListSize(names)) {
+    int numNames = xsStringListSize(names);
+    for (i = 0; < numNames) {
         xsChatData("Player: " + xsStringListGet(names, i));
-        i++;
     }
 }
 ```
@@ -490,11 +489,10 @@ void spawnUnitsAlongPath() {
         vector(50.0, 0.0, 35.0)
     );
 
-    int i = 0;
-    while (i < xsVectorListSize(waypoints)) {
+    int numWaypoints = xsVectorListSize(waypoints);
+    for (i = 0; < numWaypoints) {
         vector pos = xsVectorListGet(waypoints, i);
         xsChatData("Waypoint " + i + ": " + pos);
-        i++;
     }
 }
 ```
@@ -990,11 +988,9 @@ int  xsMtRandomUniformRange(int start, int end)   // uniform int in [start, end)
 ```cpp
 void randomTeams() {
     int numPlayers = 4;
-    int i = 0;
-    while (i < numPlayers) {
+    for (i = 0; < numPlayers) {
         int team = xsMtRandomUniformRange(0, 2);
         xsChatData("Player " + (i + 1) + " -> team " + team);
-        i++;
     }
 }
 ```
@@ -1015,8 +1011,8 @@ void main() {
 
     int cFlagElite = xsBitShiftLeft(1, 0);
 
-    int i = 0;
-    while (i < xsIntListSize(players)) {
+    int numPlayers = xsIntListSize(players);
+    for (i = 0; < numPlayers) {
         int player = xsIntListGet(players, i);
         int score = 100 + xsMtRandomUniformRange(0, 76);
         int flags = 0;
@@ -1027,13 +1023,11 @@ void main() {
 
         xsIntIntDictPut(scoreByPlayer, player, score);
         xsIntIntDictPut(flagsByPlayer, player, flags);
-        i++;
     }
 
     xsIntListSort(players, false);
 
-    i = 0;
-    while (i < xsIntListSize(players)) {
+    for (i = 0; < numPlayers) {
         int player = xsIntListGet(players, i);
         int score = xsIntIntDictGet(scoreByPlayer, player, 0);
         int flags = xsIntIntDictGet(flagsByPlayer, player, 0);
@@ -1043,8 +1037,6 @@ void main() {
         } else {
             xsChatData("Player " + player + " score: " + score);
         }
-
-        i++;
     }
 }
 ```
