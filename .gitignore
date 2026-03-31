@@ -6,3 +6,4 @@ venv/
 **/__pycache__/
 tests/c/mt
 .DS_Store
+build/
