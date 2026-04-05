@@ -141,12 +141,12 @@ int xsIntListFromRange(int start = 0, int stop = 0, int step = 1) {
         }
         distance = start - stop;
     }
-    int stepa = _xsIntListIntAbs(step);
-    int size = distance / stepa;
+    int stepA = _xsIntListIntAbs(step);
+    int size = distance / stepA;
     if (size >= cIntListMaxCapacity) {
         return (cIntListGenericError);
     }
-    if ((distance % stepa) > 0) {
+    if ((distance % stepA) > 0) {
         size++;
     }
     int lst = xsArrayCreateInt(size + 1);

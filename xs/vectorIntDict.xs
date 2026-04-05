@@ -69,15 +69,15 @@ int xsVectorIntDictCreate() {
 }
 
 int _xsVectorIntDictHash(vector key = vector(0.0, 0.0, 0.0), int capacity = 0) {
-    int hash = bitCastToInt(xsVectorGetX(key)) * cVectorIntDictHashConstant;
-    hash = (hash + bitCastToInt(xsVectorGetY(key))) * cVectorIntDictHashConstant;
-    hash = (hash + bitCastToInt(xsVectorGetZ(key))) * cVectorIntDictHashConstant;
+    int h = bitCastToInt(xsVectorGetX(key)) * cVectorIntDictHashConstant;
+    h = (h + bitCastToInt(xsVectorGetY(key))) * cVectorIntDictHashConstant;
+    h = (h + bitCastToInt(xsVectorGetZ(key))) * cVectorIntDictHashConstant;
     int numSlots = (capacity - 1) / 4;
-    hash = hash % numSlots;
-    if (hash < 0) {
-        hash = hash + numSlots;
+    h = h % numSlots;
+    if (h < 0) {
+        h = h + numSlots;
     }
-    return ((hash * 4) + 1);
+    return ((h * 4) + 1);
 }
 
 int _xsVectorIntDictFindSlot(int dct = -1, vector key = vector(0.0, 0.0, 0.0), int capacity = 0) {

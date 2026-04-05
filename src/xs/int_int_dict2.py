@@ -34,12 +34,12 @@ def xs_int_int_dict_create() -> int32:
 
 
 def _xs_int_int_dict_hash(key: int32 = int32(-1), capacity: int32 = int32(0)) -> int32:
-    hash: int32 = key * c_int_int_dict_hash_constant
+    h: int32 = key * c_int_int_dict_hash_constant
     num_of_buckets: int32 = (capacity - 1) // 3
-    hash = hash % num_of_buckets
-    if hash < 0:
-        hash += num_of_buckets
-    return (hash * 3) + 1
+    h = h % num_of_buckets
+    if h < 0:
+        h += num_of_buckets
+    return (h * 3) + 1
 
 
 def _xs_int_int_dict_find_key_in_array(bucket_arr: int32 = int32(-1), bucket_size: int32 = int32(0),
@@ -53,22 +53,22 @@ def _xs_int_int_dict_find_key_in_array(bucket_arr: int32 = int32(-1), bucket_siz
 def _xs_int_int_dict_replace(dct: int32 = int32(-1), key: int32 = int32(-1), val: int32 = int32(0),
                              capacity: int32 = int32(0)) -> int32:
     global _int_int_dict_last_operation_status
-    hash: int32 = _xs_int_int_dict_hash(key, capacity)
-    bucket_type: int32 = xs_array_get_int(dct, hash)
+    h: int32 = _xs_int_int_dict_hash(key, capacity)
+    bucket_type: int32 = xs_array_get_int(dct, h)
     bucket_arr: int32 = int32(0)
     stored_key: int32 = int32(0)
     stored_val: int32 = int32(0)
     if bucket_type == _int_int_dict_empty_bucket:
-        xs_array_set_int(dct, hash, _int_int_dict_inline_bucket)
-        xs_array_set_int(dct, hash + 1, key)
-        xs_array_set_int(dct, hash + 2, val)
+        xs_array_set_int(dct, h, _int_int_dict_inline_bucket)
+        xs_array_set_int(dct, h + 1, key)
+        xs_array_set_int(dct, h + 2, val)
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return c_int_int_dict_generic_error
     elif bucket_type == _int_int_dict_inline_bucket:
-        stored_key = xs_array_get_int(dct, hash + 1)
+        stored_key = xs_array_get_int(dct, h + 1)
         if stored_key == key:
-            stored_val = xs_array_get_int(dct, hash + 2)
-            xs_array_set_int(dct, hash + 2, val)
+            stored_val = xs_array_get_int(dct, h + 2)
+            xs_array_set_int(dct, h + 2, val)
             _int_int_dict_last_operation_status = c_int_int_dict_success
             return stored_val
         else:
@@ -77,17 +77,17 @@ def _xs_int_int_dict_replace(dct: int32 = int32(-1), key: int32 = int32(-1), val
                 _int_int_dict_last_operation_status = c_int_int_dict_resize_failed_error
                 return c_int_int_dict_generic_error
             xs_array_set_int(bucket_arr, 0, stored_key)
-            xs_array_set_int(bucket_arr, 1, xs_array_get_int(dct, hash + 2))
+            xs_array_set_int(bucket_arr, 1, xs_array_get_int(dct, h + 2))
             xs_array_set_int(bucket_arr, 2, key)
             xs_array_set_int(bucket_arr, 3, val)
-            xs_array_set_int(dct, hash, _int_int_dict_array_bucket)
-            xs_array_set_int(dct, hash + 1, bucket_arr)
-            xs_array_set_int(dct, hash + 2, 4)
+            xs_array_set_int(dct, h, _int_int_dict_array_bucket)
+            xs_array_set_int(dct, h + 1, bucket_arr)
+            xs_array_set_int(dct, h + 2, 4)
             _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
             return c_int_int_dict_generic_error
     elif bucket_type == _int_int_dict_array_bucket:
-        bucket_arr = xs_array_get_int(dct, hash + 1)
-        bucket_size: int32 = xs_array_get_int(dct, hash + 2)
+        bucket_arr = xs_array_get_int(dct, h + 1)
+        bucket_size: int32 = xs_array_get_int(dct, h + 2)
         found_idx: int32 = _xs_int_int_dict_find_key_in_array(bucket_arr, bucket_size, key)
         if found_idx >= 0:
             stored_val = xs_array_get_int(bucket_arr, found_idx + 1)
@@ -107,7 +107,7 @@ def _xs_int_int_dict_replace(dct: int32 = int32(-1), key: int32 = int32(-1), val
 
         xs_array_set_int(bucket_arr, bucket_size, key)
         xs_array_set_int(bucket_arr, bucket_size + 1, val)
-        xs_array_set_int(dct, hash + 2, bucket_size + 2)
+        xs_array_set_int(dct, h + 2, bucket_size + 2)
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return c_int_int_dict_generic_error
 
@@ -273,20 +273,20 @@ def xs_int_int_dict_get(dct: int32 = int32(-1), key: int32 = int32(-1), dft: int
     """
     global _int_int_dict_last_operation_status
     capacity: int32 = xs_array_get_size(dct)
-    hash: int32 = _xs_int_int_dict_hash(key, capacity)
-    bucket_type: int32 = xs_array_get_int(dct, hash)
+    h: int32 = _xs_int_int_dict_hash(key, capacity)
+    bucket_type: int32 = xs_array_get_int(dct, h)
     if bucket_type == _int_int_dict_empty_bucket:
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return dft
     elif bucket_type == _int_int_dict_inline_bucket:
-        if xs_array_get_int(dct, hash + 1) == key:
+        if xs_array_get_int(dct, h + 1) == key:
             _int_int_dict_last_operation_status = c_int_int_dict_success
-            return xs_array_get_int(dct, hash + 2)
+            return xs_array_get_int(dct, h + 2)
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return dft
     elif bucket_type == _int_int_dict_array_bucket:
-        bucket_arr: int32 = xs_array_get_int(dct, hash + 1)
-        bucket_size: int32 = xs_array_get_int(dct, hash + 2)
+        bucket_arr: int32 = xs_array_get_int(dct, h + 1)
+        bucket_size: int32 = xs_array_get_int(dct, h + 2)
         found_idx: int32 = _xs_int_int_dict_find_key_in_array(bucket_arr, bucket_size, key)
         if found_idx >= 0:
             _int_int_dict_last_operation_status = c_int_int_dict_success
@@ -305,31 +305,31 @@ def xs_int_int_dict_remove(dct: int32 = int32(-1), key: int32 = int32(-1)) -> in
     global _int_int_dict_last_operation_status, _int_int_dict_temp_array
     size: int32 = xs_array_get_int(dct, 0)
     capacity: int32 = xs_array_get_size(dct)
-    hash: int32 = _xs_int_int_dict_hash(key, capacity)
-    bucket_type: int32 = xs_array_get_int(dct, hash)
+    h: int32 = _xs_int_int_dict_hash(key, capacity)
+    bucket_type: int32 = xs_array_get_int(dct, h)
     stored_key: int32 = int32(0)
     if bucket_type == _int_int_dict_empty_bucket:
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return c_int_int_dict_generic_error
     if bucket_type == _int_int_dict_inline_bucket:
-        stored_key = xs_array_get_int(dct, hash + 1)
+        stored_key = xs_array_get_int(dct, h + 1)
         if stored_key == key:
-            xs_array_set_int(dct, hash, _int_int_dict_empty_bucket)
+            xs_array_set_int(dct, h, _int_int_dict_empty_bucket)
             xs_array_set_int(dct, 0, size - 1)
             _int_int_dict_last_operation_status = c_int_int_dict_success
-            return xs_array_get_int(dct, hash + 2)
+            return xs_array_get_int(dct, h + 2)
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return c_int_int_dict_generic_error
     if bucket_type == _int_int_dict_array_bucket:
-        bucket_arr: int32 = xs_array_get_int(dct, hash + 1)
-        bucket_size: int32 = xs_array_get_int(dct, hash + 2)
+        bucket_arr: int32 = xs_array_get_int(dct, h + 1)
+        bucket_size: int32 = xs_array_get_int(dct, h + 2)
         found_idx: int32 = _xs_int_int_dict_find_key_in_array(bucket_arr, bucket_size, key)
         if found_idx >= 0:
             prev_value: int32 = xs_array_get_int(bucket_arr, found_idx + 1)
             for i in i32range(found_idx + 2, bucket_size, 2):
                 xs_array_set_int(bucket_arr, i - 2, xs_array_get_int(bucket_arr, i))
                 xs_array_set_int(bucket_arr, i - 1, xs_array_get_int(bucket_arr, i + 1))
-            xs_array_set_int(dct, hash + 2, bucket_size - 2)
+            xs_array_set_int(dct, h + 2, bucket_size - 2)
             xs_array_set_int(dct, 0, size - 1)
             _int_int_dict_last_operation_status = c_int_int_dict_success
             return prev_value
@@ -347,15 +347,15 @@ def xs_int_int_dict_contains(dct: int32 = int32(-1), key: int32 = int32(-1)) -> 
     :return: true if the key is found, false otherwise
     """
     capacity: int32 = xs_array_get_size(dct)
-    hash: int32 = _xs_int_int_dict_hash(key, capacity)
-    bucket_type: int32 = xs_array_get_int(dct, hash)
+    h: int32 = _xs_int_int_dict_hash(key, capacity)
+    bucket_type: int32 = xs_array_get_int(dct, h)
     if bucket_type == _int_int_dict_empty_bucket:
         return False
     if bucket_type == _int_int_dict_inline_bucket:
-        return xs_array_get_int(dct, hash + 1) == key
+        return xs_array_get_int(dct, h + 1) == key
     if bucket_type == _int_int_dict_array_bucket:
-        bucket_arr: int32 = xs_array_get_int(dct, hash + 1)
-        bucket_size: int32 = xs_array_get_int(dct, hash + 2)
+        bucket_arr: int32 = xs_array_get_int(dct, h + 1)
+        bucket_size: int32 = xs_array_get_int(dct, h + 2)
         return _xs_int_int_dict_find_key_in_array(bucket_arr, bucket_size, key) >= 0
     return False
 
@@ -500,11 +500,11 @@ def xs_int_int_dict_next_key(dct: int32 = int32(-1), is_first: bool = True, prev
     dict_size: int32 = xs_array_get_size(dct)
     if is_first:
         return _xs_int_int_find_next_from_bucket(int32(1), dct, dict_size)
-    hash: int32 = _xs_int_int_dict_hash(prev_key, dict_size)
-    bucket_type: int32 = xs_array_get_int(dct, hash)
+    h: int32 = _xs_int_int_dict_hash(prev_key, dict_size)
+    bucket_type: int32 = xs_array_get_int(dct, h)
     if bucket_type == _int_int_dict_array_bucket:
-        bucket_arr: int32 = xs_array_get_int(dct, hash + 1)
-        bucket_size: int32 = xs_array_get_int(dct, hash + 2)
+        bucket_arr: int32 = xs_array_get_int(dct, h + 1)
+        bucket_size: int32 = xs_array_get_int(dct, h + 2)
         i: int32 = int32(0)
         found: bool = False
         while i < bucket_size and not found:
@@ -518,7 +518,7 @@ def xs_int_int_dict_next_key(dct: int32 = int32(-1), is_first: bool = True, prev
         if not found:
             _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
             return c_int_int_dict_generic_error
-    return _xs_int_int_find_next_from_bucket(hash + 3, dct, dict_size)
+    return _xs_int_int_find_next_from_bucket(h + 3, dct, dict_size)
 
 
 def xs_int_int_dict_has_next(dct: int32 = int32(-1), is_first: bool = True,
@@ -574,34 +574,34 @@ def xs_int_int_dict_put_if_absent(dct: int32 = int32(-1), key: int32 = int32(-1)
     global _int_int_dict_last_operation_status
     size: int32 = xs_array_get_int(dct, 0)
     capacity: int32 = xs_array_get_size(dct)
-    hash: int32 = _xs_int_int_dict_hash(key, capacity)
-    bucket_type: int32 = xs_array_get_int(dct, hash)
+    h: int32 = _xs_int_int_dict_hash(key, capacity)
+    bucket_type: int32 = xs_array_get_int(dct, h)
     bucket_arr: int32 = int32(0)
 
     if bucket_type == _int_int_dict_empty_bucket:
-        xs_array_set_int(dct, hash, _int_int_dict_inline_bucket)
-        xs_array_set_int(dct, hash + 1, key)
-        xs_array_set_int(dct, hash + 2, val)
+        xs_array_set_int(dct, h, _int_int_dict_inline_bucket)
+        xs_array_set_int(dct, h + 1, key)
+        xs_array_set_int(dct, h + 2, val)
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
     elif bucket_type == _int_int_dict_inline_bucket:
-        if xs_array_get_int(dct, hash + 1) == key:
+        if xs_array_get_int(dct, h + 1) == key:
             _int_int_dict_last_operation_status = c_int_int_dict_success
-            return xs_array_get_int(dct, hash + 2)
+            return xs_array_get_int(dct, h + 2)
         bucket_arr = xs_array_create_int(c_int_int_dict_initial_bucket_size, 0)
         if bucket_arr < 0:
             _int_int_dict_last_operation_status = c_int_int_dict_resize_failed_error
             return c_int_int_dict_generic_error
-        xs_array_set_int(bucket_arr, 0, xs_array_get_int(dct, hash + 1))
-        xs_array_set_int(bucket_arr, 1, xs_array_get_int(dct, hash + 2))
+        xs_array_set_int(bucket_arr, 0, xs_array_get_int(dct, h + 1))
+        xs_array_set_int(bucket_arr, 1, xs_array_get_int(dct, h + 2))
         xs_array_set_int(bucket_arr, 2, key)
         xs_array_set_int(bucket_arr, 3, val)
-        xs_array_set_int(dct, hash, _int_int_dict_array_bucket)
-        xs_array_set_int(dct, hash + 1, bucket_arr)
-        xs_array_set_int(dct, hash + 2, 4)
+        xs_array_set_int(dct, h, _int_int_dict_array_bucket)
+        xs_array_set_int(dct, h + 1, bucket_arr)
+        xs_array_set_int(dct, h + 2, 4)
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
     elif bucket_type == _int_int_dict_array_bucket:
-        bucket_arr = xs_array_get_int(dct, hash + 1)
-        bucket_size: int32 = xs_array_get_int(dct, hash + 2)
+        bucket_arr = xs_array_get_int(dct, h + 1)
+        bucket_size: int32 = xs_array_get_int(dct, h + 2)
         found_idx: int32 = _xs_int_int_dict_find_key_in_array(bucket_arr, bucket_size, key)
         if found_idx >= 0:
             _int_int_dict_last_operation_status = c_int_int_dict_success
@@ -618,7 +618,7 @@ def xs_int_int_dict_put_if_absent(dct: int32 = int32(-1), key: int32 = int32(-1)
                 return c_int_int_dict_generic_error
         xs_array_set_int(bucket_arr, bucket_size, key)
         xs_array_set_int(bucket_arr, bucket_size + 1, val)
-        xs_array_set_int(dct, hash + 2, bucket_size + 2)
+        xs_array_set_int(dct, h + 2, bucket_size + 2)
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
     else:
         _int_int_dict_last_operation_status = c_int_int_dict_generic_error

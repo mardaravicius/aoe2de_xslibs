@@ -30,18 +30,18 @@ def xs_int_int_dict_create() -> int32:
 
 
 def _xs_int_int_dict_hash(key: int32 = int32(-1), num_of_buckets: int32 = int32(0)) -> int32:
-    hash: int32 = key * c_int_int_dict_hash_constant
-    hash = hash % num_of_buckets
-    if hash < 0:
-        hash = hash + num_of_buckets
-    return hash + 1
+    h: int32 = key * c_int_int_dict_hash_constant
+    h = h % num_of_buckets
+    if h < 0:
+        h = h + num_of_buckets
+    return h + 1
 
 
 def _xs_int_int_dict_replace(dct: int32 = int32(-1), key: int32 = int32(-1), val: int32 = int32(0),
                              num_of_buckets: int32 = int32(0)) -> int32:
     global _int_int_dict_last_operation_status
-    hash: int32 = _xs_int_int_dict_hash(key, num_of_buckets)
-    bucket: int32 = xs_array_get_int(dct, hash)
+    h: int32 = _xs_int_int_dict_hash(key, num_of_buckets)
+    bucket: int32 = xs_array_get_int(dct, h)
     if bucket < 0:
         bucket = xs_array_create_int(c_int_int_dict_initial_bucket_size, c_int_int_dict_empty_param)
         if bucket < 0:
@@ -50,7 +50,7 @@ def _xs_int_int_dict_replace(dct: int32 = int32(-1), key: int32 = int32(-1), val
         xs_array_set_int(bucket, 1, key)
         xs_array_set_int(bucket, 2, val)
         xs_array_set_int(bucket, 0, 2)
-        xs_array_set_int(dct, hash, bucket)
+        xs_array_set_int(dct, h, bucket)
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return c_int_int_dict_generic_error
     bucket_size: int32 = xs_array_get_int(bucket, 0)
@@ -198,8 +198,8 @@ def xs_int_int_dict_remove(dct: int32 = int32(-1), key: int32 = int32(-1)) -> in
     global _int_int_dict_last_operation_status, _int_int_dict_temp_array
     total_size: int32 = xs_array_get_int(dct, 0)
     dict_capacity: int32 = xs_array_get_size(dct)
-    hash: int32 = _xs_int_int_dict_hash(key, dict_capacity - 1)
-    bucket: int32 = xs_array_get_int(dct, hash)
+    h: int32 = _xs_int_int_dict_hash(key, dict_capacity - 1)
+    bucket: int32 = xs_array_get_int(dct, h)
     if bucket < 0:
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return c_int_int_dict_generic_error
@@ -233,8 +233,8 @@ def xs_int_int_dict_remove(dct: int32 = int32(-1), key: int32 = int32(-1)) -> in
 def xs_int_int_dict_get(dct: int32 = int32(-1), key: int32 = int32(-1), dft: int32 = int32(-1)) -> int32:
     global _int_int_dict_last_operation_status
     dict_capacity: int32 = xs_array_get_size(dct)
-    hash: int32 = _xs_int_int_dict_hash(key, dict_capacity - 1)
-    bucket: int32 = xs_array_get_int(dct, hash)
+    h: int32 = _xs_int_int_dict_hash(key, dict_capacity - 1)
+    bucket: int32 = xs_array_get_int(dct, h)
     if bucket < 0:
         _int_int_dict_last_operation_status = c_int_int_dict_no_key_error
         return dft
@@ -250,8 +250,8 @@ def xs_int_int_dict_get(dct: int32 = int32(-1), key: int32 = int32(-1), dft: int
 
 def xs_int_int_dict_contains(dct: int32 = int32(-1), key: int32 = int32(-1)) -> bool:
     dict_capacity: int32 = xs_array_get_size(dct)
-    hash: int32 = _xs_int_int_dict_hash(key, dict_capacity - 1)
-    bucket: int32 = xs_array_get_int(dct, hash)
+    h: int32 = _xs_int_int_dict_hash(key, dict_capacity - 1)
+    bucket: int32 = xs_array_get_int(dct, h)
     if bucket < 0:
         return False
     bucket_size: int32 = xs_array_get_int(bucket, 0)
@@ -337,15 +337,15 @@ def _xs_int_int_dct_iterator_next(dct: int32 = int32(-1), return_key: bool = Tru
                     b = i
             i += 1
     else:
-        hash: int32 = _xs_int_int_dict_hash(_int_int_dict_iterator_prev_key, dict_capacity - 1)
-        bucket = xs_array_get_int(dct, hash)
+        h: int32 = _xs_int_int_dict_hash(_int_int_dict_iterator_prev_key, dict_capacity - 1)
+        bucket = xs_array_get_int(dct, h)
         bucket_size = xs_array_get_int(bucket, 0)
         j: int32 = int32(1)
         while j <= bucket_size and not found:
             stored_key = xs_array_get_int(bucket, j)
             if _int_int_dict_iterator_prev_key == stored_key:
                 idx = j + 2
-                b = hash
+                b = h
                 found = True
             j += 2
     if not found:

@@ -172,15 +172,15 @@ int xsMtRandomUniformRange(int start = 0, int end = 999999999) {
     if (dist == 1) {
         return (start);
     }
-    int distm = dist - 1;
-    if (xsBitAnd(dist, distm) == 0) {
-        return (xsBitAnd(xsMtRandom(), distm) + start);
+    int distM = dist - 1;
+    if (xsBitAnd(dist, distM) == 0) {
+        return (xsBitAnd(xsMtRandom(), distM) + start);
     }
     if (dist > 0) {
         while (true) {
             int r = xsBitShiftRightLogical(xsMtRandom(), 1);
             int c = r % dist;
-            if (((r + distm) - c) >= 0) {
+            if (((r + distM) - c) >= 0) {
                 return (c + start);
             }
         }

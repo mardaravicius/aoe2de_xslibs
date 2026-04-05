@@ -111,57 +111,57 @@ def xs_vector_list(
     :param v0 through v11: value at a given index of a list
     :return: created list id, or `c_vector_list_generic_error` on error
     """
-    lst: int32 = _xs_vector_list_arr_create(13)
+    lst: int32 = _xs_vector_list_arr_create(int32(13))
     if lst < 0:
         return c_vector_list_generic_error
     if v0 == c_vector_list_empty_param:
         _xs_vector_list_set_size(lst, int32(0))
         return lst
-    _xs_vector_list_arr_set(lst, 1, v0)
+    _xs_vector_list_arr_set(lst, int32(1), v0)
     if v1 == c_vector_list_empty_param:
         _xs_vector_list_set_size(lst, int32(1))
         return lst
-    _xs_vector_list_arr_set(lst, 2, v1)
+    _xs_vector_list_arr_set(lst, int32(2), v1)
     if v2 == c_vector_list_empty_param:
         _xs_vector_list_set_size(lst, int32(2))
         return lst
-    _xs_vector_list_arr_set(lst, 3, v2)
+    _xs_vector_list_arr_set(lst, int32(3), v2)
     if v3 == c_vector_list_empty_param:
         _xs_vector_list_set_size(lst, int32(3))
         return lst
-    _xs_vector_list_arr_set(lst, 4, v3)
+    _xs_vector_list_arr_set(lst, int32(4), v3)
     if v4 == c_vector_list_empty_param:
         _xs_vector_list_set_size(lst, int32(4))
         return lst
-    _xs_vector_list_arr_set(lst, 5, v4)
+    _xs_vector_list_arr_set(lst, int32(5), v4)
     if v5 == c_vector_list_empty_param:
         _xs_vector_list_set_size(lst, int32(5))
         return lst
-    _xs_vector_list_arr_set(lst, 6, v5)
+    _xs_vector_list_arr_set(lst, int32(6), v5)
     if v6 == c_vector_list_empty_param:
         _xs_vector_list_set_size(lst, int32(6))
         return lst
-    _xs_vector_list_arr_set(lst, 7, v6)
+    _xs_vector_list_arr_set(lst, int32(7), v6)
     if v7 == c_vector_list_empty_param:
         _xs_vector_list_set_size(lst, int32(7))
         return lst
-    _xs_vector_list_arr_set(lst, 8, v7)
+    _xs_vector_list_arr_set(lst, int32(8), v7)
     if v8 == c_vector_list_empty_param:
         _xs_vector_list_set_size(lst, int32(8))
         return lst
-    _xs_vector_list_arr_set(lst, 9, v8)
+    _xs_vector_list_arr_set(lst, int32(9), v8)
     if v9 == c_vector_list_empty_param:
         _xs_vector_list_set_size(lst, int32(9))
         return lst
-    _xs_vector_list_arr_set(lst, 10, v9)
+    _xs_vector_list_arr_set(lst, int32(10), v9)
     if v10 == c_vector_list_empty_param:
         _xs_vector_list_set_size(lst, int32(10))
         return lst
-    _xs_vector_list_arr_set(lst, 11, v10)
+    _xs_vector_list_arr_set(lst, int32(11), v10)
     if v11 == c_vector_list_empty_param:
         _xs_vector_list_set_size(lst, int32(11))
         return lst
-    _xs_vector_list_arr_set(lst, 12, v11)
+    _xs_vector_list_arr_set(lst, int32(12), v11)
     _xs_vector_list_set_size(lst, int32(12))
     return lst
 
@@ -548,7 +548,7 @@ def xs_vector_list_clear(lst: int32 = int32(-1)) -> int32:
     """
     capacity: int32 = xs_vector_list_capacity(lst)
     if capacity > 8:
-        r: int32 = _xs_vector_list_arr_resize(lst, 8)
+        r: int32 = _xs_vector_list_arr_resize(lst, int32(8))
         if r != 1:
             return c_vector_list_resize_failed_error
     _xs_vector_list_set_size(lst, int32(0))

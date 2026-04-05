@@ -1,7 +1,7 @@
 from numpy import int32
 
 from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_resize_int, xs_array_get_int, \
-    xs_array_get_size, abs
+    xs_array_get_size
 from xs_converter.symbols import XsExternConst, i32range
 
 c_int_list_success: XsExternConst[int32] = int32(0)
@@ -139,11 +139,11 @@ def xs_int_list_from_range(start: int32 = int32(0), stop: int32 = int32(0), step
         if start >= 0 and stop < 0 and start > _c_int_list_int_max + stop:
             return c_int_list_generic_error
         distance = start - stop
-    stepa: int32 = _xs_int_list_int_abs(step)
-    size: int32 = distance // stepa
+    step_a: int32 = _xs_int_list_int_abs(step)
+    size: int32 = distance // step_a
     if size >= c_int_list_max_capacity:
         return c_int_list_generic_error
-    if distance % stepa > 0:
+    if distance % step_a > 0:
         size += int32(1)
     lst: int32 = xs_array_create_int(size + 1)
     if lst < 0:
@@ -481,7 +481,7 @@ def xs_int_list_sort(lst: int32 = int32(-1), reverse: bool = False) -> None:
         temp: int32 = xs_array_get_int(lst, 1)
         xs_array_set_int(lst, 1, xs_array_get_int(lst, end))
         xs_array_set_int(lst, end, temp)
-        _xs_int_list_sift_down(lst, 1, end - 1, reverse)
+        _xs_int_list_sift_down(lst, int32(1), end - 1, reverse)
 
 
 def xs_int_list_to_string(lst: int32 = int32(-1)) -> str:
