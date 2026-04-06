@@ -721,6 +721,13 @@ class IntIntDictTest(unittest.TestCase):
             xs_int_int_dict_put(b, int32(k), int32(k + 1))
         self.assertFalse(xs_int_int_dict_equals(a, b))
 
+    def test_equals_missing_key_with_default_like_value(self):
+        a = xs_int_int_dict_create()
+        b = xs_int_int_dict_create()
+        xs_int_int_dict_put(a, int32(1), int32(-1))
+        self.assertFalse(xs_int_int_dict_equals(a, b))
+        self.assertFalse(xs_int_int_dict_equals(b, a))
+
     def test_equals_one_empty(self):
         a = xs_int_int_dict_create()
         b = xs_int_int_dict_create()

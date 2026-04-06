@@ -9,6 +9,9 @@ import xs.float_list as float_list
 # import xs.int_int_dict2 as int_int_dict_v2
 import xs.int_int_dict3 as int_int_dict
 import xs.int_list as int_list
+import xs.string_int_dict as string_int_dict
+import xs.string_vector_dict as string_vector_dict
+import xs.string_string_dict as string_string_dict
 import xs.int_vector_dict as int_vector_dict
 import xs.string_list as string_list
 import xs.vector_int_dict as vector_int_dict
@@ -27,6 +30,9 @@ def main() -> None:
         (vector_list, "vectorList"),
         (int_int_dict, "intIntDict"),
         (int_string_dict, "intStringDict"),
+        (string_int_dict, "stringIntDict"),
+        (string_vector_dict, "stringVectorDict"),
+        (string_string_dict, "stringStringDict"),
         (int_vector_dict, "intVectorDict"),
         (vector_int_dict, "vectorIntDict"),
         (vector_string_dict, "vectorStringDict"),

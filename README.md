@@ -65,6 +65,9 @@ You do not need the Python tooling for that.
 | `vectorList.xs` | Dynamic list of `vector` values |
 | `intIntDict.xs` | Hash map from `int` keys to `int` values |
 | `intStringDict.xs` | Hash map from `int` keys to `string` values |
+| `stringIntDict.xs` | Dictionary from `string` keys to `int` values |
+| `stringVectorDict.xs` | Dictionary from `string` keys to `vector` values |
+| `stringStringDict.xs` | Dictionary from `string` keys to `string` values |
 | `intVectorDict.xs` | Hash map from `int` keys to `vector` values |
 | `vectorIntDict.xs` | Hash map from `vector` keys to `int` values |
 | `vectorStringDict.xs` | Hash map from `vector` keys to `string` values |
@@ -104,6 +107,9 @@ red but still work.
 - The dictionary `Keys` and `Values` helpers return raw XS arrays, not list handles.
 - `xsIntIntDictKeys`/`Values` return `int[]` / `int[]`.
 - `xsIntStringDictKeys`/`Values` return `int[]` / `string[]`.
+- `xsStringIntDictKeys`/`Values` return `string[]` / `int[]`.
+- `xsStringVectorDictKeys`/`Values` return `string[]` / `vector[]`.
+- `xsStringStringDictKeys`/`Values` return `string[]` / `string[]`.
 - `xsIntVectorDictKeys`/`Values` return `int[]` / `vector[]`.
 - `xsVectorIntDictKeys`/`Values` return `vector[]` / `int[]`.
 - `xsVectorStringDictKeys`/`Values` return `vector[]` / `string[]`.
@@ -111,6 +117,9 @@ red but still work.
 - There is no global initialization function for these libraries. You can use them immediately.
 - `xsIntIntDict`, `xsIntStringDict`, and `xsIntVectorDict` cannot store their reserved `...EmptyKey` int sentinel as a key.
 - `xsVectorIntDict`, `xsVectorStringDict`, and `xsVectorVectorDict` cannot store their reserved `...EmptyKey` vector sentinel as a key.
+- `xsStringIntDict` cannot store the reserved sentinel string `!<[empty` as a key.
+- `xsStringVectorDict` cannot store the reserved sentinel string `!<[empty` as a key.
+- `xsStringStringDict` cannot store the reserved sentinel string `!<[empty` as a key.
 
 ## 4. Int List
 
