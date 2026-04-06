@@ -58,13 +58,13 @@ int xsIntStringDictCreate() {
 }
 
 int _xsIntStringDictHash(int key = -1, int capacity = 0) {
-    int hash = key * cIntStringDictHashConstant;
+    int h = key * cIntStringDictHashConstant;
     int numSlots = _xsIntStringDictValuesCapacityFromIntCapacity(capacity);
-    hash = hash % numSlots;
-    if (hash < 0) {
-        hash = hash + numSlots;
+    h = h % numSlots;
+    if (h < 0) {
+        h = h + numSlots;
     }
-    return (hash + 2);
+    return (h + 2);
 }
 
 /*

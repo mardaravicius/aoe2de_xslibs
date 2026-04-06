@@ -77,12 +77,12 @@ def xs_int_vector_dict_create() -> int32:
 
 
 def _xs_int_vector_dict_hash(key: int32 = int32(-1), capacity: int32 = int32(0)) -> int32:
-    hash: int32 = key * c_int_vector_dict_hash_constant
+    h: int32 = key * c_int_vector_dict_hash_constant
     num_slots: int32 = (capacity - 1) // 4
-    hash = hash % num_slots
-    if hash < 0:
-        hash += num_slots
-    return (hash * 4) + 1
+    h = h % num_slots
+    if h < 0:
+        h += num_slots
+    return (h * 4) + 1
 
 
 def _xs_int_vector_dict_find_slot(dct: int32 = int32(-1), key: int32 = int32(-1),

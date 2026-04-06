@@ -174,16 +174,16 @@ def xs_mt_random_uniform_range(start: int32 = int32(0), end: int32 = int32(99999
     if dist == 1:
         return start
 
-    distm: int32 = dist - 1
-    if xs_bit_and(dist, distm) == 0:
-        return xs_bit_and(xs_mt_random(), distm) + start
+    dist_m: int32 = dist - 1
+    if xs_bit_and(dist, dist_m) == 0:
+        return xs_bit_and(xs_mt_random(), dist_m) + start
 
     if dist > 0:
         while True:
             r: int32 = xs_bit_shift_right_logical(xs_mt_random(), int32(1))
             c: int32 = r % dist
 
-            if r + distm - c >= 0:
+            if r + dist_m - c >= 0:
                 return c + start
 
     while True:

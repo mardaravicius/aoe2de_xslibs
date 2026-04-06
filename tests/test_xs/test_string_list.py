@@ -2,6 +2,8 @@ import random
 import unittest
 from random import randint
 
+from numpy import float32
+
 import xs.string_list as _sl
 from xs.string_list import *
 from xs_converter.functions import xs_array_create_string, xs_array_set_string, xs_array_get_string, xs_array_get_int

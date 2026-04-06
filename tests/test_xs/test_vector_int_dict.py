@@ -8,7 +8,7 @@ import numpy as np
 from numpy import int32
 
 import xs.vector_int_dict as _vid
-from xs_converter.functions import vector, bit_cast_to_float, xs_array_create_int, xs_array_get_int, xs_array_get_size, \
+from xs_converter.functions import vector, xs_array_create_int, xs_array_get_int, xs_array_get_size, \
     xs_array_get_vector, xs_array_set_int
 from xs_converter.symbols import i32range
 

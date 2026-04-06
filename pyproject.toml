@@ -7,7 +7,7 @@ name = "xslibs"
 version = "0.1.0"
 description = "Various xs functions to make working with aoe2 de xs easier"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 dependencies = [
     "numpy",
     "aoe2de-xs-converter @ git+ssh://git@github.com/mardaravicius/aoe2de_xs_converter.git@master",

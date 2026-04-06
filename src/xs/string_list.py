@@ -1,4 +1,4 @@
-from numpy import int32, float32
+from numpy import int32
 
 from xs_converter.functions import xs_array_get_size, xs_array_get_int, xs_array_create_string, \
     xs_array_create_int, xs_array_set_string, xs_array_set_int, xs_array_get_string, xs_array_resize_int, \

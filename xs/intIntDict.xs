@@ -24,13 +24,13 @@ int xsIntIntDictCreate() {
 }
 
 int _xsIntIntDictHash(int key = -1, int capacity = 0) {
-    int hash = key * cIntIntDictHashConstant;
+    int h = key * cIntIntDictHashConstant;
     int numSlots = (capacity - 1) / 2;
-    hash = hash % numSlots;
-    if (hash < 0) {
-        hash = hash + numSlots;
+    h = h % numSlots;
+    if (h < 0) {
+        h = h + numSlots;
     }
-    return ((hash * 2) + 1);
+    return ((h * 2) + 1);
 }
 
 /*

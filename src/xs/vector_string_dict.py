@@ -102,14 +102,14 @@ def xs_vector_string_dict_create() -> int32:
 
 
 def _xs_vector_string_dict_hash(key: XsVector = vector(0.0, 0.0, 0.0), capacity: int32 = int32(0)) -> int32:
-    hash: int32 = bit_cast_to_int(xs_vector_get_x(key)) * c_vector_string_dict_hash_constant
-    hash = (hash + bit_cast_to_int(xs_vector_get_y(key))) * c_vector_string_dict_hash_constant
-    hash = (hash + bit_cast_to_int(xs_vector_get_z(key))) * c_vector_string_dict_hash_constant
+    h: int32 = bit_cast_to_int(xs_vector_get_x(key)) * c_vector_string_dict_hash_constant
+    h = (h + bit_cast_to_int(xs_vector_get_y(key))) * c_vector_string_dict_hash_constant
+    h = (h + bit_cast_to_int(xs_vector_get_z(key))) * c_vector_string_dict_hash_constant
     num_slots: int32 = _xs_vector_string_dict_num_slots(capacity)
-    hash = hash % num_slots
-    if hash < 0:
-        hash += num_slots
-    return (hash * 3) + 2
+    h = h % num_slots
+    if h < 0:
+        h += num_slots
+    return (h * 3) + 2
 
 
 def _xs_vector_string_dict_find_slot(dct: int32 = int32(-1), key: XsVector = vector(0.0, 0.0, 0.0),

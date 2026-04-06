@@ -63,13 +63,13 @@ int xsIntVectorDictCreate() {
 }
 
 int _xsIntVectorDictHash(int key = -1, int capacity = 0) {
-    int hash = key * cIntVectorDictHashConstant;
+    int h = key * cIntVectorDictHashConstant;
     int numSlots = (capacity - 1) / 4;
-    hash = hash % numSlots;
-    if (hash < 0) {
-        hash = hash + numSlots;
+    h = h % numSlots;
+    if (h < 0) {
+        h = h + numSlots;
     }
-    return ((hash * 4) + 1);
+    return ((h * 4) + 1);
 }
 
 int _xsIntVectorDictFindSlot(int dct = -1, int key = -1, int capacity = 0) {
