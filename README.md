@@ -8,7 +8,7 @@ It adds growable lists, `int`/`vector`/`string` dictionary variants, bitwise hel
 XS gives you arrays, vectors, and primitive types, but larger scripts quickly run into a few missing building blocks:
 
 - dynamic array with an api inspired by python list
-- hash table with an api inspired by python dictionary
+- hash tables and tree maps with an api inspired by python dictionary
 - bitwise operations as xs functions
 - a pseudo-random number generator with good random distribution based on the mersenne twister algorithm
 
@@ -65,9 +65,9 @@ You do not need the Python tooling for that.
 | `vectorList.xs` | Dynamic list of `vector` values |
 | `intIntDict.xs` | Hash map from `int` keys to `int` values |
 | `intStringDict.xs` | Hash map from `int` keys to `string` values |
-| `stringIntDict.xs` | Dictionary from `string` keys to `int` values |
-| `stringVectorDict.xs` | Dictionary from `string` keys to `vector` values |
-| `stringStringDict.xs` | Dictionary from `string` keys to `string` values |
+| `stringIntDict.xs` | AVL tree map from `string` keys to `int` values |
+| `stringVectorDict.xs` | AVL tree map from `string` keys to `vector` values |
+| `stringStringDict.xs` | AVL tree map from `string` keys to `string` values |
 | `intVectorDict.xs` | Hash map from `int` keys to `vector` values |
 | `vectorIntDict.xs` | Hash map from `vector` keys to `int` values |
 | `vectorStringDict.xs` | Hash map from `vector` keys to `string` values |
@@ -105,6 +105,7 @@ red but still work.
 
 - The list creation helpers and all dictionary constructors return an `int` handle.
 - The dictionary `Keys` and `Values` helpers return raw XS arrays, not list handles.
+- `NextKey` returns a sentinel value when iteration ends. If that sentinel could also be a real key, check `LastError()` to distinguish "no next key" from a legitimate return value.
 - `xsIntIntDictKeys`/`Values` return `int[]` / `int[]`.
 - `xsIntStringDictKeys`/`Values` return `int[]` / `string[]`.
 - `xsStringIntDictKeys`/`Values` return `string[]` / `int[]`.
@@ -560,10 +561,10 @@ int    xsIntIntDictLastError()
 
 ### Return-value technicalities
 
-`xsIntIntDictPut` and `xsIntIntDictPutIfAbsent` need a quick extra check after the call because their return value alone is not enough.
+`xsIntIntDictPut`, `xsIntIntDictPutIfAbsent`, and `xsIntIntDictRemove` need a quick extra check after the call because their return value alone is not enough.
 
 - `cIntIntDictSuccess`: the key already existed, and the returned value is meaningful
-- `cIntIntDictNoKeyError`: a new key was inserted
+- `cIntIntDictNoKeyError`: either the key was missing, or `Put`/`PutIfAbsent` inserted a new key
 - any other negative status: the call failed
 
 This is necessary because `cIntIntDictGenericError` (`-1`) can be both a legitimate stored value and the generic error sentinel.
@@ -644,6 +645,16 @@ int    xsIntVectorDictNextKey(int dct, bool isFirst, int prevKey)
 string xsIntVectorDictToString(int dct)
 int    xsIntVectorDictLastError()
 ```
+
+### Return-value technicalities
+
+`xsIntVectorDictPut`, `xsIntVectorDictPutIfAbsent`, and `xsIntVectorDictRemove` can all return `cIntVectorDictGenericErrorVector` in more than one situation.
+
+- `cIntVectorDictSuccess`: the operation succeeded, and the returned vector is meaningful
+- `cIntVectorDictNoKeyError`: either the key was missing, or `Put`/`PutIfAbsent` inserted a new key
+- any other negative status: the call failed
+
+This matters because `vector(-1.0, -1.0, -1.0)` is also a valid stored vector value.
 
 ### Example
 
@@ -736,7 +747,239 @@ void namePlayers() {
 }
 ```
 
-## 12. Vector to Int Dictionary
+## 12. String to Int Dictionary
+
+`stringIntDict.xs` provides an AVL tree map from `string` keys to `int` values.
+It supports dynamic string keys and iterates in lexicographic key order.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cStringIntDictSuccess` | `0` | Operation succeeded |
+| `cStringIntDictGenericError` | `-1` | General failure |
+| `cStringIntDictNoKeyError` | `-2` | Key not found, or new key inserted for `Put`/`PutIfAbsent` |
+| `cStringIntDictResizeFailedError` | `-3` | Resize allocation failed |
+| `cStringIntDictMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cStringIntDictMaxCapacity` | `249999998` | Hard upper limit |
+
+The reserved key string `!<[empty` is used internally and cannot be stored.
+
+### API
+
+```cpp
+// Creation
+int    xsStringIntDictCreate()
+int    xsStringIntDict(string k1, int v1, ..., string k6, int v6)
+
+// Access
+int    xsStringIntDictGet(int dct, string key, int dft)
+bool   xsStringIntDictContains(int dct, string key)
+int    xsStringIntDictSize(int dct)
+
+// Modification
+int    xsStringIntDictPut(int dct, string key, int val)
+int    xsStringIntDictPutIfAbsent(int dct, string key, int val)
+int    xsStringIntDictRemove(int dct, string key)
+int    xsStringIntDictClear(int dct)
+
+// Bulk operations
+int    xsStringIntDictUpdate(int source, int dct)
+int    xsStringIntDictCopy(int dct)
+int    xsStringIntDictKeys(int dct)              // returns a raw XS string array in lexicographic order
+int    xsStringIntDictValues(int dct)            // returns a raw XS int array matching `Keys`
+bool   xsStringIntDictEquals(int a, int b)
+
+// Iteration
+bool   xsStringIntDictHasNext(int dct, bool isFirst, string prevKey)
+string xsStringIntDictNextKey(int dct, bool isFirst, string prevKey)
+
+// Diagnostics
+string xsStringIntDictToString(int dct)
+int    xsStringIntDictLastError()
+```
+
+### Return-value technicalities
+
+`xsStringIntDictPut`, `xsStringIntDictPutIfAbsent`, and `xsStringIntDictRemove` can all return `cStringIntDictGenericError` in more than one situation.
+
+- `cStringIntDictSuccess`: the operation succeeded, and the returned int is meaningful
+- `cStringIntDictNoKeyError`: either the key was missing, or `Put`/`PutIfAbsent` inserted a new key
+- any other negative status: the call failed
+
+This matters because `-1` is also a valid stored int value.
+
+### Example
+
+```cpp
+void trackScoresByName() {
+    int scoreByName = xsStringIntDict(
+        "Alice", 1200,
+        "Bob", 950,
+        "Carol", 1310
+    );
+
+    int bobScore = xsStringIntDictGet(scoreByName, "Bob", 0);
+    xsStringIntDictPut(scoreByName, "Bob", bobScore + 100);
+
+    xsChatData(xsStringIntDictToString(scoreByName));
+}
+```
+
+## 13. String to Vector Dictionary
+
+`stringVectorDict.xs` provides an AVL tree map from `string` keys to `vector` values.
+It supports dynamic string keys and iterates in lexicographic key order.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cStringVectorDictSuccess` | `0` | Operation succeeded |
+| `cStringVectorDictGenericError` | `-1` | General failure |
+| `cStringVectorDictNoKeyError` | `-2` | Key not found, or new key inserted for `Put`/`PutIfAbsent` |
+| `cStringVectorDictResizeFailedError` | `-3` | Resize allocation failed |
+| `cStringVectorDictMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cStringVectorDictGenericErrorVector` | `vector(-1.0, -1.0, -1.0)` | Error return for vector-valued operations |
+| `cStringVectorDictMaxCapacity` | `333333330` | Hard upper limit |
+
+The reserved key string `!<[empty` is used internally and cannot be stored.
+
+### API
+
+```cpp
+// Creation
+int    xsStringVectorDictCreate()
+int    xsStringVectorDict(string k1, vector v1, ..., string k6, vector v6)
+
+// Access
+vector xsStringVectorDictGet(int dct, string key, vector dft)
+bool   xsStringVectorDictContains(int dct, string key)
+int    xsStringVectorDictSize(int dct)
+
+// Modification
+vector xsStringVectorDictPut(int dct, string key, vector val)
+vector xsStringVectorDictPutIfAbsent(int dct, string key, vector val)
+vector xsStringVectorDictRemove(int dct, string key)
+int    xsStringVectorDictClear(int dct)
+
+// Bulk operations
+int    xsStringVectorDictUpdate(int source, int dct)
+int    xsStringVectorDictCopy(int dct)
+int    xsStringVectorDictKeys(int dct)           // returns a raw XS string array in lexicographic order
+int    xsStringVectorDictValues(int dct)         // returns a raw XS vector array matching `Keys`
+bool   xsStringVectorDictEquals(int a, int b)
+
+// Iteration
+bool   xsStringVectorDictHasNext(int dct, bool isFirst, string prevKey)
+string xsStringVectorDictNextKey(int dct, bool isFirst, string prevKey)
+
+// Diagnostics
+string xsStringVectorDictToString(int dct)
+int    xsStringVectorDictLastError()
+```
+
+### Return-value technicalities
+
+`xsStringVectorDictPut`, `xsStringVectorDictPutIfAbsent`, and `xsStringVectorDictRemove` can all return `cStringVectorDictGenericErrorVector` in more than one situation.
+
+- `cStringVectorDictSuccess`: the operation succeeded, and the returned vector is meaningful
+- `cStringVectorDictNoKeyError`: either the key was missing, or `Put`/`PutIfAbsent` inserted a new key
+- any other negative status: the call failed
+
+This matters because `vector(-1.0, -1.0, -1.0)` is also a valid stored vector value.
+
+### Example
+
+```cpp
+void placeNamedTargets() {
+    int targets = xsStringVectorDict(
+        "north", vector(10.0, 0.0, 30.0),
+        "south", vector(10.0, 0.0, 60.0)
+    );
+
+    vector north = xsStringVectorDictGet(targets, "north", vector(-1.0, -1.0, -1.0));
+    xsChatData("North target: " + north);
+}
+```
+
+## 14. String to String Dictionary
+
+`stringStringDict.xs` provides an AVL tree map from `string` keys to `string` values.
+It supports dynamic string keys and iterates in lexicographic key order.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cStringStringDictSuccess` | `0` | Operation succeeded |
+| `cStringStringDictGenericError` | `-1` | General failure |
+| `cStringStringDictNoKeyError` | `-2` | Key not found, or new key inserted for `Put`/`PutIfAbsent` |
+| `cStringStringDictResizeFailedError` | `-3` | Resize allocation failed |
+| `cStringStringDictMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cStringStringDictMaxCapacity` | `333333331` | Hard upper limit |
+
+The reserved key string `!<[empty` is used internally and cannot be stored.
+
+### API
+
+```cpp
+// Creation
+int    xsStringStringDictCreate()
+int    xsStringStringDict(string k1, string v1, ..., string k6, string v6)
+
+// Access
+string xsStringStringDictGet(int dct, string key, string dft)
+bool   xsStringStringDictContains(int dct, string key)
+int    xsStringStringDictSize(int dct)
+
+// Modification
+string xsStringStringDictPut(int dct, string key, string val)
+string xsStringStringDictPutIfAbsent(int dct, string key, string val)
+string xsStringStringDictRemove(int dct, string key)
+int    xsStringStringDictClear(int dct)
+
+// Bulk operations
+int    xsStringStringDictUpdate(int source, int dct)
+int    xsStringStringDictCopy(int dct)
+int    xsStringStringDictKeys(int dct)           // returns a raw XS string array in lexicographic order
+int    xsStringStringDictValues(int dct)         // returns a raw XS string array matching `Keys`
+bool   xsStringStringDictEquals(int a, int b)
+
+// Iteration
+bool   xsStringStringDictHasNext(int dct, bool isFirst, string prevKey)
+string xsStringStringDictNextKey(int dct, bool isFirst, string prevKey)
+
+// Diagnostics
+string xsStringStringDictToString(int dct)
+int    xsStringStringDictLastError()
+```
+
+### Return-value technicalities
+
+`xsStringStringDictPut`, `xsStringStringDictPutIfAbsent`, and `xsStringStringDictRemove` can all return `"-1"` in more than one situation.
+
+- `cStringStringDictSuccess`: the operation succeeded, and the returned string is meaningful
+- `cStringStringDictNoKeyError`: either the key was missing, or `Put`/`PutIfAbsent` inserted a new key
+- any other negative status: the call failed
+
+This matters because `"-1"` is also a valid stored string value.
+
+### Example
+
+```cpp
+void mapAliases() {
+    int aliases = xsStringStringDict(
+        "Britons", "Archer civ",
+        "Teutons", "Infantry civ"
+    );
+
+    string label = xsStringStringDictGet(aliases, "Britons", "Unknown");
+    xsChatData("Britons: " + label);
+}
+```
+
+## 15. Vector to Int Dictionary
 
 `vectorIntDict.xs` provides a hash map from `vector` keys to `int` values.
 It uses direct vector equality for key lookup and reserves `cVectorIntDictEmptyKey` as the empty-slot sentinel.
@@ -789,6 +1032,16 @@ string xsVectorIntDictToString(int dct)
 int    xsVectorIntDictLastError()
 ```
 
+### Return-value technicalities
+
+`xsVectorIntDictPut`, `xsVectorIntDictPutIfAbsent`, and `xsVectorIntDictRemove` can all return `cVectorIntDictGenericError` in more than one situation.
+
+- `cVectorIntDictSuccess`: the operation succeeded, and the returned int is meaningful
+- `cVectorIntDictNoKeyError`: either the key was missing, or `Put`/`PutIfAbsent` inserted a new key
+- any other negative status: the call failed
+
+This matters because `-1` is also a valid stored int value.
+
 ### Example
 
 ```cpp
@@ -802,7 +1055,7 @@ void markDangerZones() {
 }
 ```
 
-## 13. Vector to Vector Dictionary
+## 16. Vector to Vector Dictionary
 
 `vectorVectorDict.xs` provides a hash map from `vector` keys to `vector` values.
 It mirrors the other dictionary variants, but both keys and values are vectors.
@@ -855,6 +1108,16 @@ string xsVectorVectorDictToString(int dct)
 int    xsVectorVectorDictLastError()
 ```
 
+### Return-value technicalities
+
+`xsVectorVectorDictPut`, `xsVectorVectorDictPutIfAbsent`, and `xsVectorVectorDictRemove` can all return `cVectorVectorDictGenericErrorVector` in more than one situation.
+
+- `cVectorVectorDictSuccess`: the operation succeeded, and the returned vector is meaningful
+- `cVectorVectorDictNoKeyError`: either the key was missing, or `Put`/`PutIfAbsent` inserted a new key
+- any other negative status: the call failed
+
+This matters because `vector(-1.0, -1.0, -1.0)` is also a valid stored vector value.
+
 ### Example
 
 ```cpp
@@ -869,7 +1132,7 @@ void remapTargets() {
 }
 ```
 
-## 14. Vector to String Dictionary
+## 17. Vector to String Dictionary
 
 `vectorStringDict.xs` provides a hash map from `vector` keys to `string` values.
 It mirrors the other vector-keyed dictionary variants, but stores values in a parallel string array.
@@ -946,7 +1209,7 @@ void labelZones() {
 }
 ```
 
-## 15. Binary Operations
+## 18. Binary Operations
 
 `binaryFunctions.xs` provides software implementations of common 32-bit bitwise operations.
 Use these when you need flags, masking, shifting, or packed integer values in XS.
@@ -979,7 +1242,7 @@ int unpackLow(int packed) {
 }
 ```
 
-## 16. Random Numbers
+## 19. Random Numbers
 
 `binaryFunctions.xs` also includes a Mersenne Twister (`MT19937`) pseudo-random number generator.
 Seed it once with `xsMtSeed`, then draw values with `xsMtRandom` or `xsMtRandomUniformRange`.
@@ -1004,7 +1267,7 @@ void randomTeams() {
 }
 ```
 
-## 17. Larger example
+## 20. Larger example
 
 The example below shows `Int List`, `IntIntDict`, bitwise flags, and the MT RNG working together in one script.
 
