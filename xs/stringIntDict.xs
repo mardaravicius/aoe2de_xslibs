@@ -653,8 +653,8 @@ int xsStringIntDictCopy(int dct = -1) {
     }
     _xsStringIntDictSetKeysArray(newDct, newKeysArr);
     int keysArr = _xsStringIntDictGetKeysArray(dct);
-    for (i = 0; < capacity) {
-        xsArraySetString(newKeysArr, i, xsArrayGetString(keysArr, i));
+    for (j = 0; < capacity) {
+        xsArraySetString(newKeysArr, j, xsArrayGetString(keysArr, j));
     }
     return (newDct);
 }

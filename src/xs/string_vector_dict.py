@@ -695,12 +695,12 @@ def xs_string_vector_dict_copy(dct: int32 = int32(-1)) -> int32:
     _xs_string_vector_dict_set_keys_array(new_dct, new_keys_arr)
     _xs_string_vector_dict_set_values_array(new_dct, new_values_arr)
     keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
-    for i in i32range(0, capacity):
-        xs_array_set_string(new_keys_arr, i, xs_array_get_string(keys_arr, i))
+    for j in i32range(0, capacity):
+        xs_array_set_string(new_keys_arr, j, xs_array_get_string(keys_arr, j))
     values_arr: int32 = _xs_string_vector_dict_get_values_array(dct)
     values_size: int32 = capacity * c_string_vector_dict_value_stride
-    for i in i32range(0, values_size):
-        xs_array_set_float(new_values_arr, i, xs_array_get_float(values_arr, i))
+    for k in i32range(0, values_size):
+        xs_array_set_float(new_values_arr, k, xs_array_get_float(values_arr, k))
     return new_dct
 
 

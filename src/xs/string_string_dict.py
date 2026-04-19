@@ -648,8 +648,8 @@ def xs_string_string_dict_copy(dct: int32 = int32(-1)) -> int32:
         xs_array_set_int(new_dct, i, xs_array_get_int(dct, i))
     _xs_string_string_dict_set_strings_array(new_dct, new_strings_arr)
     strings_arr: int32 = _xs_string_string_dict_get_strings_array(dct)
-    for i in i32range(0, capacity * c_string_string_dict_string_stride):
-        xs_array_set_string(new_strings_arr, i, xs_array_get_string(strings_arr, i))
+    for j in i32range(0, capacity * c_string_string_dict_string_stride):
+        xs_array_set_string(new_strings_arr, j, xs_array_get_string(strings_arr, j))
     return new_dct
 
 

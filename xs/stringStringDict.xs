@@ -643,8 +643,8 @@ int xsStringStringDictCopy(int dct = -1) {
     }
     _xsStringStringDictSetStringsArray(newDct, newStringsArr);
     int stringsArr = _xsStringStringDictGetStringsArray(dct);
-    for (i = 0; < capacity * cStringStringDictStringStride) {
-        xsArraySetString(newStringsArr, i, xsArrayGetString(stringsArr, i));
+    for (j = 0; < capacity * cStringStringDictStringStride) {
+        xsArraySetString(newStringsArr, j, xsArrayGetString(stringsArr, j));
     }
     return (newDct);
 }

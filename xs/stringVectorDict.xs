@@ -677,13 +677,13 @@ int xsStringVectorDictCopy(int dct = -1) {
     _xsStringVectorDictSetKeysArray(newDct, newKeysArr);
     _xsStringVectorDictSetValuesArray(newDct, newValuesArr);
     int keysArr = _xsStringVectorDictGetKeysArray(dct);
-    for (i = 0; < capacity) {
-        xsArraySetString(newKeysArr, i, xsArrayGetString(keysArr, i));
+    for (j = 0; < capacity) {
+        xsArraySetString(newKeysArr, j, xsArrayGetString(keysArr, j));
     }
     int valuesArr = _xsStringVectorDictGetValuesArray(dct);
     int valuesSize = capacity * cStringVectorDictValueStride;
-    for (i = 0; < valuesSize) {
-        xsArraySetFloat(newValuesArr, i, xsArrayGetFloat(valuesArr, i));
+    for (k = 0; < valuesSize) {
+        xsArraySetFloat(newValuesArr, k, xsArrayGetFloat(valuesArr, k));
     }
     return (newDct);
 }
