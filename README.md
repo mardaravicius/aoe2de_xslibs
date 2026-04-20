@@ -1,7 +1,7 @@
 # aoe2de_xslibs
 
 A reusable XS library pack for Age of Empires II: Definitive Edition.
-It adds growable lists, `int`/`vector`/`string` dictionary variants, bitwise helpers, and a Mersenne Twister random number generator.
+It adds growable lists, `int`/`float`/`vector`/`string` dictionary variants, bitwise helpers, and a Mersenne Twister random number generator.
 
 ## Why these libraries?
 
@@ -66,6 +66,9 @@ You do not need the Python tooling for that.
 | `intIntDict.xs` | Hash map from `int` keys to `int` values |
 | `intStringDict.xs` | Hash map from `int` keys to `string` values |
 | `intVectorDict.xs` | Hash map from `int` keys to `vector` values |
+| `floatIntDict.xs` | Hash map from `float` keys to `int` values |
+| `floatStringDict.xs` | Hash map from `float` keys to `string` values |
+| `floatVectorDict.xs` | Hash map from `float` keys to `vector` values |
 | `stringIntDict.xs` | AVL tree map from `string` keys to `int` values |
 | `stringStringDict.xs` | AVL tree map from `string` keys to `string` values |
 | `stringVectorDict.xs` | AVL tree map from `string` keys to `vector` values |
@@ -109,6 +112,9 @@ red but still work.
 - `xsIntIntDictKeys`/`Values` return `int[]` / `int[]`.
 - `xsIntStringDictKeys`/`Values` return `int[]` / `string[]`.
 - `xsIntVectorDictKeys`/`Values` return `int[]` / `vector[]`.
+- `xsFloatIntDictKeys`/`Values` return `float[]` / `int[]`.
+- `xsFloatStringDictKeys`/`Values` return `float[]` / `string[]`.
+- `xsFloatVectorDictKeys`/`Values` return `float[]` / `vector[]`.
 - `xsStringIntDictKeys`/`Values` return `string[]` / `int[]`.
 - `xsStringStringDictKeys`/`Values` return `string[]` / `string[]`.
 - `xsStringVectorDictKeys`/`Values` return `string[]` / `vector[]`.
@@ -117,6 +123,8 @@ red but still work.
 - `xsVectorVectorDictKeys`/`Values` return `vector[]` / `vector[]`.
 - There is no global initialization function for these libraries. You can use them immediately.
 - `xsIntIntDict`, `xsIntStringDict`, and `xsIntVectorDict` cannot store their reserved `...EmptyKey` int sentinel as a key.
+- `xsFloatIntDict`, `xsFloatStringDict`, and `xsFloatVectorDict` cannot store their reserved `...EmptyKey` float sentinel as a key.
+- The float-key dictionaries canonicalize `-0.0` to `0.0` and all NaN keys to a single internal NaN representation.
 - `xsStringIntDict` cannot store the reserved sentinel string `!<[empty` as a key.
 - `xsStringStringDict` cannot store the reserved sentinel string `!<[empty` as a key.
 - `xsStringVectorDict` cannot store the reserved sentinel string `!<[empty` as a key.
@@ -747,7 +755,239 @@ void placeCamps() {
 }
 ```
 
-## 12. String to Int Dictionary
+## 12. Float to Int Dictionary
+
+`floatIntDict.xs` provides a hash map from `float` keys to `int` values.
+The exported implementation uses open addressing with linear probing and resizes automatically when the load factor grows past `cFloatIntDictMaxLoadFactor`. Signed zero keys are canonicalized to `0.0`, and all NaN keys are canonicalized to a single internal NaN representation.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cFloatIntDictSuccess` | `0` | Operation succeeded |
+| `cFloatIntDictGenericError` | `-1` | General failure |
+| `cFloatIntDictGenericErrorFloat` | `-1.0` | Error return for float-key iteration operations |
+| `cFloatIntDictNoKeyError` | `-2` | Key not found, or new key inserted for `Put`/`PutIfAbsent` |
+| `cFloatIntDictResizeFailedError` | `-3` | Resize allocation failed |
+| `cFloatIntDictMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cFloatIntDictMaxCapacity` | `999999999` | Hard upper limit |
+| `cFloatIntDictMaxLoadFactor` | `0.75` | Resize trigger threshold |
+| `cFloatIntDictEmptyKey` | `-9999999.0` | Reserved empty-slot sentinel; cannot be used as a key |
+
+### API
+
+```cpp
+// Creation
+int   xsFloatIntDictCreate()
+int   xsFloatIntDict(float k1, int v1, ..., float k6, int v6)
+
+// Access
+int   xsFloatIntDictGet(int dct, float key, int dft)
+bool  xsFloatIntDictContains(int dct, float key)
+int   xsFloatIntDictSize(int dct)
+
+// Modification
+int   xsFloatIntDictPut(int dct, float key, int val)
+int   xsFloatIntDictPutIfAbsent(int dct, float key, int val)
+int   xsFloatIntDictRemove(int dct, float key)
+int   xsFloatIntDictClear(int dct)
+
+// Bulk operations
+int   xsFloatIntDictUpdate(int source, int dct)
+int   xsFloatIntDictCopy(int dct)
+int   xsFloatIntDictKeys(int dct)               // returns a raw XS float array
+int   xsFloatIntDictValues(int dct)             // returns a raw XS int array
+bool  xsFloatIntDictEquals(int a, int b)
+
+// Iteration
+bool  xsFloatIntDictHasNext(int dct, bool isFirst, float prevKey)
+float xsFloatIntDictNextKey(int dct, bool isFirst, float prevKey)
+
+// Diagnostics
+string xsFloatIntDictToString(int dct)
+int    xsFloatIntDictLastError()
+```
+
+### Return-value technicalities
+
+`xsFloatIntDictPut`, `xsFloatIntDictPutIfAbsent`, and `xsFloatIntDictRemove` need a quick extra check after the call because their return value alone is not enough.
+
+- `cFloatIntDictSuccess`: the key already existed, and the returned value is meaningful
+- `cFloatIntDictNoKeyError`: either the key was missing, or `Put`/`PutIfAbsent` inserted a new key
+- any other negative status: the call failed
+
+This is necessary because `cFloatIntDictGenericError` (`-1`) can be both a legitimate stored value and the generic error sentinel.
+
+### Example
+
+```cpp
+void scoreZones() {
+    int danger = xsFloatIntDict(
+        1.5, 3,
+        2.5, 7,
+        3.5, 2
+    );
+
+    int level = xsFloatIntDictGet(danger, 2.5, 0);
+    xsChatData("Danger level: " + level);
+}
+```
+
+## 13. Float to String Dictionary
+
+`floatStringDict.xs` provides a hash map from `float` keys to `string` values.
+It uses the same open-addressed layout as `floatIntDict.xs`, but stores values in a parallel string array. Signed zero keys are canonicalized to `0.0`, and all NaN keys are canonicalized to a single internal NaN representation.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cFloatStringDictSuccess` | `0` | Operation succeeded |
+| `cFloatStringDictGenericError` | `-1` | General failure |
+| `cFloatStringDictGenericErrorFloat` | `-1.0` | Error return for float-key iteration operations |
+| `cFloatStringDictNoKeyError` | `-2` | Key not found, or new key inserted for `Put`/`PutIfAbsent` |
+| `cFloatStringDictResizeFailedError` | `-3` | Resize allocation failed |
+| `cFloatStringDictMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cFloatStringDictMaxCapacity` | `999999999` | Hard upper limit |
+| `cFloatStringDictMaxLoadFactor` | `0.75` | Resize trigger threshold |
+| `cFloatStringDictEmptyKey` | `-9999999.0` | Reserved empty-slot sentinel; cannot be used as a key |
+
+### API
+
+```cpp
+// Creation
+int    xsFloatStringDictCreate()
+int    xsFloatStringDict(float k1, string v1, ..., float k6, string v6)
+
+// Access
+string xsFloatStringDictGet(int dct, float key, string dft)
+bool   xsFloatStringDictContains(int dct, float key)
+int    xsFloatStringDictSize(int dct)
+
+// Modification
+string xsFloatStringDictPut(int dct, float key, string val)
+string xsFloatStringDictPutIfAbsent(int dct, float key, string val)
+string xsFloatStringDictRemove(int dct, float key)
+int    xsFloatStringDictClear(int dct)
+
+// Bulk operations
+int    xsFloatStringDictUpdate(int source, int dct)
+int    xsFloatStringDictCopy(int dct)
+int    xsFloatStringDictKeys(int dct)            // returns a raw XS float array
+int    xsFloatStringDictValues(int dct)          // returns a raw XS string array
+bool   xsFloatStringDictEquals(int a, int b)
+
+// Iteration
+bool   xsFloatStringDictHasNext(int dct, bool isFirst, float prevKey)
+float  xsFloatStringDictNextKey(int dct, bool isFirst, float prevKey)
+
+// Diagnostics
+string xsFloatStringDictToString(int dct)
+int    xsFloatStringDictLastError()
+```
+
+### Return-value technicalities
+
+`xsFloatStringDictPut`, `xsFloatStringDictPutIfAbsent`, and `xsFloatStringDictRemove` can all return `"-1"` in more than one situation.
+
+- `cFloatStringDictSuccess`: the operation succeeded, and the returned string is meaningful
+- `cFloatStringDictNoKeyError`: either the key was missing, or `Put`/`PutIfAbsent` inserted a new key
+- any other negative status: the call failed
+
+This matters because `"-1"` is also a valid stored string value.
+
+### Example
+
+```cpp
+void labelZones() {
+    int labels = xsFloatStringDict(
+        1.5, "north camp",
+        2.5, "south camp"
+    );
+
+    string label = xsFloatStringDictGet(labels, 1.5, "unknown");
+    xsChatData("Zone label: " + label);
+}
+```
+
+## 14. Float to Vector Dictionary
+
+`floatVectorDict.xs` provides a hash map from `float` keys to `vector` values.
+It uses the same open-addressed layout as `floatIntDict.xs`, but stores vectors as raw float components. Signed zero keys are canonicalized to `0.0`, and all NaN keys are canonicalized to a single internal NaN representation.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cFloatVectorDictSuccess` | `0` | Operation succeeded |
+| `cFloatVectorDictGenericError` | `-1` | General failure |
+| `cFloatVectorDictNoKeyError` | `-2` | Key not found, or new key inserted for `Put`/`PutIfAbsent` |
+| `cFloatVectorDictResizeFailedError` | `-3` | Resize allocation failed |
+| `cFloatVectorDictMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cFloatVectorDictGenericErrorVector` | `vector(-1.0, -1.0, -1.0)` | Error return for vector-valued operations |
+| `cFloatVectorDictMaxCapacity` | `999999997` | Hard upper limit |
+| `cFloatVectorDictMaxLoadFactor` | `0.75` | Resize trigger threshold |
+| `cFloatVectorDictEmptyKey` | `-9999999.0` | Reserved empty-slot sentinel; cannot be used as a key |
+
+### API
+
+```cpp
+// Creation
+int    xsFloatVectorDictCreate()
+int    xsFloatVectorDict(float k1, vector v1, ..., float k6, vector v6)
+
+// Access
+vector xsFloatVectorDictGet(int dct, float key, vector dft)
+bool   xsFloatVectorDictContains(int dct, float key)
+int    xsFloatVectorDictSize(int dct)
+
+// Modification
+vector xsFloatVectorDictPut(int dct, float key, vector val)
+vector xsFloatVectorDictPutIfAbsent(int dct, float key, vector val)
+vector xsFloatVectorDictRemove(int dct, float key)
+int    xsFloatVectorDictClear(int dct)
+
+// Bulk operations
+int    xsFloatVectorDictUpdate(int source, int dct)
+int    xsFloatVectorDictCopy(int dct)
+int    xsFloatVectorDictKeys(int dct)            // returns a raw XS float array
+int    xsFloatVectorDictValues(int dct)          // returns a raw XS vector array
+bool   xsFloatVectorDictEquals(int a, int b)
+
+// Iteration
+bool   xsFloatVectorDictHasNext(int dct, bool isFirst, float prevKey)
+float  xsFloatVectorDictNextKey(int dct, bool isFirst, float prevKey)
+
+// Diagnostics
+string xsFloatVectorDictToString(int dct)
+int    xsFloatVectorDictLastError()
+```
+
+### Return-value technicalities
+
+`xsFloatVectorDictPut`, `xsFloatVectorDictPutIfAbsent`, and `xsFloatVectorDictRemove` can all return `cFloatVectorDictGenericErrorVector` in more than one situation.
+
+- `cFloatVectorDictSuccess`: the operation succeeded, and the returned vector is meaningful
+- `cFloatVectorDictNoKeyError`: either the key was missing, or `Put`/`PutIfAbsent` inserted a new key
+- any other negative status: the call failed
+
+This matters because `vector(-1.0, -1.0, -1.0)` is also a valid stored vector value.
+
+### Example
+
+```cpp
+void placeCamps() {
+    int camps = xsFloatVectorDict(
+        1.5, vector(12.0, 0.0, 18.0),
+        2.5, vector(40.0, 0.0, 26.0)
+    );
+
+    vector camp = xsFloatVectorDictGet(camps, 2.5, vector(-1.0, -1.0, -1.0));
+    xsChatData("Camp: " + camp);
+}
+```
+
+## 15. String to Int Dictionary
 
 `stringIntDict.xs` provides an AVL tree map from `string` keys to `int` values.
 It supports dynamic string keys and iterates in lexicographic key order.
@@ -826,7 +1066,7 @@ void trackScoresByName() {
 }
 ```
 
-## 13. String to String Dictionary
+## 16. String to String Dictionary
 
 `stringStringDict.xs` provides an AVL tree map from `string` keys to `string` values.
 It supports dynamic string keys and iterates in lexicographic key order.
@@ -902,7 +1142,7 @@ void mapAliases() {
 }
 ```
 
-## 14. String to Vector Dictionary
+## 17. String to Vector Dictionary
 
 `stringVectorDict.xs` provides an AVL tree map from `string` keys to `vector` values.
 It supports dynamic string keys and iterates in lexicographic key order.
@@ -979,7 +1219,7 @@ void placeNamedTargets() {
 }
 ```
 
-## 15. Vector to Int Dictionary
+## 18. Vector to Int Dictionary
 
 `vectorIntDict.xs` provides a hash map from `vector` keys to `int` values.
 It uses direct vector equality for key lookup and reserves `cVectorIntDictEmptyKey` as the empty-slot sentinel.
@@ -1055,7 +1295,7 @@ void markDangerZones() {
 }
 ```
 
-## 16. Vector to String Dictionary
+## 19. Vector to String Dictionary
 
 `vectorStringDict.xs` provides a hash map from `vector` keys to `string` values.
 It mirrors the other vector-keyed dictionary variants, but stores values in a parallel string array.
@@ -1132,7 +1372,7 @@ void labelZones() {
 }
 ```
 
-## 17. Vector to Vector Dictionary
+## 20. Vector to Vector Dictionary
 
 `vectorVectorDict.xs` provides a hash map from `vector` keys to `vector` values.
 It mirrors the other dictionary variants, but both keys and values are vectors.
@@ -1209,7 +1449,7 @@ void remapTargets() {
 }
 ```
 
-## 18. Binary Operations
+## 21. Binary Operations
 
 `binaryFunctions.xs` provides software implementations of common 32-bit bitwise operations.
 Use these when you need flags, masking, shifting, or packed integer values in XS.
@@ -1242,7 +1482,7 @@ int unpackLow(int packed) {
 }
 ```
 
-## 19. Random Numbers
+## 22. Random Numbers
 
 `binaryFunctions.xs` also includes a Mersenne Twister (`MT19937`) pseudo-random number generator.
 Seed it once with `xsMtSeed`, then draw values with `xsMtRandom` or `xsMtRandomUniformRange`.
@@ -1267,7 +1507,7 @@ void randomTeams() {
 }
 ```
 
-## 20. Larger example
+## 23. Larger example
 
 The example below shows `Int List`, `IntIntDict`, bitwise flags, and the MT RNG working together in one script.
 

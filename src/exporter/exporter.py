@@ -5,6 +5,9 @@ from types import ModuleType
 import xs.binary_functions as binary_functions
 import xs.bool_list as bool_list
 import xs.float_list as float_list
+import xs.float_int_dict as float_int_dict
+import xs.float_string_dict as float_string_dict
+import xs.float_vector_dict as float_vector_dict
 # import xs.int_int_dict as int_int_dict_v1
 # import xs.int_int_dict2 as int_int_dict_v2
 import xs.int_int_dict3 as int_int_dict
@@ -29,6 +32,9 @@ def main() -> None:
         (string_list, "stringList"),
         (vector_list, "vectorList"),
         (int_int_dict, "intIntDict"),
+        (float_int_dict, "floatIntDict"),
+        (float_string_dict, "floatStringDict"),
+        (float_vector_dict, "floatVectorDict"),
         (int_string_dict, "intStringDict"),
         (string_int_dict, "stringIntDict"),
         (string_vector_dict, "stringVectorDict"),
