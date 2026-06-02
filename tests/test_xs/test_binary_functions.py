@@ -71,68 +71,6 @@ class FunctionsTest(unittest.TestCase):
                 actual = xs_bit_shift_left(int32(a), int32(b))
                 self.assertEqual(expected, actual, f"{a} << {b}")
 
-    def test_not(self):
-        for n in range(100000):
-            n = int32(random.randint(-2147483648, 2147483647))
-            expected = ~int32(n)
-            actual = xs_bit_not(int32(n))
-            self.assertEqual(expected, actual, f"~{n}")
-
-    def test_not_edges(self):
-        edges = [-2147483648, -2147483647, 2147483647, 2147483646, 0, 1, -1, 2, -2]
-        for n in edges:
-            expected = ~int32(n)
-            actual = xs_bit_not(int32(n))
-            self.assertEqual(expected, actual, f"~{n}")
-
-    def test_and(self):
-        for n in range(10000):
-            a = int32(random.randint(-2147483648, 2147483647))
-            b = int32(random.randint(-2147483648, 2147483647))
-            expected = int32(a) & int32(b)
-            actual = xs_bit_and(int32(a), int32(b))
-            self.assertEqual(expected, actual, f"{a} & {b}")
-
-    def test_and_edges(self):
-        edges = [-2147483648, -2147483647, 2147483647, 2147483646, 0, 1, -1, 2, -2]
-        for a in edges:
-            for b in edges:
-                expected = int32(a) & int32(b)
-                actual = xs_bit_and(int32(a), int32(b))
-                self.assertEqual(expected, actual, f"{a} & {b}")
-
-    def test_xor(self):
-        for n in range(10000):
-            a = int32(random.randint(-2147483648, 2147483647))
-            b = int32(random.randint(-2147483648, 2147483647))
-            expected = int32(a) ^ int32(b)
-            actual = xs_bit_xor(int32(a), int32(b))
-            self.assertEqual(expected, actual, f"{a} ^ {b}")
-
-    def test_xor_edges(self):
-        edges = [-2147483648, -2147483647, 2147483647, 2147483646, 0, 1, -1, 2, -2]
-        for a in edges:
-            for b in edges:
-                expected = int32(a) ^ int32(b)
-                actual = xs_bit_xor(int32(a), int32(b))
-                self.assertEqual(expected, actual, f"{a} ^ {b}")
-
-    def test_or(self):
-        for n in range(10000):
-            a = int32(random.randint(-2147483648, 2147483647))
-            b = int32(random.randint(-2147483648, 2147483647))
-            expected = int32(a) | int32(b)
-            actual = xs_bit_or(int32(a), int32(b))
-            self.assertEqual(expected, actual, f"{a} | {b}")
-
-    def test_or_edges(self):
-        edges = [-2147483648, -2147483647, 2147483647, 2147483646, 0, 1, -1, 2, -2]
-        for a in edges:
-            for b in edges:
-                expected = int32(a) | int32(b)
-                actual = xs_bit_or(int32(a), int32(b))
-                self.assertEqual(expected, actual, f"{a} | {b}")
-
     def test_random_uniform_in_range(self):
         xs_mt_seed(int32(random.randint(-2147483648, 2147483647)))
 

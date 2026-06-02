@@ -1457,10 +1457,6 @@ Use these when you need flags, masking, shifting, or packed integer values in XS
 ### API
 
 ```cpp
-int xsBitAnd(int a, int b)
-int xsBitOr(int a, int b)
-int xsBitXor(int a, int b)
-int xsBitNot(int n)
 int xsBitShiftLeft(int x, int n)
 int xsBitShiftRightLogical(int x, int n)
 int xsBitShiftRightArithmetic(int x, int n)
@@ -1470,7 +1466,7 @@ int xsBitShiftRightArithmetic(int x, int n)
 
 ```cpp
 int pack(int high, int low) {
-    return (xsBitOr(xsBitShiftLeft(high, 16), xsBitAnd(low, 65535)));
+    return (bitOr(xsBitShiftLeft(high, 16), bitAnd(low, 65535)));
 }
 
 int unpackHigh(int packed) {
@@ -1478,7 +1474,7 @@ int unpackHigh(int packed) {
 }
 
 int unpackLow(int packed) {
-    return (xsBitAnd(packed, 65535));
+    return (bitAnd(packed, 65535));
 }
 ```
 
@@ -1530,7 +1526,7 @@ void main() {
         int flags = 0;
 
         if (score >= 150) {
-            flags = xsBitOr(flags, cFlagElite);
+            flags = bitOr(flags, cFlagElite);
         }
 
         xsIntIntDictPut(scoreByPlayer, player, score);
@@ -1544,7 +1540,7 @@ void main() {
         int score = xsIntIntDictGet(scoreByPlayer, player, 0);
         int flags = xsIntIntDictGet(flagsByPlayer, player, 0);
 
-        if (xsBitAnd(flags, cFlagElite) != 0) {
+        if (bitAnd(flags, cFlagElite) != 0) {
             xsChatData("Player " + player + " is elite with score " + score);
         } else {
             xsChatData("Player " + player + " score: " + score);

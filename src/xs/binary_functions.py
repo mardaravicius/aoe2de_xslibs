@@ -1,6 +1,6 @@
 from numpy import int32
 
-from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_get_int, xs_get_random_number
+from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_get_int, xs_get_random_number, bit_and, bit_or, bit_xor
 from xs_converter.symbols import XsConst
 
 _bit_operator_powers: int32 = int32(-1)
@@ -69,42 +69,6 @@ def xs_bit_shift_right_logical(x: int32 = int32(0), n: int32 = int32(0)) -> int3
     return _xs_bit_shift_right_divide(x, n, powers)
 
 
-def xs_bit_not(n: int32 = int32(0)) -> int32:
-    return (n * -1) - 1
-
-
-def xs_bit_and(a: int32 = int32(0), b: int32 = int32(0)) -> int32:
-    powers: int32 = _xs_bit_get_powers()
-    res: int32 = int32(0)
-    for i in range(0, 32):
-        m: int32 = xs_array_get_int(powers, 31 - i)
-        if a * m < 0 and b * m < 0:
-            res += xs_array_get_int(powers, i)
-    return res
-
-
-def xs_bit_xor(a: int32 = int32(0), b: int32 = int32(0)) -> int32:
-    powers: int32 = _xs_bit_get_powers()
-    res: int32 = int32(0)
-    for i in range(0, 32):
-        m: int32 = xs_array_get_int(powers, 31 - i)
-        an: int32 = a * m
-        bn: int32 = b * m
-        if (an < 0 and bn >= 0) or (an >= 0 and bn < 0):
-            res += xs_array_get_int(powers, i)
-    return res
-
-
-def xs_bit_or(a: int32 = int32(0), b: int32 = int32(0)) -> int32:
-    powers: int32 = _xs_bit_get_powers()
-    res: int32 = int32(0)
-    for i in range(0, 32):
-        m: int32 = xs_array_get_int(powers, 31 - i)
-        if a * m < 0 or b * m < 0:
-            res += xs_array_get_int(powers, i)
-    return res
-
-
 def xs_mt_seed(seed: int32 = int32(0)) -> None:
     global _mt_state_array, _c_mt_matrix_a, _c_mt_upper_mask, _c_mt_lower_mask, _c_mt_a, _c_mt_b, _c_mt_f, \
         _mt_state_index, _mt_seed_set, _c_mt_nm
@@ -120,7 +84,7 @@ def xs_mt_seed(seed: int32 = int32(0)) -> None:
     xs_array_set_int(_mt_state_array, 0, seed)
     i: int32 = int32(1)
     while i < _c_mt_n:
-        seed = _c_mt_f * xs_bit_xor(seed, xs_bit_shift_right_logical(seed, (_c_mt_w - 2))) + i
+        seed = _c_mt_f * bit_xor(seed, xs_bit_shift_right_logical(seed, (_c_mt_w - 2))) + i
         xs_array_set_int(_mt_state_array, i, seed)
         i += 1
     _mt_state_index = int32(0)
@@ -139,20 +103,20 @@ def xs_mt_random() -> int32:
     if j < 0:
         j += _c_mt_n
 
-    x: int32 = xs_bit_or(
-        xs_bit_and(xs_array_get_int(_mt_state_array, k), _c_mt_upper_mask),
-        xs_bit_and(xs_array_get_int(_mt_state_array, j), _c_mt_lower_mask),
+    x: int32 = bit_or(
+        bit_and(xs_array_get_int(_mt_state_array, k), _c_mt_upper_mask),
+        bit_and(xs_array_get_int(_mt_state_array, j), _c_mt_lower_mask),
     )
 
     xa: int32 = xs_bit_shift_right_logical(x, int32(1))
-    if xs_bit_and(x, int32(1)) != 0:
-        xa = xs_bit_xor(xa, _c_mt_a)
+    if bit_and(x, int32(1)) != 0:
+        xa = bit_xor(xa, _c_mt_a)
 
     j = k - _c_mt_nm
     if j < 0:
         j += _c_mt_n
 
-    x = xs_bit_xor(xs_array_get_int(_mt_state_array, j), xa)
+    x = bit_xor(xs_array_get_int(_mt_state_array, j), xa)
     xs_array_set_int(_mt_state_array, k, x)
     k += 1
 
@@ -160,30 +124,30 @@ def xs_mt_random() -> int32:
         k = int32(0)
     _mt_state_index = k
 
-    y: int32 = xs_bit_xor(x, xs_bit_shift_right_logical(x, _c_mt_u))
-    y = xs_bit_xor(y, xs_bit_and(xs_bit_shift_left(y, _c_mt_s), _c_mt_b))
-    y = xs_bit_xor(y, xs_bit_and(xs_bit_shift_left(y, _c_mt_t), _c_mt_c))
-    return xs_bit_xor(y, xs_bit_shift_right_logical(y, _c_mt_l))
+    y: int32 = bit_xor(x, xs_bit_shift_right_logical(x, _c_mt_u))
+    y = bit_xor(y, bit_and(xs_bit_shift_left(y, _c_mt_s), _c_mt_b))
+    y = bit_xor(y, bit_and(xs_bit_shift_left(y, _c_mt_t), _c_mt_c))
+    return bit_xor(y, xs_bit_shift_right_logical(y, _c_mt_l))
 
 
 def xs_mt_random_uniform_range(start: int32 = int32(0), end: int32 = int32(999999999)) -> int32:
     if end <= start:
         return int32(-1)
 
-    dist: int32 = end - start
-    if dist == 1:
+    dst: int32 = end - start
+    if dst == 1:
         return start
 
-    dist_m: int32 = dist - 1
-    if xs_bit_and(dist, dist_m) == 0:
-        return xs_bit_and(xs_mt_random(), dist_m) + start
+    dst_m: int32 = dst - 1
+    if bit_and(dst, dst_m) == 0:
+        return bit_and(xs_mt_random(), dst_m) + start
 
-    if dist > 0:
+    if dst > 0:
         while True:
             r: int32 = xs_bit_shift_right_logical(xs_mt_random(), int32(1))
-            c: int32 = r % dist
+            c: int32 = r % dst
 
-            if r + dist_m - c >= 0:
+            if r + dst_m - c >= 0:
                 return c + start
 
     while True:

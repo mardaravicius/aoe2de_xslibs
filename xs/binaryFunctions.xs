@@ -69,48 +69,6 @@ int xsBitShiftRightLogical(int x = 0, int n = 0) {
     return (_xsBitShiftRightDivide(x, n, powers));
 }
 
-int xsBitNot(int n = 0) {
-    return ((n * -1) - 1);
-}
-
-int xsBitAnd(int a = 0, int b = 0) {
-    int powers = _xsBitGetPowers();
-    int res = 0;
-    for (i = 0; < 32) {
-        int m = xsArrayGetInt(powers, 31 - i);
-        if (((a * m) < 0) && ((b * m) < 0)) {
-            res = res + xsArrayGetInt(powers, i);
-        }
-    }
-    return (res);
-}
-
-int xsBitXor(int a = 0, int b = 0) {
-    int powers = _xsBitGetPowers();
-    int res = 0;
-    for (i = 0; < 32) {
-        int m = xsArrayGetInt(powers, 31 - i);
-        int an = a * m;
-        int bn = b * m;
-        if (((an < 0) && (bn >= 0)) || ((an >= 0) && (bn < 0))) {
-            res = res + xsArrayGetInt(powers, i);
-        }
-    }
-    return (res);
-}
-
-int xsBitOr(int a = 0, int b = 0) {
-    int powers = _xsBitGetPowers();
-    int res = 0;
-    for (i = 0; < 32) {
-        int m = xsArrayGetInt(powers, 31 - i);
-        if (((a * m) < 0) || ((b * m) < 0)) {
-            res = res + xsArrayGetInt(powers, i);
-        }
-    }
-    return (res);
-}
-
 void xsMtSeed(int seed = 0) {
     if (_mtStateArray < 0) {
         _cMtMatrixA = -172748368 * 10 - 1;
@@ -125,7 +83,7 @@ void xsMtSeed(int seed = 0) {
     xsArraySetInt(_mtStateArray, 0, seed);
     int i = 1;
     while (i < _cMtN) {
-        seed = (_cMtF * xsBitXor(seed, xsBitShiftRightLogical(seed, _cMtW - 2))) + i;
+        seed = (_cMtF * bitXor(seed, xsBitShiftRightLogical(seed, _cMtW - 2))) + i;
         xsArraySetInt(_mtStateArray, i, seed);
         i++;
     }
@@ -142,45 +100,45 @@ int xsMtRandom() {
     if (j < 0) {
         j = j + _cMtN;
     }
-    int x = xsBitOr(xsBitAnd(xsArrayGetInt(_mtStateArray, k), _cMtUpperMask), xsBitAnd(xsArrayGetInt(_mtStateArray, j), _cMtLowerMask));
+    int x = bitOr(bitAnd(xsArrayGetInt(_mtStateArray, k), _cMtUpperMask), bitAnd(xsArrayGetInt(_mtStateArray, j), _cMtLowerMask));
     int xa = xsBitShiftRightLogical(x, 1);
-    if (xsBitAnd(x, 1) != 0) {
-        xa = xsBitXor(xa, _cMtA);
+    if (bitAnd(x, 1) != 0) {
+        xa = bitXor(xa, _cMtA);
     }
     j = k - _cMtNm;
     if (j < 0) {
         j = j + _cMtN;
     }
-    x = xsBitXor(xsArrayGetInt(_mtStateArray, j), xa);
+    x = bitXor(xsArrayGetInt(_mtStateArray, j), xa);
     xsArraySetInt(_mtStateArray, k, x);
     k++;
     if (k >= _cMtN) {
         k = 0;
     }
     _mtStateIndex = k;
-    int y = xsBitXor(x, xsBitShiftRightLogical(x, _cMtU));
-    y = xsBitXor(y, xsBitAnd(xsBitShiftLeft(y, _cMtS), _cMtB));
-    y = xsBitXor(y, xsBitAnd(xsBitShiftLeft(y, _cMtT), _cMtC));
-    return (xsBitXor(y, xsBitShiftRightLogical(y, _cMtL)));
+    int y = bitXor(x, xsBitShiftRightLogical(x, _cMtU));
+    y = bitXor(y, bitAnd(xsBitShiftLeft(y, _cMtS), _cMtB));
+    y = bitXor(y, bitAnd(xsBitShiftLeft(y, _cMtT), _cMtC));
+    return (bitXor(y, xsBitShiftRightLogical(y, _cMtL)));
 }
 
 int xsMtRandomUniformRange(int start = 0, int end = 999999999) {
     if (end <= start) {
         return (-1);
     }
-    int dist = end - start;
-    if (dist == 1) {
+    int dst = end - start;
+    if (dst == 1) {
         return (start);
     }
-    int distM = dist - 1;
-    if (xsBitAnd(dist, distM) == 0) {
-        return (xsBitAnd(xsMtRandom(), distM) + start);
+    int dstM = dst - 1;
+    if (bitAnd(dst, dstM) == 0) {
+        return (bitAnd(xsMtRandom(), dstM) + start);
     }
-    if (dist > 0) {
+    if (dst > 0) {
         while (true) {
             int r = xsBitShiftRightLogical(xsMtRandom(), 1);
-            int c = r % dist;
-            if (((r + distM) - c) >= 0) {
+            int c = r % dst;
+            if (((r + dstM) - c) >= 0) {
                 return (c + start);
             }
         }
