@@ -1,9 +1,8 @@
-from numpy import int32
+from numpy import int32, float32
 
-from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_get_int, xs_get_random_number, bit_and, bit_or, bit_xor
+from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_get_int, xs_get_random_number, \
+    bit_and, bit_or, bit_xor, pow
 from xs_converter.symbols import XsConst
-
-_bit_operator_powers: int32 = int32(-1)
 
 _c_mt_n: XsConst[int32] = int32(624)
 _c_mt_m: XsConst[int32] = int32(397)
@@ -27,27 +26,18 @@ _mt_state_array: int32 = int32(-1)
 _mt_state_index: int32 = int32(0)
 
 
-def _xs_bit_get_powers() -> int32:
-    global _bit_operator_powers
-    if _bit_operator_powers == -1:
-        _bit_operator_powers = xs_array_create_int(32, 1, "_bitOperatorPowers")
-        for i in range(1, 32):
-            xs_array_set_int(_bit_operator_powers, i, xs_array_get_int(_bit_operator_powers, i - 1) * 2)
-    return _bit_operator_powers
-
-
-def _xs_bit_shift_right_divide(x: int32 = int32(-1), n: int32 = int32(-1), powers: int32 = int32(-1)) -> int32:
+def _xs_bit_shift_right_divide(x: int32 = int32(-1), n: int32 = int32(-1), divisor: int32 = int32(-1)) -> int32:
     if n == 31:
         if x < 0:
             return int32(-1)
         return int32(0)
-    return x // xs_array_get_int(powers, n)
+    return x // divisor
 
 
 def xs_bit_shift_left(x: int32 = int32(0), n: int32 = int32(0)) -> int32:
     if n < 0 or n >= 32:
         return int32(0)
-    return x * xs_array_get_int(_xs_bit_get_powers(), n)
+    return x * int32(pow(float32(2.0), n))
 
 
 def xs_bit_shift_right_arithmetic(x: int32 = int32(0), n: int32 = int32(0)) -> int32:
@@ -55,18 +45,17 @@ def xs_bit_shift_right_arithmetic(x: int32 = int32(0), n: int32 = int32(0)) -> i
         if x < 0:
             return int32(-1)
         return int32(0)
-    return _xs_bit_shift_right_divide(x, n, _xs_bit_get_powers())
+    return _xs_bit_shift_right_divide(x, n, int32(pow(float32(2.0), n)))
 
 
 def xs_bit_shift_right_logical(x: int32 = int32(0), n: int32 = int32(0)) -> int32:
     if n < 0 or n >= 32:
         return int32(0)
-    powers: int32 = _xs_bit_get_powers()
     if x < 0:
-        x += xs_array_get_int(powers, 31)
-        x = _xs_bit_shift_right_divide(x, n, powers)
-        return x + xs_array_get_int(powers, 31 - n)
-    return _xs_bit_shift_right_divide(x, n, powers)
+        x += int32(-2147483648)
+        x = _xs_bit_shift_right_divide(x, n, int32(pow(float32(2.0), n)))
+        return x + int32(pow(float32(2.0), int32(31) - n))
+    return _xs_bit_shift_right_divide(x, n, int32(pow(float32(2.0), n)))
 
 
 def xs_mt_seed(seed: int32 = int32(0)) -> None:
@@ -95,7 +84,9 @@ def xs_mt_random() -> int32:
     global _mt_state_index, _mt_state_index
 
     if not _mt_seed_set:
-        xs_mt_seed(xs_get_random_number() * int32(32768) + xs_get_random_number() + xs_bit_shift_left(xs_get_random_number(), int32(30)))
+        xs_mt_seed(
+            xs_get_random_number() * int32(32768) + xs_get_random_number() + xs_bit_shift_left(xs_get_random_number(),
+                                                                                               int32(30)))
 
     k: int32 = _mt_state_index
 

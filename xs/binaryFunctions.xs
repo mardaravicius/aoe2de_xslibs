@@ -1,4 +1,3 @@
-int _bitOperatorPowers = -1;
 const int _cMtN = 624;
 const int _cMtM = 397;
 int _cMtNm = -1;
@@ -19,31 +18,21 @@ bool _mtSeedSet = false;
 int _mtStateArray = -1;
 int _mtStateIndex = 0;
 
-int _xsBitGetPowers() {
-    if (_bitOperatorPowers == -1) {
-        _bitOperatorPowers = xsArrayCreateInt(32, 1, "_bitOperatorPowers");
-        for (i = 1; < 32) {
-            xsArraySetInt(_bitOperatorPowers, i, xsArrayGetInt(_bitOperatorPowers, i - 1) * 2);
-        }
-    }
-    return (_bitOperatorPowers);
-}
-
-int _xsBitShiftRightDivide(int x = -1, int n = -1, int powers = -1) {
+int _xsBitShiftRightDivide(int x = -1, int n = -1, int divisor = -1) {
     if (n == 31) {
         if (x < 0) {
             return (-1);
         }
         return (0);
     }
-    return (x / xsArrayGetInt(powers, n));
+    return (x / divisor);
 }
 
 int xsBitShiftLeft(int x = 0, int n = 0) {
     if ((n < 0) || (n >= 32)) {
         return (0);
     }
-    return (x * xsArrayGetInt(_xsBitGetPowers(), n));
+    return (x * (0 + pow(2.0, n)));
 }
 
 int xsBitShiftRightArithmetic(int x = 0, int n = 0) {
@@ -53,20 +42,19 @@ int xsBitShiftRightArithmetic(int x = 0, int n = 0) {
         }
         return (0);
     }
-    return (_xsBitShiftRightDivide(x, n, _xsBitGetPowers()));
+    return (_xsBitShiftRightDivide(x, n, 0 + pow(2.0, n)));
 }
 
 int xsBitShiftRightLogical(int x = 0, int n = 0) {
     if ((n < 0) || (n >= 32)) {
         return (0);
     }
-    int powers = _xsBitGetPowers();
     if (x < 0) {
-        x = x + xsArrayGetInt(powers, 31);
-        x = _xsBitShiftRightDivide(x, n, powers);
-        return (x + xsArrayGetInt(powers, 31 - n));
+        x = x + (-214748364 * 10 - 8);
+        x = _xsBitShiftRightDivide(x, n, 0 + pow(2.0, n));
+        return (x + (0 + pow(2.0, 31 - n)));
     }
-    return (_xsBitShiftRightDivide(x, n, powers));
+    return (_xsBitShiftRightDivide(x, n, 0 + pow(2.0, n)));
 }
 
 void xsMtSeed(int seed = 0) {
