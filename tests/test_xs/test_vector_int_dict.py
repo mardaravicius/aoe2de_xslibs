@@ -32,7 +32,7 @@ def _decode_key(value) -> int32:
 
 
 def _build_compat_module() -> types.ModuleType:
-    compat = types.ModuleType("xs.int_int_dict3")
+    compat = types.ModuleType("xs.int_int_dict")
 
     def _sync_constants() -> None:
         logical_slots: int32 = (compat.c_int_int_dict_max_capacity - 1) // 2
@@ -165,18 +165,18 @@ def _build_compat_module() -> types.ModuleType:
 
 
 def _load_base_test_module():
-    module_path = Path(__file__).with_name("test_int_int_dict3.py")
+    module_path = Path(__file__).with_name("test_int_int_dict.py")
     spec = importlib.util.spec_from_file_location("_vector_int_dict_base_tests", module_path)
     module = importlib.util.module_from_spec(spec)
-    previous = sys.modules.get("xs.int_int_dict3")
-    sys.modules["xs.int_int_dict3"] = _build_compat_module()
+    previous = sys.modules.get("xs.int_int_dict")
+    sys.modules["xs.int_int_dict"] = _build_compat_module()
     try:
         spec.loader.exec_module(module)
     finally:
         if previous is None:
-            del sys.modules["xs.int_int_dict3"]
+            del sys.modules["xs.int_int_dict"]
         else:
-            sys.modules["xs.int_int_dict3"] = previous
+            sys.modules["xs.int_int_dict"] = previous
     return module
 
 

@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from xs.int_int_dict3 import *
+from xs.int_int_dict import *
 
 np.seterr(over="ignore")
 
@@ -170,10 +170,10 @@ class IntIntDictTest(unittest.TestCase):
         self._assert_dicts_equal(xs_dct1, dct)
 
     def test_rehash_past_max_capacity_reports_max_capacity_error(self):
-        import xs.int_int_dict3 as _d3
+        import xs.int_int_dict as _dict
 
-        orig = _d3.c_int_int_dict_max_capacity
-        _d3.c_int_int_dict_max_capacity = int32(33)
+        orig = _dict.c_int_int_dict_max_capacity
+        _dict.c_int_int_dict_max_capacity = int32(33)
         try:
             xs_dct = xs_int_int_dict_create()
             expected = {}
@@ -185,16 +185,16 @@ class IntIntDictTest(unittest.TestCase):
             self.assertEqual(c_int_int_dict_max_capacity_error, xs_int_int_dict_last_error())
             self._assert_dicts_equal(xs_dct, expected)
         finally:
-            _d3.c_int_int_dict_max_capacity = orig
+            _dict.c_int_int_dict_max_capacity = orig
 
     def test_put_if_absent_past_max_capacity_preserves_existing_entries(self):
-        if xs_int_int_dict_put.__module__ != "xs.int_int_dict3":
-            self.skipTest("native int_int_dict3 only")
+        if xs_int_int_dict_put.__module__ != "xs.int_int_dict":
+            self.skipTest("native int_int_dict only")
 
-        import xs.int_int_dict3 as _d3
+        import xs.int_int_dict as _dict
 
-        orig = _d3.c_int_int_dict_max_capacity
-        _d3.c_int_int_dict_max_capacity = int32(33)
+        orig = _dict.c_int_int_dict_max_capacity
+        _dict.c_int_int_dict_max_capacity = int32(33)
         try:
             xs_dct = xs_int_int_dict_create()
             expected = {}
@@ -209,7 +209,7 @@ class IntIntDictTest(unittest.TestCase):
             self.assertEqual(c_int_int_dict_max_capacity_error, xs_int_int_dict_last_error())
             self._assert_dicts_equal(xs_dct, expected)
         finally:
-            _d3.c_int_int_dict_max_capacity = orig
+            _dict.c_int_int_dict_max_capacity = orig
 
     def test_empty_dict_size(self):
         xs_dct = xs_int_int_dict_create()

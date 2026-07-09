@@ -35,7 +35,7 @@ def _decode_key(value: str) -> int32:
 
 
 def _build_compat_module() -> types.ModuleType:
-    compat = types.ModuleType("xs.int_int_dict3")
+    compat = types.ModuleType("xs.int_int_dict")
 
     def _sync_constants() -> None:
         _sid.c_string_int_dict_max_capacity = compat.c_int_int_dict_max_capacity
@@ -134,8 +134,8 @@ def _build_compat_module() -> types.ModuleType:
     def xs_int_int_dict_equals(a: int32 = int32(-1), b: int32 = int32(-1)) -> bool:
         return _sid.xs_string_int_dict_equals(a, b)
 
-    xs_int_int_dict_put.__module__ = "xs.int_int_dict3"
-    xs_int_int_dict_put_if_absent.__module__ = "xs.int_int_dict3"
+    xs_int_int_dict_put.__module__ = "xs.int_int_dict"
+    xs_int_int_dict_put_if_absent.__module__ = "xs.int_int_dict"
 
     compat.int32 = int32
     compat.float32 = float32
@@ -175,18 +175,18 @@ def _build_compat_module() -> types.ModuleType:
 
 
 def _load_base_test_module():
-    module_path = Path(__file__).with_name("test_int_int_dict3.py")
+    module_path = Path(__file__).with_name("test_int_int_dict.py")
     spec = importlib.util.spec_from_file_location("_string_int_dict_base_tests", module_path)
     module = importlib.util.module_from_spec(spec)
-    previous = sys.modules.get("xs.int_int_dict3")
-    sys.modules["xs.int_int_dict3"] = _build_compat_module()
+    previous = sys.modules.get("xs.int_int_dict")
+    sys.modules["xs.int_int_dict"] = _build_compat_module()
     try:
         spec.loader.exec_module(module)
     finally:
         if previous is None:
-            del sys.modules["xs.int_int_dict3"]
+            del sys.modules["xs.int_int_dict"]
         else:
-            sys.modules["xs.int_int_dict3"] = previous
+            sys.modules["xs.int_int_dict"] = previous
     return module
 
 
