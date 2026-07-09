@@ -28,7 +28,7 @@ int _xsFloatIntDictKeyBits(float key = 0.0) {
     Creates an empty float-to-int dictionary.
     Keys equal to `cFloatIntDictEmptyKey` (-9999999.0) are reserved as the internal empty-slot
     sentinel and cannot be stored. `put` and `putIfAbsent` silently reject them. Signed zero keys
-    are canonicalized to `0.0`, and all NaN keys are canonicalized to a single NaN bit pattern.
+    are canonicalized to `0.0`, and all NaN keys are treated as the same key.
     @return created dict id, or `cFloatIntDictGenericError` on error
 */
 int xsFloatIntDictCreate() {
@@ -539,7 +539,7 @@ int xsFloatIntDictPutIfAbsent(int dct = -1, float key = 0.0, int val = 0) {
 
 /*
     Returns a float array containing all keys in iteration order.
-    Keys are returned in canonicalized form, so `-0.0` becomes `0.0` and NaN keys use the canonical NaN payload.
+    Keys are returned in canonical form, so `-0.0` becomes `0.0` and all NaN keys become the same NaN value.
     @return array id, or `cFloatIntDictResizeFailedError` on allocation failure
 */
 int xsFloatIntDictKeys(int dct = -1) {
@@ -588,7 +588,7 @@ int xsFloatIntDictValues(int dct = -1) {
 
 /*
     Checks whether both dicts contain the same keys and values.
-    Float keys are compared using the dict's canonical key semantics for signed zero and NaN.
+    Float keys treat `-0.0` as `0.0`, and all NaN keys compare as equal.
     @return true if both dicts are equal, false otherwise
 */
 bool xsFloatIntDictEquals(int a = -1, int b = -1) {

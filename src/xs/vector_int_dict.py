@@ -66,7 +66,8 @@ def xs_vector_int_dict_create() -> int32:
     """
     Creates an empty vector-to-int dictionary.
     Keys equal to `c_vector_int_dict_empty_key` are reserved as the internal empty-slot sentinel
-    and cannot be stored. `put` and `put_if_absent` silently reject them.
+    and cannot be stored. `put` and `put_if_absent` silently reject them. Vector keys are not
+    canonicalized; avoid NaN and signed-zero components.
     :return: created dict id, or `c_vector_int_dict_generic_error` on error
     """
     dct: int32 = xs_array_create_float(c_vector_int_dict_initial_capacity, xs_vector_get_x(c_vector_int_dict_empty_key))
@@ -547,6 +548,7 @@ def xs_vector_int_dict_values(dct: int32 = int32(-1)) -> int32:
 def xs_vector_int_dict_equals(a: int32 = int32(-1), b: int32 = int32(-1)) -> bool:
     """
     Returns true if both dicts contain the same key-value pairs.
+    Vector keys are not canonicalized; avoid NaN and signed-zero components.
     """
     size_a: int32 = _xs_vector_int_dict_get_size(a)
     size_b: int32 = _xs_vector_int_dict_get_size(b)

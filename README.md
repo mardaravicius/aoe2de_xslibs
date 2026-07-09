@@ -124,7 +124,8 @@ red but still work.
 - There is no global initialization function for these libraries. You can use them immediately.
 - `xsIntIntDict`, `xsIntStringDict`, and `xsIntVectorDict` cannot store their reserved `...EmptyKey` int sentinel as a key.
 - `xsFloatIntDict`, `xsFloatStringDict`, and `xsFloatVectorDict` cannot store their reserved `...EmptyKey` float sentinel as a key.
-- The float-key dictionaries canonicalize `-0.0` to `0.0` and all NaN keys to a single internal NaN representation.
+- The float-key dictionaries canonicalize `-0.0` to `0.0` and treat all NaN keys as the same key.
+- Vector-key dictionaries do not canonicalize components; avoid NaN and signed-zero components in keys.
 - `xsStringIntDict` cannot store the reserved sentinel string `!<[empty` as a key.
 - `xsStringStringDict` cannot store the reserved sentinel string `!<[empty` as a key.
 - `xsStringVectorDict` cannot store the reserved sentinel string `!<[empty` as a key.
@@ -758,7 +759,7 @@ void placeCamps() {
 ## 12. Float to Int Dictionary
 
 `floatIntDict.xs` provides a hash map from `float` keys to `int` values.
-The exported implementation uses open addressing with linear probing and resizes automatically when the load factor grows past `cFloatIntDictMaxLoadFactor`. Signed zero keys are canonicalized to `0.0`, and all NaN keys are canonicalized to a single internal NaN representation.
+The exported implementation uses open addressing with linear probing and resizes automatically when the load factor grows past `cFloatIntDictMaxLoadFactor`. Signed zero keys are canonicalized to `0.0`, and all NaN keys are treated as the same key.
 
 ### Constants
 
@@ -836,7 +837,7 @@ void scoreZones() {
 ## 13. Float to String Dictionary
 
 `floatStringDict.xs` provides a hash map from `float` keys to `string` values.
-It uses the same open-addressed layout as `floatIntDict.xs`, but stores values in a parallel string array. Signed zero keys are canonicalized to `0.0`, and all NaN keys are canonicalized to a single internal NaN representation.
+It uses the same open-addressed layout as `floatIntDict.xs`, but stores values in a parallel string array. Signed zero keys are canonicalized to `0.0`, and all NaN keys are treated as the same key.
 
 ### Constants
 
@@ -913,7 +914,7 @@ void labelZones() {
 ## 14. Float to Vector Dictionary
 
 `floatVectorDict.xs` provides a hash map from `float` keys to `vector` values.
-It uses the same open-addressed layout as `floatIntDict.xs`, but stores vectors as raw float components. Signed zero keys are canonicalized to `0.0`, and all NaN keys are canonicalized to a single internal NaN representation.
+It uses the same open-addressed layout as `floatIntDict.xs`, but stores vectors as raw float components. Signed zero keys are canonicalized to `0.0`, and all NaN keys are treated as the same key.
 
 ### Constants
 
@@ -1222,7 +1223,7 @@ void placeNamedTargets() {
 ## 18. Vector to Int Dictionary
 
 `vectorIntDict.xs` provides a hash map from `vector` keys to `int` values.
-It uses direct vector equality for key lookup and reserves `cVectorIntDictEmptyKey` as the empty-slot sentinel.
+It uses direct vector equality for key lookup and reserves `cVectorIntDictEmptyKey` as the empty-slot sentinel. Vector keys are not canonicalized; avoid NaN and signed-zero components.
 
 ### Constants
 
@@ -1298,7 +1299,7 @@ void markDangerZones() {
 ## 19. Vector to String Dictionary
 
 `vectorStringDict.xs` provides a hash map from `vector` keys to `string` values.
-It mirrors the other vector-keyed dictionary variants, but stores values in a parallel string array.
+It mirrors the other vector-keyed dictionary variants, but stores values in a parallel string array. Vector keys are not canonicalized; avoid NaN and signed-zero components.
 
 ### Constants
 
@@ -1375,7 +1376,7 @@ void labelZones() {
 ## 20. Vector to Vector Dictionary
 
 `vectorVectorDict.xs` provides a hash map from `vector` keys to `vector` values.
-It mirrors the other dictionary variants, but both keys and values are vectors.
+It mirrors the other dictionary variants, but both keys and values are vectors. Vector keys are not canonicalized; avoid NaN and signed-zero components.
 
 ### Constants
 

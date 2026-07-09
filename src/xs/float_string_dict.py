@@ -72,8 +72,7 @@ def xs_float_string_dict_create() -> int32:
     Creates an empty float-to-string dictionary.
     Keys equal to `c_float_string_dict_empty_key` are reserved as the internal
     empty-slot sentinel and cannot be stored. `put` and `put_if_absent` silently reject them.
-    Signed zero keys are canonicalized to `0.0`, and all NaN keys are canonicalized to a
-    single NaN bit pattern.
+    Signed zero keys are canonicalized to `0.0`, and all NaN keys are treated as the same key.
     :return: created dict id, or `c_float_string_dict_generic_error` on error
     """
     dct: int32 = xs_array_create_int(c_float_string_dict_initial_capacity, c_float_string_dict_empty_key_bits)
@@ -558,7 +557,7 @@ def xs_float_string_dict_put_if_absent(dct: int32 = int32(-1), key: float32 = fl
 def xs_float_string_dict_keys(dct: int32 = int32(-1)) -> int32:
     """
     Returns a float array containing all keys in iteration order.
-    Keys are returned in canonicalized form, so `-0.0` becomes `0.0` and NaN keys use the canonical NaN payload.
+    Keys are returned in canonical form, so `-0.0` becomes `0.0` and all NaN keys become the same NaN value.
     :return: array id, or `c_float_string_dict_resize_failed_error` on allocation failure
     """
     size: int32 = xs_array_get_int(dct, 0)
@@ -597,7 +596,7 @@ def xs_float_string_dict_values(dct: int32 = int32(-1)) -> int32:
 def xs_float_string_dict_equals(a: int32 = int32(-1), b: int32 = int32(-1)) -> bool:
     """
     Checks whether both dicts contain the same keys and values.
-    Float keys are compared using the dict's canonical key semantics for signed zero and NaN.
+    Float keys treat `-0.0` as `0.0`, and all NaN keys compare as equal.
     :return: true if both dicts are equal, false otherwise
     """
     size_a: int32 = xs_array_get_int(a, 0)

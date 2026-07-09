@@ -53,8 +53,7 @@ void _xsFloatStringDictClearSlot(int dct = -1, int slot = 2) {
     Creates an empty float-to-string dictionary.
     Keys equal to `cFloatStringDictEmptyKey` are reserved as the internal
     empty-slot sentinel and cannot be stored. `put` and `putIfAbsent` silently reject them.
-    Signed zero keys are canonicalized to `0.0`, and all NaN keys are canonicalized to a
-    single NaN bit pattern.
+    Signed zero keys are canonicalized to `0.0`, and all NaN keys are treated as the same key.
     @return created dict id, or `cFloatStringDictGenericError` on error
 */
 int xsFloatStringDictCreate() {
@@ -573,7 +572,7 @@ string xsFloatStringDictPutIfAbsent(int dct = -1, float key = 0.0, string val = 
 
 /*
     Returns a float array containing all keys in iteration order.
-    Keys are returned in canonicalized form, so `-0.0` becomes `0.0` and NaN keys use the canonical NaN payload.
+    Keys are returned in canonical form, so `-0.0` becomes `0.0` and all NaN keys become the same NaN value.
     @return array id, or `cFloatStringDictResizeFailedError` on allocation failure
 */
 int xsFloatStringDictKeys(int dct = -1) {
@@ -618,7 +617,7 @@ int xsFloatStringDictValues(int dct = -1) {
 
 /*
     Checks whether both dicts contain the same keys and values.
-    Float keys are compared using the dict's canonical key semantics for signed zero and NaN.
+    Float keys treat `-0.0` as `0.0`, and all NaN keys compare as equal.
     @return true if both dicts are equal, false otherwise
 */
 bool xsFloatStringDictEquals(int a = -1, int b = -1) {

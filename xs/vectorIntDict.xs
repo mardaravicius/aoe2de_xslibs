@@ -50,7 +50,8 @@ void _xsVectorIntDictSetSlot(int dct = -1, int slot = 1, vector key = vector(0.0
 /*
     Creates an empty vector-to-int dictionary.
     Keys equal to `cVectorIntDictEmptyKey` are reserved as the internal empty-slot sentinel
-    and cannot be stored. `put` and `putIfAbsent` silently reject them.
+    and cannot be stored. `put` and `putIfAbsent` silently reject them. Vector keys are not
+    canonicalized; avoid NaN and signed-zero components.
     @return created dict id, or `cVectorIntDictGenericError` on error
 */
 int xsVectorIntDictCreate() {
@@ -584,6 +585,7 @@ int xsVectorIntDictValues(int dct = -1) {
 
 /*
     Returns true if both dicts contain the same key-value pairs.
+    Vector keys are not canonicalized; avoid NaN and signed-zero components.
 */
 bool xsVectorIntDictEquals(int a = -1, int b = -1) {
     int sizeA = _xsVectorIntDictGetSize(a);
