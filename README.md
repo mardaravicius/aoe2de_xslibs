@@ -108,6 +108,7 @@ red but still work.
 
 - The list creation helpers and all dictionary constructors return an `int` handle.
 - The dictionary `Keys` and `Values` helpers return raw XS arrays, not list handles.
+- Pass an existing array to dictionary `Keys` or `Values` to reuse it; the helper resizes and returns that same array.
 - `NextKey` returns a sentinel value when iteration ends. If that sentinel could also be a real key, check `LastError()` to distinguish "no next key" from a legitimate return value.
 - `xsIntIntDictKeys`/`Values` return `int[]` / `int[]`.
 - `xsIntStringDictKeys`/`Values` return `int[]` / `string[]`.

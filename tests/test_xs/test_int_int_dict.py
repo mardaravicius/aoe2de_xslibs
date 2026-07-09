@@ -633,6 +633,29 @@ class IntIntDictTest(unittest.TestCase):
             v = int(xs_array_get_int(vals_arr, int32(i)))
             self.assertEqual(dct[k], v)
 
+    def test_keys_reuses_output_array_when_size_matches(self):
+        xs_dct = xs_int_int_dict_create()
+        xs_int_int_dict_put(xs_dct, int32(1), int32(10))
+        xs_int_int_dict_put(xs_dct, int32(2), int32(20))
+        out_arr = xs_array_create_int(int32(2), int32(-7))
+
+        arr = xs_int_int_dict_keys(xs_dct, out_arr)
+
+        self.assertEqual(out_arr, arr)
+        self.assertEqual({1, 2}, set(self._arr_to_list(arr)))
+
+    def test_values_reuses_output_array_and_resizes_when_size_differs(self):
+        xs_dct = xs_int_int_dict_create()
+        xs_int_int_dict_put(xs_dct, int32(1), int32(10))
+        xs_int_int_dict_put(xs_dct, int32(2), int32(20))
+        out_arr = xs_array_create_int(int32(1), int32(-7))
+
+        arr = xs_int_int_dict_values(xs_dct, out_arr)
+
+        self.assertEqual(out_arr, arr)
+        self.assertEqual(2, xs_array_get_size(arr))
+        self.assertEqual({10, 20}, set(self._arr_to_list(arr)))
+
     def test_keys_values_order_matches(self):
         xs_dct = xs_int_int_dict_create()
         dct = {}

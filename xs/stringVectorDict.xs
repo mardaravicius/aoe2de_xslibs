@@ -436,7 +436,13 @@ int _xsStringVectorDictValuesFill(int dct = -1, int node = -1, int arr = -1, int
         return (idx);
     }
     idx = _xsStringVectorDictValuesFill(dct, _xsStringVectorDictGetLeft(dct, node), arr, idx);
-    xsArraySetVector(arr, idx, _xsStringVectorDictGetStoredValue(dct, node));
+    if (idx < 0) {
+        return (idx);
+    }
+    int r = xsArraySetVector(arr, idx, _xsStringVectorDictGetStoredValue(dct, node));
+    if (r != 1) {
+        return (cStringVectorDictResizeFailedError);
+    }
     idx++;
     return (_xsStringVectorDictValuesFill(dct, _xsStringVectorDictGetRight(dct, node), arr, idx));
 }
@@ -774,11 +780,19 @@ vector xsStringVectorDictPutIfAbsent(int dct = -1, string key = "", vector val =
 /*
     Returns a new string array containing all keys in the dict. Order is lexicographic.
 */
-int xsStringVectorDictKeys(int dct = -1) {
+int xsStringVectorDictKeys(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
-    int arr = xsArrayCreateString(size);
+    int arr = outArr;
     if (arr < 0) {
-        return (cStringVectorDictResizeFailedError);
+        arr = xsArrayCreateString(size);
+        if (arr < 0) {
+            return (cStringVectorDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeString(arr, size);
+        if (r != 1) {
+            return (cStringVectorDictResizeFailedError);
+        }
     }
     _xsStringVectorDictKeysFill(dct, _xsStringVectorDictGetRoot(dct), arr);
     return (arr);
@@ -787,13 +801,24 @@ int xsStringVectorDictKeys(int dct = -1) {
 /*
     Returns a new vector array containing all values in the dict. Order matches `xsStringVectorDictKeys`.
 */
-int xsStringVectorDictValues(int dct = -1) {
+int xsStringVectorDictValues(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
-    int arr = xsArrayCreateVector(size, vector(0.0, 0.0, 0.0));
+    int arr = outArr;
     if (arr < 0) {
+        arr = xsArrayCreateVector(size, vector(0.0, 0.0, 0.0));
+        if (arr < 0) {
+            return (cStringVectorDictResizeFailedError);
+        }
+    } else {
+        int currentSize = xsArrayGetSize(arr);
+        if (currentSize != size) {
+            return (cStringVectorDictResizeFailedError);
+        }
+    }
+    int r = _xsStringVectorDictValuesFill(dct, _xsStringVectorDictGetRoot(dct), arr);
+    if (r < 0) {
         return (cStringVectorDictResizeFailedError);
     }
-    _xsStringVectorDictValuesFill(dct, _xsStringVectorDictGetRoot(dct), arr);
     return (arr);
 }
 

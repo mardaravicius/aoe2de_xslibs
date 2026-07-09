@@ -6,7 +6,14 @@ from numpy import float32, int32
 
 import xs.float_int_dict as _fid
 from xs.float_int_dict import *
-from xs_converter.functions import bit_cast_to_float, bit_cast_to_int, xs_array_get_float, xs_array_get_int, xs_array_get_size
+from xs_converter.functions import (
+    bit_cast_to_float,
+    bit_cast_to_int,
+    xs_array_create_float,
+    xs_array_get_float,
+    xs_array_get_int,
+    xs_array_get_size,
+)
 
 np.seterr(over="ignore")
 
@@ -141,6 +148,18 @@ class FloatIntDictTest(unittest.TestCase):
         self.assertEqual(2, xs_array_get_size(arr))
         bits = {int(bit_cast_to_int(xs_array_get_float(arr, int32(i)))) for i in range(xs_array_get_size(arr))}
         self.assertEqual({0, int(_canonical_nan_bits())}, bits)
+
+    def test_keys_reuses_output_array(self):
+        xs_dct = xs_float_int_dict_create()
+        xs_float_int_dict_put(xs_dct, float32(1.25), int32(10))
+        xs_float_int_dict_put(xs_dct, float32(2.5), int32(20))
+        out_arr = xs_array_create_float(int32(1), float32(-7.0))
+
+        arr = xs_float_int_dict_keys(xs_dct, out_arr)
+
+        self.assertEqual(out_arr, arr)
+        self.assertEqual(2, xs_array_get_size(arr))
+        self.assertEqual({1.25, 2.5}, {float(xs_array_get_float(arr, int32(i))) for i in range(xs_array_get_size(arr))})
 
     def test_values_array_matches_keys_order(self):
         xs_dct = xs_float_int_dict_create()

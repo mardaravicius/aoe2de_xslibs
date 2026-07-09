@@ -540,11 +540,19 @@ int xsVectorIntDictPutIfAbsent(int dct = -1, vector key = vector(0.0, 0.0, 0.0),
 /*
     Returns a new vector array containing all keys in the dict. Order is arbitrary.
 */
-int xsVectorIntDictKeys(int dct = -1) {
+int xsVectorIntDictKeys(int dct = -1, int outArr = -1) {
     int size = _xsVectorIntDictGetSize(dct);
-    int arr = xsArrayCreateVector(size, vector(0.0, 0.0, 0.0));
+    int arr = outArr;
     if (arr < 0) {
-        return (cVectorIntDictResizeFailedError);
+        arr = xsArrayCreateVector(size, vector(0.0, 0.0, 0.0));
+        if (arr < 0) {
+            return (cVectorIntDictResizeFailedError);
+        }
+    } else {
+        int currentSize = xsArrayGetSize(arr);
+        if (currentSize != size) {
+            return (cVectorIntDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;
@@ -552,7 +560,10 @@ int xsVectorIntDictKeys(int dct = -1) {
     while (i < capacity) {
         vector storedKey = _xsVectorIntDictGetStoredKey(dct, i);
         if (storedKey != cVectorIntDictEmptyKey) {
-            xsArraySetVector(arr, idx, storedKey);
+            int r = xsArraySetVector(arr, idx, storedKey);
+            if (r != 1) {
+                return (cVectorIntDictResizeFailedError);
+            }
             idx++;
         }
         i = i + 4;
@@ -563,11 +574,19 @@ int xsVectorIntDictKeys(int dct = -1) {
 /*
     Returns a new int array containing all values in the dict. Order matches `xsVectorIntDictKeys`.
 */
-int xsVectorIntDictValues(int dct = -1) {
+int xsVectorIntDictValues(int dct = -1, int outArr = -1) {
     int size = _xsVectorIntDictGetSize(dct);
-    int arr = xsArrayCreateInt(size, 0);
+    int arr = outArr;
     if (arr < 0) {
-        return (cVectorIntDictResizeFailedError);
+        arr = xsArrayCreateInt(size, 0);
+        if (arr < 0) {
+            return (cVectorIntDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeInt(arr, size);
+        if (r != 1) {
+            return (cVectorIntDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;

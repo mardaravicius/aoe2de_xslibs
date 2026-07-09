@@ -9,7 +9,7 @@ from numpy import int32
 
 import xs.int_vector_dict as _ivd
 from xs_converter.functions import vector, xs_array_create_int, xs_array_get_int, xs_array_get_size, \
-    xs_array_get_vector, xs_array_set_int, xs_vector_get_x, xs_vector_get_y
+    xs_array_create_vector, xs_array_get_vector, xs_array_resize_int, xs_array_set_int, xs_vector_get_x, xs_vector_get_y
 from xs_converter.symbols import i32range
 
 np.seterr(over="ignore")
@@ -114,17 +114,23 @@ def _build_compat_module() -> types.ModuleType:
             return _decode_value(result)
         return compat.c_int_int_dict_generic_error
 
-    def xs_int_int_dict_keys(dct: int32 = int32(-1)) -> int32:
-        return _ivd.xs_int_vector_dict_keys(dct)
+    def xs_int_int_dict_keys(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
+        return _ivd.xs_int_vector_dict_keys(dct, out_arr)
 
-    def xs_int_int_dict_values(dct: int32 = int32(-1)) -> int32:
+    def xs_int_int_dict_values(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
         vec_arr: int32 = _ivd.xs_int_vector_dict_values(dct)
         if vec_arr < 0:
             return vec_arr
         size: int32 = xs_array_get_size(vec_arr)
-        arr: int32 = xs_array_create_int(size, int32(0))
+        arr: int32 = out_arr
         if arr < 0:
-            return arr
+            arr = xs_array_create_int(size, int32(0))
+            if arr < 0:
+                return arr
+        else:
+            r: int32 = xs_array_resize_int(arr, size)
+            if r != 1:
+                return compat.c_int_int_dict_resize_failed_error
         for i in i32range(0, size):
             xs_array_set_int(arr, i, _decode_value(xs_array_get_vector(vec_arr, i)))
         return arr
@@ -241,6 +247,44 @@ class IntVectorDictNativeTest(unittest.TestCase):
         self.assertEqual(2, xs_array_get_size(arr))
         values = [xs_array_get_vector(arr, int32(i)) for i in range(xs_array_get_size(arr))]
         self.assertEqual([v1, v2], values)
+
+    def test_values_reuses_exact_size_vector_array(self):
+        xs_dct = _ivd.xs_int_vector_dict_create()
+        v1 = vector(1.0, 2.0, 3.0)
+        v2 = vector(4.0, 5.0, 6.0)
+        _ivd.xs_int_vector_dict_put(xs_dct, int32(1), v1)
+        _ivd.xs_int_vector_dict_put(xs_dct, int32(2), v2)
+        out_arr = xs_array_create_vector(int32(2), vector(0.0, 0.0, 0.0))
+
+        arr = _ivd.xs_int_vector_dict_values(xs_dct, out_arr)
+
+        self.assertEqual(out_arr, arr)
+        values = [xs_array_get_vector(arr, int32(i)) for i in range(xs_array_get_size(arr))]
+        self.assertEqual([v1, v2], values)
+
+    def test_values_returns_resize_error_for_wrong_size_vector_array(self):
+        xs_dct = _ivd.xs_int_vector_dict_create()
+        _ivd.xs_int_vector_dict_put(xs_dct, int32(1), vector(1.0, 2.0, 3.0))
+        _ivd.xs_int_vector_dict_put(xs_dct, int32(2), vector(4.0, 5.0, 6.0))
+        out_arr = xs_array_create_vector(int32(1), vector(0.0, 0.0, 0.0))
+
+        arr = _ivd.xs_int_vector_dict_values(xs_dct, out_arr)
+
+        self.assertEqual(_ivd.c_int_vector_dict_resize_failed_error, arr)
+        self.assertEqual(1, xs_array_get_size(out_arr))
+
+    def test_values_returns_resize_error_for_wrong_type_output_array(self):
+        xs_dct = _ivd.xs_int_vector_dict_create()
+        _ivd.xs_int_vector_dict_put(xs_dct, int32(1), vector(1.0, 2.0, 3.0))
+        _ivd.xs_int_vector_dict_put(xs_dct, int32(2), vector(4.0, 5.0, 6.0))
+        out_arr = xs_array_create_int(int32(2), int32(-7))
+
+        arr = _ivd.xs_int_vector_dict_values(xs_dct, out_arr)
+
+        self.assertEqual(_ivd.c_int_vector_dict_resize_failed_error, arr)
+        self.assertEqual(2, xs_array_get_size(out_arr))
+        self.assertEqual(-7, xs_array_get_int(out_arr, int32(0)))
+        self.assertEqual(-7, xs_array_get_int(out_arr, int32(1)))
 
     def test_to_string_mentions_vector_value(self):
         xs_dct = _ivd.xs_int_vector_dict_create()

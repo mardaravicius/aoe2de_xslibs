@@ -9,7 +9,7 @@ from numpy import int32
 
 import xs.vector_vector_dict as _vvd
 from xs_converter.functions import vector, bit_cast_to_float, xs_array_create_int, xs_array_get_int, xs_array_get_size, \
-    xs_array_get_vector, xs_array_set_int
+    xs_array_get_vector, xs_array_resize_int, xs_array_set_int
 from xs_converter.symbols import i32range
 
 np.seterr(over="ignore")
@@ -123,26 +123,38 @@ def _build_compat_module() -> types.ModuleType:
             return _decode_value(result)
         return compat.c_int_int_dict_generic_error
 
-    def xs_int_int_dict_keys(dct: int32 = int32(-1)) -> int32:
+    def xs_int_int_dict_keys(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
         vec_arr: int32 = _vvd.xs_vector_vector_dict_keys(dct)
         if vec_arr < 0:
             return vec_arr
         size: int32 = xs_array_get_size(vec_arr)
-        arr: int32 = xs_array_create_int(size, int32(0))
+        arr: int32 = out_arr
         if arr < 0:
-            return arr
+            arr = xs_array_create_int(size, int32(0))
+            if arr < 0:
+                return arr
+        else:
+            r: int32 = xs_array_resize_int(arr, size)
+            if r != 1:
+                return compat.c_int_int_dict_resize_failed_error
         for i in i32range(0, size):
             xs_array_set_int(arr, i, _decode_value(xs_array_get_vector(vec_arr, i)))
         return arr
 
-    def xs_int_int_dict_values(dct: int32 = int32(-1)) -> int32:
+    def xs_int_int_dict_values(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
         vec_arr: int32 = _vvd.xs_vector_vector_dict_values(dct)
         if vec_arr < 0:
             return vec_arr
         size: int32 = xs_array_get_size(vec_arr)
-        arr: int32 = xs_array_create_int(size, int32(0))
+        arr: int32 = out_arr
         if arr < 0:
-            return arr
+            arr = xs_array_create_int(size, int32(0))
+            if arr < 0:
+                return arr
+        else:
+            r: int32 = xs_array_resize_int(arr, size)
+            if r != 1:
+                return compat.c_int_int_dict_resize_failed_error
         for i in i32range(0, size):
             xs_array_set_int(arr, i, _decode_value(xs_array_get_vector(vec_arr, i)))
         return arr
@@ -271,6 +283,32 @@ class VectorVectorDictNativeTest(unittest.TestCase):
         self.assertEqual(2, xs_array_get_size(vals_arr))
         self.assertEqual([k1, k2], [xs_array_get_vector(keys_arr, int32(i)) for i in range(xs_array_get_size(keys_arr))])
         self.assertEqual([v1, v2], [xs_array_get_vector(vals_arr, int32(i)) for i in range(xs_array_get_size(vals_arr))])
+
+    def test_keys_returns_resize_error_for_wrong_type_output_array(self):
+        xs_dct = _vvd.xs_vector_vector_dict_create()
+        _vvd.xs_vector_vector_dict_put(xs_dct, vector(1.0, 2.0, 3.0), vector(10.0, 20.0, 30.0))
+        _vvd.xs_vector_vector_dict_put(xs_dct, vector(4.0, 5.0, 6.0), vector(40.0, 50.0, 60.0))
+        out_arr = xs_array_create_int(int32(2), int32(-7))
+
+        arr = _vvd.xs_vector_vector_dict_keys(xs_dct, out_arr)
+
+        self.assertEqual(_vvd.c_vector_vector_dict_resize_failed_error, arr)
+        self.assertEqual(2, xs_array_get_size(out_arr))
+        self.assertEqual(-7, xs_array_get_int(out_arr, int32(0)))
+        self.assertEqual(-7, xs_array_get_int(out_arr, int32(1)))
+
+    def test_values_returns_resize_error_for_wrong_type_output_array(self):
+        xs_dct = _vvd.xs_vector_vector_dict_create()
+        _vvd.xs_vector_vector_dict_put(xs_dct, vector(1.0, 2.0, 3.0), vector(10.0, 20.0, 30.0))
+        _vvd.xs_vector_vector_dict_put(xs_dct, vector(4.0, 5.0, 6.0), vector(40.0, 50.0, 60.0))
+        out_arr = xs_array_create_int(int32(2), int32(-7))
+
+        arr = _vvd.xs_vector_vector_dict_values(xs_dct, out_arr)
+
+        self.assertEqual(_vvd.c_vector_vector_dict_resize_failed_error, arr)
+        self.assertEqual(2, xs_array_get_size(out_arr))
+        self.assertEqual(-7, xs_array_get_int(out_arr, int32(0)))
+        self.assertEqual(-7, xs_array_get_int(out_arr, int32(1)))
 
     def test_to_string_mentions_vectors(self):
         xs_dct = _vvd.xs_vector_vector_dict_create()

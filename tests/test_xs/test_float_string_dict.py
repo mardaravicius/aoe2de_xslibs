@@ -6,7 +6,14 @@ from numpy import float32, int32
 
 import xs.float_string_dict as _fsd
 from xs.float_string_dict import *
-from xs_converter.functions import bit_cast_to_float, bit_cast_to_int, xs_array_get_float, xs_array_get_size, xs_array_get_string
+from xs_converter.functions import (
+    bit_cast_to_float,
+    bit_cast_to_int,
+    xs_array_create_float,
+    xs_array_get_float,
+    xs_array_get_size,
+    xs_array_get_string,
+)
 
 np.seterr(over="ignore")
 
@@ -132,6 +139,18 @@ class FloatStringDictTest(unittest.TestCase):
         keys_arr = xs_float_string_dict_keys(xs_dct)
         bits = {int(bit_cast_to_int(xs_array_get_float(keys_arr, int32(i)))) for i in range(xs_array_get_size(keys_arr))}
         self.assertEqual({0, int(_canonical_nan_bits())}, bits)
+
+    def test_keys_reuses_output_array(self):
+        xs_dct = xs_float_string_dict_create()
+        xs_float_string_dict_put(xs_dct, float32(1.25), "ten")
+        xs_float_string_dict_put(xs_dct, float32(2.5), "twenty")
+        out_arr = xs_array_create_float(int32(1), float32(-7.0))
+
+        arr = xs_float_string_dict_keys(xs_dct, out_arr)
+
+        self.assertEqual(out_arr, arr)
+        self.assertEqual(2, xs_array_get_size(arr))
+        self.assertEqual({1.25, 2.5}, {float(xs_array_get_float(arr, int32(i))) for i in range(xs_array_get_size(arr))})
 
     def test_put_if_absent_uses_normalized_keys(self):
         xs_dct = xs_float_string_dict_create()

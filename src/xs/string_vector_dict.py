@@ -455,7 +455,11 @@ def _xs_string_vector_dict_values_fill(dct: int32 = int32(-1), node: int32 = int
     if node < 0:
         return idx
     idx = _xs_string_vector_dict_values_fill(dct, _xs_string_vector_dict_get_left(dct, node), arr, idx)
-    xs_array_set_vector(arr, idx, _xs_string_vector_dict_get_stored_value(dct, node))
+    if idx < 0:
+        return idx
+    r: int32 = xs_array_set_vector(arr, idx, _xs_string_vector_dict_get_stored_value(dct, node))
+    if r != 1:
+        return c_string_vector_dict_resize_failed_error
     idx += 1
     return _xs_string_vector_dict_values_fill(dct, _xs_string_vector_dict_get_right(dct, node), arr, idx)
 
@@ -787,27 +791,41 @@ def xs_string_vector_dict_put_if_absent(dct: int32 = int32(-1), key: str = "",
     return c_string_vector_dict_generic_error_vector
 
 
-def xs_string_vector_dict_keys(dct: int32 = int32(-1)) -> int32:
+def xs_string_vector_dict_keys(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
     """
     Returns a new string array containing all keys in the dict. Order is lexicographic.
     """
     size: int32 = xs_array_get_int(dct, 0)
-    arr: int32 = xs_array_create_string(size)
+    arr: int32 = out_arr
     if arr < 0:
-        return c_string_vector_dict_resize_failed_error
+        arr = xs_array_create_string(size)
+        if arr < 0:
+            return c_string_vector_dict_resize_failed_error
+    else:
+        r: int32 = xs_array_resize_string(arr, size)
+        if r != 1:
+            return c_string_vector_dict_resize_failed_error
     _xs_string_vector_dict_keys_fill(dct, _xs_string_vector_dict_get_root(dct), arr)
     return arr
 
 
-def xs_string_vector_dict_values(dct: int32 = int32(-1)) -> int32:
+def xs_string_vector_dict_values(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
     """
     Returns a new vector array containing all values in the dict. Order matches `xs_string_vector_dict_keys`.
     """
     size: int32 = xs_array_get_int(dct, 0)
-    arr: int32 = xs_array_create_vector(size, vector(0.0, 0.0, 0.0))
+    arr: int32 = out_arr
     if arr < 0:
+        arr = xs_array_create_vector(size, vector(0.0, 0.0, 0.0))
+        if arr < 0:
+            return c_string_vector_dict_resize_failed_error
+    else:
+        current_size: int32 = xs_array_get_size(arr)
+        if current_size != size:
+            return c_string_vector_dict_resize_failed_error
+    r: int32 = _xs_string_vector_dict_values_fill(dct, _xs_string_vector_dict_get_root(dct), arr)
+    if r < 0:
         return c_string_vector_dict_resize_failed_error
-    _xs_string_vector_dict_values_fill(dct, _xs_string_vector_dict_get_root(dct), arr)
     return arr
 
 

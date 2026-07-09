@@ -13,6 +13,7 @@ from xs_converter.functions import (
     xs_array_get_int,
     xs_array_get_size,
     xs_array_get_string,
+    xs_array_resize_int,
     xs_array_set_int,
 )
 from xs_converter.symbols import i32range
@@ -116,20 +117,26 @@ def _build_compat_module() -> types.ModuleType:
         _sync_constants()
         return _sid.xs_string_int_dict_put_if_absent(dct, _encode_key(key), val)
 
-    def xs_int_int_dict_keys(dct: int32 = int32(-1)) -> int32:
+    def xs_int_int_dict_keys(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
         str_arr: int32 = _sid.xs_string_int_dict_keys(dct)
         if str_arr < 0:
             return str_arr
         size: int32 = xs_array_get_size(str_arr)
-        arr: int32 = xs_array_create_int(size, int32(0))
+        arr: int32 = out_arr
         if arr < 0:
-            return arr
+            arr = xs_array_create_int(size, int32(0))
+            if arr < 0:
+                return arr
+        else:
+            r: int32 = xs_array_resize_int(arr, size)
+            if r != 1:
+                return compat.c_int_int_dict_resize_failed_error
         for i in i32range(0, size):
             xs_array_set_int(arr, i, _decode_key(xs_array_get_string(str_arr, i)))
         return arr
 
-    def xs_int_int_dict_values(dct: int32 = int32(-1)) -> int32:
-        return _sid.xs_string_int_dict_values(dct)
+    def xs_int_int_dict_values(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
+        return _sid.xs_string_int_dict_values(dct, out_arr)
 
     def xs_int_int_dict_equals(a: int32 = int32(-1), b: int32 = int32(-1)) -> bool:
         return _sid.xs_string_int_dict_equals(a, b)

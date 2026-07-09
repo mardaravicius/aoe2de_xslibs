@@ -575,11 +575,19 @@ string xsFloatStringDictPutIfAbsent(int dct = -1, float key = 0.0, string val = 
     Keys are returned in canonical form, so `-0.0` becomes `0.0` and all NaN keys become the same NaN value.
     @return array id, or `cFloatStringDictResizeFailedError` on allocation failure
 */
-int xsFloatStringDictKeys(int dct = -1) {
+int xsFloatStringDictKeys(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
-    int arr = xsArrayCreateFloat(size, 0.0);
+    int arr = outArr;
     if (arr < 0) {
-        return (cFloatStringDictResizeFailedError);
+        arr = xsArrayCreateFloat(size, 0.0);
+        if (arr < 0) {
+            return (cFloatStringDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeFloat(arr, size);
+        if (r != 1) {
+            return (cFloatStringDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;
@@ -597,11 +605,19 @@ int xsFloatStringDictKeys(int dct = -1) {
     Returns a string array containing all values in the same order as `xsFloatStringDictKeys`.
     @return array id, or `cFloatStringDictResizeFailedError` on allocation failure
 */
-int xsFloatStringDictValues(int dct = -1) {
+int xsFloatStringDictValues(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
-    int arr = xsArrayCreateString(size);
+    int arr = outArr;
     if (arr < 0) {
-        return (cFloatStringDictResizeFailedError);
+        arr = xsArrayCreateString(size);
+        if (arr < 0) {
+            return (cFloatStringDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeString(arr, size);
+        if (r != 1) {
+            return (cFloatStringDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;

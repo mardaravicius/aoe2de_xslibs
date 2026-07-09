@@ -735,11 +735,19 @@ string xsStringStringDictPutIfAbsent(int dct = -1, string key = "", string val =
 /*
     Returns a new string array containing all keys in the dict. Order is lexicographic.
 */
-int xsStringStringDictKeys(int dct = -1) {
+int xsStringStringDictKeys(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
-    int arr = xsArrayCreateString(size);
+    int arr = outArr;
     if (arr < 0) {
-        return (cStringStringDictResizeFailedError);
+        arr = xsArrayCreateString(size);
+        if (arr < 0) {
+            return (cStringStringDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeString(arr, size);
+        if (r != 1) {
+            return (cStringStringDictResizeFailedError);
+        }
     }
     _xsStringStringDictKeysFill(dct, _xsStringStringDictGetRoot(dct), arr);
     return (arr);
@@ -748,11 +756,19 @@ int xsStringStringDictKeys(int dct = -1) {
 /*
     Returns a new string array containing all values in the dict. Order matches `xsStringStringDictKeys`.
 */
-int xsStringStringDictValues(int dct = -1) {
+int xsStringStringDictValues(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
-    int arr = xsArrayCreateString(size);
+    int arr = outArr;
     if (arr < 0) {
-        return (cStringStringDictResizeFailedError);
+        arr = xsArrayCreateString(size);
+        if (arr < 0) {
+            return (cStringStringDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeString(arr, size);
+        if (r != 1) {
+            return (cStringStringDictResizeFailedError);
+        }
     }
     _xsStringStringDictValuesFill(dct, _xsStringStringDictGetRoot(dct), arr);
     return (arr);

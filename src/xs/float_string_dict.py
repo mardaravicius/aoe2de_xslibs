@@ -9,6 +9,7 @@ from xs_converter.functions import (
     xs_array_get_int,
     xs_array_get_size,
     xs_array_get_string,
+    xs_array_resize_float,
     xs_array_resize_int,
     xs_array_resize_string,
     xs_array_set_float,
@@ -554,16 +555,22 @@ def xs_float_string_dict_put_if_absent(dct: int32 = int32(-1), key: float32 = fl
     return result
 
 
-def xs_float_string_dict_keys(dct: int32 = int32(-1)) -> int32:
+def xs_float_string_dict_keys(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
     """
     Returns a float array containing all keys in iteration order.
     Keys are returned in canonical form, so `-0.0` becomes `0.0` and all NaN keys become the same NaN value.
     :return: array id, or `c_float_string_dict_resize_failed_error` on allocation failure
     """
     size: int32 = xs_array_get_int(dct, 0)
-    arr: int32 = xs_array_create_float(size, float32(0.0))
+    arr: int32 = out_arr
     if arr < 0:
-        return c_float_string_dict_resize_failed_error
+        arr = xs_array_create_float(size, float32(0.0))
+        if arr < 0:
+            return c_float_string_dict_resize_failed_error
+    else:
+        r: int32 = xs_array_resize_float(arr, size)
+        if r != 1:
+            return c_float_string_dict_resize_failed_error
     capacity: int32 = xs_array_get_size(dct)
     idx: int32 = int32(0)
     for i in i32range(2, capacity):
@@ -574,15 +581,21 @@ def xs_float_string_dict_keys(dct: int32 = int32(-1)) -> int32:
     return arr
 
 
-def xs_float_string_dict_values(dct: int32 = int32(-1)) -> int32:
+def xs_float_string_dict_values(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
     """
     Returns a string array containing all values in the same order as `xs_float_string_dict_keys`.
     :return: array id, or `c_float_string_dict_resize_failed_error` on allocation failure
     """
     size: int32 = xs_array_get_int(dct, 0)
-    arr: int32 = xs_array_create_string(size)
+    arr: int32 = out_arr
     if arr < 0:
-        return c_float_string_dict_resize_failed_error
+        arr = xs_array_create_string(size)
+        if arr < 0:
+            return c_float_string_dict_resize_failed_error
+    else:
+        r: int32 = xs_array_resize_string(arr, size)
+        if r != 1:
+            return c_float_string_dict_resize_failed_error
     capacity: int32 = xs_array_get_size(dct)
     idx: int32 = int32(0)
     for i in i32range(2, capacity):

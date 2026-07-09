@@ -519,11 +519,19 @@ vector xsIntVectorDictPutIfAbsent(int dct = -1, int key = -1, vector val = vecto
 /*
     Returns a new int array containing all keys in the dict. Order is arbitrary.
 */
-int xsIntVectorDictKeys(int dct = -1) {
+int xsIntVectorDictKeys(int dct = -1, int outArr = -1) {
     int size = _xsIntVectorDictGetSize(dct);
-    int arr = xsArrayCreateInt(size, 0);
+    int arr = outArr;
     if (arr < 0) {
-        return (cIntVectorDictResizeFailedError);
+        arr = xsArrayCreateInt(size, 0);
+        if (arr < 0) {
+            return (cIntVectorDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeInt(arr, size);
+        if (r != 1) {
+            return (cIntVectorDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;
@@ -542,11 +550,19 @@ int xsIntVectorDictKeys(int dct = -1) {
 /*
     Returns a new vector array containing all values in the dict. Order matches `xsIntVectorDictKeys`.
 */
-int xsIntVectorDictValues(int dct = -1) {
+int xsIntVectorDictValues(int dct = -1, int outArr = -1) {
     int size = _xsIntVectorDictGetSize(dct);
-    int arr = xsArrayCreateVector(size, vector(0.0, 0.0, 0.0));
+    int arr = outArr;
     if (arr < 0) {
-        return (cIntVectorDictResizeFailedError);
+        arr = xsArrayCreateVector(size, vector(0.0, 0.0, 0.0));
+        if (arr < 0) {
+            return (cIntVectorDictResizeFailedError);
+        }
+    } else {
+        int currentSize = xsArrayGetSize(arr);
+        if (currentSize != size) {
+            return (cIntVectorDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;
@@ -554,7 +570,10 @@ int xsIntVectorDictValues(int dct = -1) {
     while (i < capacity) {
         int storedKey = _xsIntVectorDictGetStoredKey(dct, i);
         if (storedKey != cIntVectorDictEmptyKey) {
-            xsArraySetVector(arr, idx, _xsIntVectorDictGetStoredValue(dct, i));
+            int r = xsArraySetVector(arr, idx, _xsIntVectorDictGetStoredValue(dct, i));
+            if (r != 1) {
+                return (cIntVectorDictResizeFailedError);
+            }
             idx++;
         }
         i = i + 4;

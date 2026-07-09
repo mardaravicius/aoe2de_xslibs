@@ -736,26 +736,38 @@ def xs_string_string_dict_put_if_absent(dct: int32 = int32(-1), key: str = "",
     return "-1"
 
 
-def xs_string_string_dict_keys(dct: int32 = int32(-1)) -> int32:
+def xs_string_string_dict_keys(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
     """
     Returns a new string array containing all keys in the dict. Order is lexicographic.
     """
     size: int32 = xs_array_get_int(dct, 0)
-    arr: int32 = xs_array_create_string(size)
+    arr: int32 = out_arr
     if arr < 0:
-        return c_string_string_dict_resize_failed_error
+        arr = xs_array_create_string(size)
+        if arr < 0:
+            return c_string_string_dict_resize_failed_error
+    else:
+        r: int32 = xs_array_resize_string(arr, size)
+        if r != 1:
+            return c_string_string_dict_resize_failed_error
     _xs_string_string_dict_keys_fill(dct, _xs_string_string_dict_get_root(dct), arr)
     return arr
 
 
-def xs_string_string_dict_values(dct: int32 = int32(-1)) -> int32:
+def xs_string_string_dict_values(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
     """
     Returns a new string array containing all values in the dict. Order matches `xs_string_string_dict_keys`.
     """
     size: int32 = xs_array_get_int(dct, 0)
-    arr: int32 = xs_array_create_string(size)
+    arr: int32 = out_arr
     if arr < 0:
-        return c_string_string_dict_resize_failed_error
+        arr = xs_array_create_string(size)
+        if arr < 0:
+            return c_string_string_dict_resize_failed_error
+    else:
+        r: int32 = xs_array_resize_string(arr, size)
+        if r != 1:
+            return c_string_string_dict_resize_failed_error
     _xs_string_string_dict_values_fill(dct, _xs_string_string_dict_get_root(dct), arr)
     return arr
 

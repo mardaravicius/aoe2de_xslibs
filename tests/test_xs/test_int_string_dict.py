@@ -9,7 +9,7 @@ from numpy import int32
 
 import xs.int_string_dict as _isd
 from xs_converter.functions import xs_array_create_int, xs_array_get_int, xs_array_get_size, xs_array_get_string, \
-    xs_array_set_int
+    xs_array_resize_int, xs_array_set_int
 from xs_converter.symbols import i32range
 
 np.seterr(over="ignore")
@@ -112,17 +112,23 @@ def _build_compat_module() -> types.ModuleType:
             return _decode_value(result)
         return compat.c_int_int_dict_generic_error
 
-    def xs_int_int_dict_keys(dct: int32 = int32(-1)) -> int32:
-        return _isd.xs_int_string_dict_keys(dct)
+    def xs_int_int_dict_keys(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
+        return _isd.xs_int_string_dict_keys(dct, out_arr)
 
-    def xs_int_int_dict_values(dct: int32 = int32(-1)) -> int32:
+    def xs_int_int_dict_values(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
         str_arr: int32 = _isd.xs_int_string_dict_values(dct)
         if str_arr < 0:
             return str_arr
         size: int32 = xs_array_get_size(str_arr)
-        arr: int32 = xs_array_create_int(size, int32(0))
+        arr: int32 = out_arr
         if arr < 0:
-            return arr
+            arr = xs_array_create_int(size, int32(0))
+            if arr < 0:
+                return arr
+        else:
+            r: int32 = xs_array_resize_int(arr, size)
+            if r != 1:
+                return compat.c_int_int_dict_resize_failed_error
         for i in i32range(0, size):
             xs_array_set_int(arr, i, _decode_value(xs_array_get_string(str_arr, i)))
         return arr

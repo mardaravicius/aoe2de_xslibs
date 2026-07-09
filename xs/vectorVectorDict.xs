@@ -548,11 +548,19 @@ vector xsVectorVectorDictPutIfAbsent(int dct = -1, vector key = vector(0.0, 0.0,
 /*
     Returns a new vector array containing all keys in the dict. Order is arbitrary.
 */
-int xsVectorVectorDictKeys(int dct = -1) {
+int xsVectorVectorDictKeys(int dct = -1, int outArr = -1) {
     int size = _xsVectorVectorDictGetSize(dct);
-    int arr = xsArrayCreateVector(size, vector(0.0, 0.0, 0.0));
+    int arr = outArr;
     if (arr < 0) {
-        return (cVectorVectorDictResizeFailedError);
+        arr = xsArrayCreateVector(size, vector(0.0, 0.0, 0.0));
+        if (arr < 0) {
+            return (cVectorVectorDictResizeFailedError);
+        }
+    } else {
+        int currentSize = xsArrayGetSize(arr);
+        if (currentSize != size) {
+            return (cVectorVectorDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;
@@ -560,7 +568,10 @@ int xsVectorVectorDictKeys(int dct = -1) {
     while (i < capacity) {
         vector storedKey = _xsVectorVectorDictGetStoredKey(dct, i);
         if (storedKey != cVectorVectorDictEmptyKey) {
-            xsArraySetVector(arr, idx, storedKey);
+            int r = xsArraySetVector(arr, idx, storedKey);
+            if (r != 1) {
+                return (cVectorVectorDictResizeFailedError);
+            }
             idx++;
         }
         i = i + 6;
@@ -571,11 +582,19 @@ int xsVectorVectorDictKeys(int dct = -1) {
 /*
     Returns a new vector array containing all values in the dict. Order matches `xsVectorVectorDictKeys`.
 */
-int xsVectorVectorDictValues(int dct = -1) {
+int xsVectorVectorDictValues(int dct = -1, int outArr = -1) {
     int size = _xsVectorVectorDictGetSize(dct);
-    int arr = xsArrayCreateVector(size, vector(0.0, 0.0, 0.0));
+    int arr = outArr;
     if (arr < 0) {
-        return (cVectorVectorDictResizeFailedError);
+        arr = xsArrayCreateVector(size, vector(0.0, 0.0, 0.0));
+        if (arr < 0) {
+            return (cVectorVectorDictResizeFailedError);
+        }
+    } else {
+        int currentSize = xsArrayGetSize(arr);
+        if (currentSize != size) {
+            return (cVectorVectorDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;
@@ -583,7 +602,10 @@ int xsVectorVectorDictValues(int dct = -1) {
     while (i < capacity) {
         vector storedKey = _xsVectorVectorDictGetStoredKey(dct, i);
         if (storedKey != cVectorVectorDictEmptyKey) {
-            xsArraySetVector(arr, idx, _xsVectorVectorDictGetStoredValue(dct, i));
+            int r = xsArraySetVector(arr, idx, _xsVectorVectorDictGetStoredValue(dct, i));
+            if (r != 1) {
+                return (cVectorVectorDictResizeFailedError);
+            }
             idx++;
         }
         i = i + 6;

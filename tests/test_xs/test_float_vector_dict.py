@@ -6,7 +6,8 @@ from numpy import float32, int32
 
 import xs.float_vector_dict as _fvd
 from xs.float_vector_dict import *
-from xs_converter.functions import bit_cast_to_float, bit_cast_to_int, vector, xs_array_get_float, xs_array_get_size, xs_array_get_vector
+from xs_converter.functions import bit_cast_to_float, bit_cast_to_int, vector, xs_array_create_int, xs_array_get_float, \
+    xs_array_get_int, xs_array_get_size, xs_array_get_vector
 
 np.seterr(over="ignore")
 
@@ -124,6 +125,19 @@ class FloatVectorDictTest(unittest.TestCase):
         for i in range(xs_array_get_size(keys_arr)):
             reconstructed[_canonical_bits(xs_array_get_float(keys_arr, int32(i)))] = xs_array_get_vector(vals_arr, int32(i))
         self.assertEqual(expected, reconstructed)
+
+    def test_values_returns_resize_error_for_wrong_type_output_array(self):
+        xs_dct = xs_float_vector_dict_create()
+        xs_float_vector_dict_put(xs_dct, float32(1.5), _vec(1))
+        xs_float_vector_dict_put(xs_dct, float32(2.5), _vec(2))
+        out_arr = xs_array_create_int(int32(2), int32(-7))
+
+        arr = xs_float_vector_dict_values(xs_dct, out_arr)
+
+        self.assertEqual(c_float_vector_dict_resize_failed_error, arr)
+        self.assertEqual(2, xs_array_get_size(out_arr))
+        self.assertEqual(-7, xs_array_get_int(out_arr, int32(0)))
+        self.assertEqual(-7, xs_array_get_int(out_arr, int32(1)))
 
     def test_keys_array_uses_canonical_zero_and_nan(self):
         xs_dct = xs_float_vector_dict_create()

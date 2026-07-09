@@ -542,11 +542,19 @@ int xsFloatIntDictPutIfAbsent(int dct = -1, float key = 0.0, int val = 0) {
     Keys are returned in canonical form, so `-0.0` becomes `0.0` and all NaN keys become the same NaN value.
     @return array id, or `cFloatIntDictResizeFailedError` on allocation failure
 */
-int xsFloatIntDictKeys(int dct = -1) {
+int xsFloatIntDictKeys(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
-    int arr = xsArrayCreateFloat(size, 0.0);
+    int arr = outArr;
     if (arr < 0) {
-        return (cFloatIntDictResizeFailedError);
+        arr = xsArrayCreateFloat(size, 0.0);
+        if (arr < 0) {
+            return (cFloatIntDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeFloat(arr, size);
+        if (r != 1) {
+            return (cFloatIntDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;
@@ -566,11 +574,19 @@ int xsFloatIntDictKeys(int dct = -1) {
     Returns an int array containing all values in the same order as `xsFloatIntDictKeys`.
     @return array id, or `cFloatIntDictResizeFailedError` on allocation failure
 */
-int xsFloatIntDictValues(int dct = -1) {
+int xsFloatIntDictValues(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
-    int arr = xsArrayCreateInt(size, 0);
+    int arr = outArr;
     if (arr < 0) {
-        return (cFloatIntDictResizeFailedError);
+        arr = xsArrayCreateInt(size, 0);
+        if (arr < 0) {
+            return (cFloatIntDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeInt(arr, size);
+        if (r != 1) {
+            return (cFloatIntDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;

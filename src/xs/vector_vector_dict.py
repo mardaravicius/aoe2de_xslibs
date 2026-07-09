@@ -526,38 +526,54 @@ def xs_vector_vector_dict_put_if_absent(dct: int32 = int32(-1), key: XsVector = 
     return result
 
 
-def xs_vector_vector_dict_keys(dct: int32 = int32(-1)) -> int32:
+def xs_vector_vector_dict_keys(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
     """
     Returns a new vector array containing all keys in the dict. Order is arbitrary.
     """
     size: int32 = _xs_vector_vector_dict_get_size(dct)
-    arr: int32 = xs_array_create_vector(size, vector(0.0, 0.0, 0.0))
+    arr: int32 = out_arr
     if arr < 0:
-        return c_vector_vector_dict_resize_failed_error
+        arr = xs_array_create_vector(size, vector(0.0, 0.0, 0.0))
+        if arr < 0:
+            return c_vector_vector_dict_resize_failed_error
+    else:
+        current_size: int32 = xs_array_get_size(arr)
+        if current_size != size:
+            return c_vector_vector_dict_resize_failed_error
     capacity: int32 = xs_array_get_size(dct)
     idx: int32 = int32(0)
     for i in i32range(1, capacity, 6):
         stored_key: XsVector = _xs_vector_vector_dict_get_stored_key(dct, i)
         if stored_key != c_vector_vector_dict_empty_key:
-            xs_array_set_vector(arr, idx, stored_key)
+            r: int32 = xs_array_set_vector(arr, idx, stored_key)
+            if r != 1:
+                return c_vector_vector_dict_resize_failed_error
             idx += 1
     return arr
 
 
-def xs_vector_vector_dict_values(dct: int32 = int32(-1)) -> int32:
+def xs_vector_vector_dict_values(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
     """
     Returns a new vector array containing all values in the dict. Order matches `xs_vector_vector_dict_keys`.
     """
     size: int32 = _xs_vector_vector_dict_get_size(dct)
-    arr: int32 = xs_array_create_vector(size, vector(0.0, 0.0, 0.0))
+    arr: int32 = out_arr
     if arr < 0:
-        return c_vector_vector_dict_resize_failed_error
+        arr = xs_array_create_vector(size, vector(0.0, 0.0, 0.0))
+        if arr < 0:
+            return c_vector_vector_dict_resize_failed_error
+    else:
+        current_size: int32 = xs_array_get_size(arr)
+        if current_size != size:
+            return c_vector_vector_dict_resize_failed_error
     capacity: int32 = xs_array_get_size(dct)
     idx: int32 = int32(0)
     for i in i32range(1, capacity, 6):
         stored_key: XsVector = _xs_vector_vector_dict_get_stored_key(dct, i)
         if stored_key != c_vector_vector_dict_empty_key:
-            xs_array_set_vector(arr, idx, _xs_vector_vector_dict_get_stored_value(dct, i))
+            r: int32 = xs_array_set_vector(arr, idx, _xs_vector_vector_dict_get_stored_value(dct, i))
+            if r != 1:
+                return c_vector_vector_dict_resize_failed_error
             idx += 1
     return arr
 

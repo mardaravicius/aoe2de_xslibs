@@ -545,11 +545,19 @@ int xsIntIntDictPutIfAbsent(int dct = -1, int key = -1, int val = 0) {
     @param dct - dict id
     @return array id, or `cIntIntDictResizeFailedError` on allocation failure
 */
-int xsIntIntDictKeys(int dct = -1) {
+int xsIntIntDictKeys(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
-    int arr = xsArrayCreateInt(size, 0);
+    int arr = outArr;
     if (arr < 0) {
-        return (cIntIntDictResizeFailedError);
+        arr = xsArrayCreateInt(size, 0);
+        if (arr < 0) {
+            return (cIntIntDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeInt(arr, size);
+        if (r != 1) {
+            return (cIntIntDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;
@@ -570,11 +578,19 @@ int xsIntIntDictKeys(int dct = -1) {
     @param dct - dict id
     @return array id, or `cIntIntDictResizeFailedError` on allocation failure
 */
-int xsIntIntDictValues(int dct = -1) {
+int xsIntIntDictValues(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
-    int arr = xsArrayCreateInt(size, 0);
+    int arr = outArr;
     if (arr < 0) {
-        return (cIntIntDictResizeFailedError);
+        arr = xsArrayCreateInt(size, 0);
+        if (arr < 0) {
+            return (cIntIntDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeInt(arr, size);
+        if (r != 1) {
+            return (cIntIntDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;

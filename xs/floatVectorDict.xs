@@ -566,11 +566,19 @@ vector xsFloatVectorDictPutIfAbsent(int dct = -1, float key = 0.0, vector val = 
     Keys are returned in canonical form, so `-0.0` becomes `0.0` and all NaN keys become the same NaN value.
     @return array id, or `cFloatVectorDictResizeFailedError` on allocation failure
 */
-int xsFloatVectorDictKeys(int dct = -1) {
+int xsFloatVectorDictKeys(int dct = -1, int outArr = -1) {
     int size = _xsFloatVectorDictGetSize(dct);
-    int arr = xsArrayCreateFloat(size, 0.0);
+    int arr = outArr;
     if (arr < 0) {
-        return (cFloatVectorDictResizeFailedError);
+        arr = xsArrayCreateFloat(size, 0.0);
+        if (arr < 0) {
+            return (cFloatVectorDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeFloat(arr, size);
+        if (r != 1) {
+            return (cFloatVectorDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;
@@ -590,11 +598,19 @@ int xsFloatVectorDictKeys(int dct = -1) {
     Returns a vector array containing all values in the same order as `xsFloatVectorDictKeys`.
     @return array id, or `cFloatVectorDictResizeFailedError` on allocation failure
 */
-int xsFloatVectorDictValues(int dct = -1) {
+int xsFloatVectorDictValues(int dct = -1, int outArr = -1) {
     int size = _xsFloatVectorDictGetSize(dct);
-    int arr = xsArrayCreateVector(size, vector(0.0, 0.0, 0.0));
+    int arr = outArr;
     if (arr < 0) {
-        return (cFloatVectorDictResizeFailedError);
+        arr = xsArrayCreateVector(size, vector(0.0, 0.0, 0.0));
+        if (arr < 0) {
+            return (cFloatVectorDictResizeFailedError);
+        }
+    } else {
+        int currentSize = xsArrayGetSize(arr);
+        if (currentSize != size) {
+            return (cFloatVectorDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;
@@ -602,7 +618,10 @@ int xsFloatVectorDictValues(int dct = -1) {
     while (i < capacity) {
         float storedKey = _xsFloatVectorDictGetStoredKey(dct, i);
         if (storedKey != cFloatVectorDictEmptyKey) {
-            xsArraySetVector(arr, idx, _xsFloatVectorDictGetStoredValue(dct, i));
+            int r = xsArraySetVector(arr, idx, _xsFloatVectorDictGetStoredValue(dct, i));
+            if (r != 1) {
+                return (cFloatVectorDictResizeFailedError);
+            }
             idx++;
         }
         i = i + 4;

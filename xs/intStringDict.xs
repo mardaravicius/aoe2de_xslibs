@@ -538,11 +538,19 @@ string xsIntStringDictPutIfAbsent(int dct = -1, int key = -1, string val = "") {
 /*
     Returns a new int array containing all keys in the dict. Order is arbitrary.
 */
-int xsIntStringDictKeys(int dct = -1) {
+int xsIntStringDictKeys(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
-    int arr = xsArrayCreateInt(size, 0);
+    int arr = outArr;
     if (arr < 0) {
-        return (cIntStringDictResizeFailedError);
+        arr = xsArrayCreateInt(size, 0);
+        if (arr < 0) {
+            return (cIntStringDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeInt(arr, size);
+        if (r != 1) {
+            return (cIntStringDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;
@@ -560,11 +568,19 @@ int xsIntStringDictKeys(int dct = -1) {
     Returns a new string array containing all values in the dict. Order matches
     `xsIntStringDictKeys`.
 */
-int xsIntStringDictValues(int dct = -1) {
+int xsIntStringDictValues(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
-    int arr = xsArrayCreateString(size);
+    int arr = outArr;
     if (arr < 0) {
-        return (cIntStringDictResizeFailedError);
+        arr = xsArrayCreateString(size);
+        if (arr < 0) {
+            return (cIntStringDictResizeFailedError);
+        }
+    } else {
+        int r = xsArrayResizeString(arr, size);
+        if (r != 1) {
+            return (cIntStringDictResizeFailedError);
+        }
     }
     int capacity = xsArrayGetSize(dct);
     int idx = 0;

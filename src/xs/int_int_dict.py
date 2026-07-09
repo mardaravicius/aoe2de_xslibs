@@ -503,16 +503,22 @@ def xs_int_int_dict_put_if_absent(dct: int32 = int32(-1), key: int32 = int32(-1)
     return result
 
 
-def xs_int_int_dict_keys(dct: int32 = int32(-1)) -> int32:
+def xs_int_int_dict_keys(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
     """
     Returns a new int array containing all keys in the dict. Order is arbitrary.
     :param dct: dict id
     :return: array id, or `c_int_int_dict_resize_failed_error` on allocation failure
     """
     size: int32 = xs_array_get_int(dct, 0)
-    arr: int32 = xs_array_create_int(size, 0)
+    arr: int32 = out_arr
     if arr < 0:
-        return c_int_int_dict_resize_failed_error
+        arr = xs_array_create_int(size, 0)
+        if arr < 0:
+            return c_int_int_dict_resize_failed_error
+    else:
+        r: int32 = xs_array_resize_int(arr, size)
+        if r != 1:
+            return c_int_int_dict_resize_failed_error
     capacity: int32 = xs_array_get_size(dct)
     idx: int32 = int32(0)
     for i in i32range(1, capacity, 2):
@@ -523,16 +529,22 @@ def xs_int_int_dict_keys(dct: int32 = int32(-1)) -> int32:
     return arr
 
 
-def xs_int_int_dict_values(dct: int32 = int32(-1)) -> int32:
+def xs_int_int_dict_values(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
     """
     Returns a new int array containing all values in the dict. Order matches `xs_int_int_dict_keys`.
     :param dct: dict id
     :return: array id, or `c_int_int_dict_resize_failed_error` on allocation failure
     """
     size: int32 = xs_array_get_int(dct, 0)
-    arr: int32 = xs_array_create_int(size, 0)
+    arr: int32 = out_arr
     if arr < 0:
-        return c_int_int_dict_resize_failed_error
+        arr = xs_array_create_int(size, 0)
+        if arr < 0:
+            return c_int_int_dict_resize_failed_error
+    else:
+        r: int32 = xs_array_resize_int(arr, size)
+        if r != 1:
+            return c_int_int_dict_resize_failed_error
     capacity: int32 = xs_array_get_size(dct)
     idx: int32 = int32(0)
     for i in i32range(1, capacity, 2):

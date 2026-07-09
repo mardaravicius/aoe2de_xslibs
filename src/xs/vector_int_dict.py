@@ -3,7 +3,7 @@ from numpy import int32, float32
 from xs_converter.functions import xs_array_create_float, xs_array_set_float, xs_array_resize_float, \
     xs_array_get_float, xs_array_get_size, bit_cast_to_float, bit_cast_to_int, vector, xs_vector_get_x, \
     xs_vector_get_y, xs_vector_get_z, xs_vector_set, xs_array_create_vector, xs_array_set_vector, \
-    xs_array_create_int, xs_array_set_int
+    xs_array_create_int, xs_array_set_int, xs_array_resize_int
 from xs_converter.symbols import XsExternConst, i32range, XsVector
 
 c_vector_int_dict_success: XsExternConst[int32] = int32(0)
@@ -509,32 +509,46 @@ def xs_vector_int_dict_put_if_absent(dct: int32 = int32(-1), key: XsVector = vec
     return result
 
 
-def xs_vector_int_dict_keys(dct: int32 = int32(-1)) -> int32:
+def xs_vector_int_dict_keys(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
     """
     Returns a new vector array containing all keys in the dict. Order is arbitrary.
     """
     size: int32 = _xs_vector_int_dict_get_size(dct)
-    arr: int32 = xs_array_create_vector(size, vector(0.0, 0.0, 0.0))
+    arr: int32 = out_arr
     if arr < 0:
-        return c_vector_int_dict_resize_failed_error
+        arr = xs_array_create_vector(size, vector(0.0, 0.0, 0.0))
+        if arr < 0:
+            return c_vector_int_dict_resize_failed_error
+    else:
+        current_size: int32 = xs_array_get_size(arr)
+        if current_size != size:
+            return c_vector_int_dict_resize_failed_error
     capacity: int32 = xs_array_get_size(dct)
     idx: int32 = int32(0)
     for i in i32range(1, capacity, 4):
         stored_key: XsVector = _xs_vector_int_dict_get_stored_key(dct, i)
         if stored_key != c_vector_int_dict_empty_key:
-            xs_array_set_vector(arr, idx, stored_key)
+            r: int32 = xs_array_set_vector(arr, idx, stored_key)
+            if r != 1:
+                return c_vector_int_dict_resize_failed_error
             idx += 1
     return arr
 
 
-def xs_vector_int_dict_values(dct: int32 = int32(-1)) -> int32:
+def xs_vector_int_dict_values(dct: int32 = int32(-1), out_arr: int32 = int32(-1)) -> int32:
     """
     Returns a new int array containing all values in the dict. Order matches `xs_vector_int_dict_keys`.
     """
     size: int32 = _xs_vector_int_dict_get_size(dct)
-    arr: int32 = xs_array_create_int(size, 0)
+    arr: int32 = out_arr
     if arr < 0:
-        return c_vector_int_dict_resize_failed_error
+        arr = xs_array_create_int(size, 0)
+        if arr < 0:
+            return c_vector_int_dict_resize_failed_error
+    else:
+        r: int32 = xs_array_resize_int(arr, size)
+        if r != 1:
+            return c_vector_int_dict_resize_failed_error
     capacity: int32 = xs_array_get_size(dct)
     idx: int32 = int32(0)
     for i in i32range(1, capacity, 4):
