@@ -8,12 +8,14 @@ int _cMtUpperMask = -1;
 int _cMtLowerMask = -1;
 int _cMtA = -1;
 const int _cMtU = 11;
-const int _cMtS = 7;
-const int _cMtT = 15;
+const int _cMtSP = 128;
+const int _cMtTP = 32768;
 const int _cMtL = 18;
 int _cMtB = -1;
 const int _cMtC = -272236544;
 int _cMtF = -1;
+int _cMtIntMax = -1;
+int _cMtFloat1AsInt = -1;
 bool _mtSeedSet = false;
 int _mtStateArray = -1;
 int _mtStateIndex = 0;
@@ -67,6 +69,8 @@ void xsMtSeed(int seed = 0) {
         _cMtF = 181243325 * 10 + 3;
         _cMtNm = _cMtN - _cMtM;
         _mtStateArray = xsArrayCreateInt(_cMtN, 0, "_mtStateArray");
+        _cMtIntMax = 214748364 * 10 + 7;
+        _cMtFloat1AsInt = 106535321 * 10 + 6;
     }
     xsArraySetInt(_mtStateArray, 0, seed);
     int i = 1;
@@ -105,9 +109,18 @@ int xsMtRandom() {
     }
     _mtStateIndex = k;
     int y = bitXor(x, xsBitShiftRightLogical(x, _cMtU));
-    y = bitXor(y, bitAnd(xsBitShiftLeft(y, _cMtS), _cMtB));
-    y = bitXor(y, bitAnd(xsBitShiftLeft(y, _cMtT), _cMtC));
+    y = bitXor(y, bitAnd(y * _cMtSP, _cMtB));
+    y = bitXor(y, bitAnd(y * _cMtTP, _cMtC));
     return (bitXor(y, xsBitShiftRightLogical(y, _cMtL)));
+}
+
+float xsMtRandomFloat() {
+    int bits = bitOr(bitAnd(xsMtRandom(), _cMtIntMax) / 256, _cMtFloat1AsInt);
+    return (bitCastToFloat(bits) - 1.0);
+}
+
+bool xsMtRandomBool() {
+    return (xsMtRandom() > -1);
 }
 
 int xsMtRandomUniformRange(int start = 0, int end = 999999999) {

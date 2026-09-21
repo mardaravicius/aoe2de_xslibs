@@ -6,7 +6,6 @@ from pathlib import Path
 
 import numpy as np
 from numpy import uint32
-
 from xs.binary_functions import *
 
 np.seterr(over="ignore")
@@ -126,7 +125,7 @@ class FunctionsTest(unittest.TestCase):
         if os.name == "nt":
             c_dir = str(c_dir)
             c = str(c_dir).find(":")
-            c_dir = c_dir[:c-1] + c_dir[c-1:c].lower() + c_dir[c:]
+            c_dir = c_dir[:c - 1] + c_dir[c - 1:c].lower() + c_dir[c:]
             c_dir = "/mnt/" + c_dir.replace("\\", "/").replace(":", "")
             cpp_path = str(c_dir + "/mt.cpp")
             exec_path = str(c_dir + "/mt")
@@ -142,7 +141,8 @@ class FunctionsTest(unittest.TestCase):
         for _ in range(attempts):
             seed = int32(random.randint(-2147483648, 2147483647))
             if os.name == "nt":
-                result = subprocess.run(["wsl", "--exec", exec_path, str(seed), str(random_iterations)], stdout=subprocess.PIPE)
+                result = subprocess.run(["wsl", "--exec", exec_path, str(seed), str(random_iterations)],
+                                        stdout=subprocess.PIPE)
             else:
                 result = subprocess.run([exec_path, str(seed), str(random_iterations)], stdout=subprocess.PIPE)
             if result.returncode != 0:
@@ -154,3 +154,41 @@ class FunctionsTest(unittest.TestCase):
             for _ in range(random_iterations):
                 actual_results.append(xs_mt_random())
             self.assertEqual(actual_results, expected_results, f"{seed=}, {random_iterations=}")
+
+    def test_random_float(self):
+        seed = int32(random.randint(-2147483648, 2147483647))
+        xs_mt_seed(seed)
+
+        loops = 10000
+        add = True
+        r = float32(0.0)
+        for _ in range(loops):
+            f = xs_mt_random_float()
+            self.assertGreaterEqual(f, float32(0.0))
+            self.assertLess(f, float32(1.0))
+            if add:
+                r += f
+                add = False
+            else:
+                r -= f
+                add = True
+        r = abs(r)
+        self.assertLessEqual(r, float32(50.0))
+
+    def test_random_bool(self):
+        seed = int32(random.randint(-2147483648, 2147483647))
+        xs_mt_seed(seed)
+
+        loops = 10000
+        add = True
+        r = 0
+        for _ in range(loops):
+            b = xs_mt_random_bool()
+            if add:
+                r += 1 if b else 0
+                add = False
+            else:
+                r -= 1 if b else 0
+                add = True
+        r = abs(r)
+        self.assertLessEqual(r, 100)

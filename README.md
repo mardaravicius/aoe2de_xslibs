@@ -1483,14 +1483,16 @@ int unpackLow(int packed) {
 ## 22. Random Numbers
 
 `binaryFunctions.xs` also includes a Mersenne Twister (`MT19937`) pseudo-random number generator.
-Seed it once with `xsMtSeed`, then draw values with `xsMtRandom` or `xsMtRandomUniformRange`.
+Seed it once with `xsMtSeed`, then draw values with `xsMtRandom`, `xsMtRandomFloat`, `xsMtRandomBool` or `xsMtRandomUniformRange`.
 
 ### API
 
 ```cpp
-void xsMtSeed(int seed)
-int  xsMtRandom()
-int  xsMtRandomUniformRange(int start, int end)   // uniform int in [start, end)
+void  xsMtSeed(int seed)
+int   xsMtRandom()                                 // uniform int
+float xsMtRandomFloat()                            // uniform float in [0.0, 1.0)
+bool  xsMtRandomBool()                             // uniform bool
+int   xsMtRandomUniformRange(int start, int end)   // uniform int in [start, end)
 ```
 
 ### Example
