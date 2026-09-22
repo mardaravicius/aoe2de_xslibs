@@ -21,7 +21,7 @@ class FunctionsTest(unittest.TestCase):
             else:
                 b = int32(random.randint(-2147483648, 2147483647))
             expected = int32(a) >> int32(b)
-            actual = xs_bit_shift_right_arithmetic(int32(a), int32(b))
+            actual = bit_rsh(int32(a), int32(b))
             self.assertEqual(expected, actual, f"{a} >> {b}")
 
     def test_right_shift_arithmetic_edges(self):
@@ -29,7 +29,7 @@ class FunctionsTest(unittest.TestCase):
         for a in edges:
             for b in list(range(-32, 64)) + edges:
                 expected = int32(a) >> int32(b)
-                actual = xs_bit_shift_right_arithmetic(int32(a), int32(b))
+                actual = bit_rsh(int32(a), int32(b))
                 self.assertEqual(expected, actual, f"{a} >> {b}")
 
     def test_right_shift_logical(self):
@@ -59,7 +59,7 @@ class FunctionsTest(unittest.TestCase):
             else:
                 b = int32(random.randint(-2147483648, 2147483647))
             expected = int32(a) << int32(b)
-            actual = xs_bit_shift_left(int32(a), int32(b))
+            actual = bit_lsh(int32(a), int32(b))
             self.assertEqual(expected, actual, f"{a} << {b}")
 
     def test_left_shift_edges(self):
@@ -67,7 +67,7 @@ class FunctionsTest(unittest.TestCase):
         for a in edges:
             for b in list(range(-32, 64)) + edges:
                 expected = int32(a) << int32(b)
-                actual = xs_bit_shift_left(int32(a), int32(b))
+                actual = bit_lsh(int32(a), int32(b))
                 self.assertEqual(expected, actual, f"{a} << {b}")
 
     def test_random_uniform_in_range(self):

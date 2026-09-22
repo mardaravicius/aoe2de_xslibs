@@ -35,12 +35,9 @@ void main() {
 
     int roll = xsMtRandomUniformRange(1, 100);
 
-    int bitFlag = xsBitShiftLeft(1, 8);
-
     xsChatData("List: " + xsIntListToString(scores));
     xsChatData("Dict: " + xsIntIntDictToString(civUnits));
     xsChatData("Roll: " + roll);
-    xsChatData("Bit Flag: " + bitFlag);
 }
 ```
 
@@ -1454,30 +1451,12 @@ void remapTargets() {
 ## 21. Binary Operations
 
 `binaryFunctions.xs` provides software implementations of common 32-bit bitwise operations.
-Use these when you need flags, masking, shifting, or packed integer values in XS.
+Most are already implemented within xs itself, so it contains the only one not currently supported: the `>>>` equivalent `xsBitShiftRightLogical`. 
 
 ### API
 
 ```cpp
-int xsBitShiftLeft(int x, int n)
 int xsBitShiftRightLogical(int x, int n)
-int xsBitShiftRightArithmetic(int x, int n)
-```
-
-### Example
-
-```cpp
-int pack(int high, int low) {
-    return (bitOr(xsBitShiftLeft(high, 16), bitAnd(low, 65535)));
-}
-
-int unpackHigh(int packed) {
-    return (xsBitShiftRightArithmetic(packed, 16));
-}
-
-int unpackLow(int packed) {
-    return (bitAnd(packed, 65535));
-}
 ```
 
 ## 22. Random Numbers
@@ -1514,27 +1493,17 @@ The example below shows `Int List`, `IntIntDict`, bitwise flags, and the MT RNG 
 ```cpp
 include "intList.xs";
 include "intIntDict.xs";
-include "binaryFunctions.xs";
 
 void main() {
     int players = xsIntList(1, 2, 3, 4);
     int scoreByPlayer = xsIntIntDict();
-    int flagsByPlayer = xsIntIntDict();
-
-    int cFlagElite = xsBitShiftLeft(1, 0);
 
     int numPlayers = xsIntListSize(players);
     for (i = 0; < numPlayers) {
         int player = xsIntListGet(players, i);
         int score = 100 + xsMtRandomUniformRange(0, 76);
-        int flags = 0;
-
-        if (score >= 150) {
-            flags = bitOr(flags, cFlagElite);
-        }
 
         xsIntIntDictPut(scoreByPlayer, player, score);
-        xsIntIntDictPut(flagsByPlayer, player, flags);
     }
 
     xsIntListSort(players, false);
@@ -1542,7 +1511,6 @@ void main() {
     for (i = 0; < numPlayers) {
         int player = xsIntListGet(players, i);
         int score = xsIntIntDictGet(scoreByPlayer, player, 0);
-        int flags = xsIntIntDictGet(flagsByPlayer, player, 0);
 
         if (bitAnd(flags, cFlagElite) != 0) {
             xsChatData("Player " + player + " is elite with score " + score);
