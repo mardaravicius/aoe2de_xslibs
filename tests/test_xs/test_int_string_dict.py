@@ -215,6 +215,26 @@ class IntStringDictCompatibilityTest(_BASE_TESTS.IntIntDictTest):
         finally:
             _isd.c_int_string_dict_max_capacity = orig
 
+    def test_rehash_clamps_to_max_capacity_before_reporting_full(self):
+        orig = _isd.c_int_string_dict_max_capacity
+        _isd.c_int_string_dict_max_capacity = int32(26)
+        try:
+            xs_dct = _isd.xs_int_string_dict_create()
+            expected = {}
+            for key in range(18):
+                _isd.xs_int_string_dict_put(xs_dct, int32(key), _encode_value(int32(key)))
+                expected[key] = key
+                self.assertEqual(_isd.c_int_string_dict_no_key_error, _isd.xs_int_string_dict_last_error())
+            self.assertEqual(26, xs_array_get_size(xs_dct))
+            self.assertEqual(
+                "-1",
+                _isd.xs_int_string_dict_put(xs_dct, int32(18), _encode_value(int32(18))),
+            )
+            self.assertEqual(_isd.c_int_string_dict_max_capacity_error, _isd.xs_int_string_dict_last_error())
+            self._assert_dicts_equal(xs_dct, expected)
+        finally:
+            _isd.c_int_string_dict_max_capacity = orig
+
     def test_put_if_absent_past_max_capacity_preserves_existing_entries(self):
         orig = _isd.c_int_string_dict_max_capacity
         _isd.c_int_string_dict_max_capacity = int32(18)

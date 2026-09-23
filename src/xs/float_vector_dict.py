@@ -201,6 +201,8 @@ def _xs_float_vector_dict_rehash_if_needed(dct: int32 = int32(-1), size: int32 =
         store_status: int32 = _float_vector_dict_last_operation_status
         new_capacity: int32 = (capacity - 1) * 2 + 1
         if new_capacity > c_float_vector_dict_max_capacity:
+            new_capacity = c_float_vector_dict_max_capacity
+        if new_capacity <= capacity:
             _float_vector_dict_last_operation_status = c_float_vector_dict_max_capacity_error
             return c_float_vector_dict_generic_error
         temp_data_size: int32 = _xs_float_vector_dict_move_to_temp_array(dct, size, capacity)

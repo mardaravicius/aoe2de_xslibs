@@ -156,6 +156,9 @@ int _xsFloatIntDictRehashIfNeeded(int dct = -1, int size = 0, int capacity = 0, 
         int storeStatus = _floatIntDictLastOperationStatus;
         int newCapacity = ((capacity - 1) * 2) + 1;
         if (newCapacity > cFloatIntDictMaxCapacity) {
+            newCapacity = cFloatIntDictMaxCapacity;
+        }
+        if (newCapacity <= capacity) {
             _floatIntDictLastOperationStatus = cFloatIntDictMaxCapacityError;
             return (cFloatIntDictGenericError);
         }

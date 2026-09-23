@@ -284,6 +284,26 @@ class FloatIntDictTest(unittest.TestCase):
         finally:
             _fid.c_float_int_dict_max_capacity = orig
 
+    def test_rehash_clamps_to_max_capacity_before_reporting_full(self):
+        orig = _fid.c_float_int_dict_max_capacity
+        _fid.c_float_int_dict_max_capacity = int32(49)
+        try:
+            xs_dct = xs_float_int_dict_create()
+            expected: dict[int, int] = {}
+            for key in range(18):
+                xs_float_int_dict_put(xs_dct, float32(key) + float32(0.5), int32(key))
+                expected[_canonical_bits(float32(key) + float32(0.5))] = key
+                self.assertEqual(c_float_int_dict_no_key_error, xs_float_int_dict_last_error())
+            self.assertEqual(49, xs_array_get_size(xs_dct))
+            self.assertEqual(
+                c_float_int_dict_generic_error,
+                xs_float_int_dict_put(xs_dct, float32(18.5), int32(18)),
+            )
+            self.assertEqual(c_float_int_dict_max_capacity_error, xs_float_int_dict_last_error())
+            self._assert_dict_matches(xs_dct, expected)
+        finally:
+            _fid.c_float_int_dict_max_capacity = orig
+
     def test_put_if_absent_past_max_capacity_preserves_existing_entries(self):
         orig = _fid.c_float_int_dict_max_capacity
         _fid.c_float_int_dict_max_capacity = int32(33)

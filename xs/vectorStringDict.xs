@@ -231,9 +231,13 @@ int _xsVectorStringDictRehashIfNeeded(int dct = -1, int size = 0, int capacity =
         int newValuesCapacity = _xsVectorStringDictNumSlots(capacity) * 2;
         int newCapacity = (newValuesCapacity * 3) + 2;
         if (newCapacity > cVectorStringDictMaxCapacity) {
+            newCapacity = cVectorStringDictMaxCapacity;
+        }
+        if (newCapacity <= capacity) {
             _vectorStringDictLastOperationStatus = cVectorStringDictMaxCapacityError;
             return (cVectorStringDictGenericError);
         }
+        newValuesCapacity = _xsVectorStringDictNumSlots(newCapacity);
         int tempDataSize = _xsVectorStringDictMoveToTempArrays(dct, size, capacity);
         if (tempDataSize < 0) {
             _vectorStringDictLastOperationStatus = tempDataSize;

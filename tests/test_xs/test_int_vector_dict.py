@@ -214,6 +214,26 @@ class IntVectorDictCompatibilityTest(_BASE_TESTS.IntIntDictTest):
         finally:
             _ivd.c_int_vector_dict_max_capacity = orig
 
+    def test_rehash_clamps_to_max_capacity_before_reporting_full(self):
+        orig = _ivd.c_int_vector_dict_max_capacity
+        _ivd.c_int_vector_dict_max_capacity = int32(97)
+        try:
+            xs_dct = _ivd.xs_int_vector_dict_create()
+            expected = {}
+            for key in range(18):
+                _ivd.xs_int_vector_dict_put(xs_dct, int32(key), _encode_value(int32(key)))
+                expected[key] = key
+                self.assertEqual(_ivd.c_int_vector_dict_no_key_error, _ivd.xs_int_vector_dict_last_error())
+            self.assertEqual(97, xs_array_get_size(xs_dct))
+            self.assertEqual(
+                _ivd.c_int_vector_dict_generic_error_vector,
+                _ivd.xs_int_vector_dict_put(xs_dct, int32(18), _encode_value(int32(18))),
+            )
+            self.assertEqual(_ivd.c_int_vector_dict_max_capacity_error, _ivd.xs_int_vector_dict_last_error())
+            self._assert_dicts_equal(xs_dct, expected)
+        finally:
+            _ivd.c_int_vector_dict_max_capacity = orig
+
     def test_put_if_absent_past_max_capacity_preserves_existing_entries(self):
         orig = _ivd.c_int_vector_dict_max_capacity
         _ivd.c_int_vector_dict_max_capacity = int32(65)

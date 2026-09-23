@@ -228,6 +228,27 @@ class FloatVectorDictTest(unittest.TestCase):
         finally:
             _fvd.c_float_vector_dict_max_capacity = orig
 
+    def test_rehash_clamps_to_max_capacity_before_reporting_full(self):
+        orig = _fvd.c_float_vector_dict_max_capacity
+        _fvd.c_float_vector_dict_max_capacity = int32(97)
+        try:
+            xs_dct = xs_float_vector_dict_create()
+            expected: dict[int, XsVector] = {}
+            for key in range(18):
+                float_key = float32(key) + float32(0.5)
+                xs_float_vector_dict_put(xs_dct, float_key, _vec(key))
+                expected[_canonical_bits(float_key)] = _vec(key)
+                self.assertEqual(c_float_vector_dict_no_key_error, xs_float_vector_dict_last_error())
+            self.assertEqual(97, xs_array_get_size(xs_dct))
+            self.assertEqual(
+                c_float_vector_dict_generic_error_vector,
+                xs_float_vector_dict_put(xs_dct, float32(18.5), _vec(18)),
+            )
+            self.assertEqual(c_float_vector_dict_max_capacity_error, xs_float_vector_dict_last_error())
+            self._assert_dict_matches(xs_dct, expected)
+        finally:
+            _fvd.c_float_vector_dict_max_capacity = orig
+
     def test_put_if_absent_past_max_capacity_preserves_existing_entries(self):
         orig = _fvd.c_float_vector_dict_max_capacity
         _fvd.c_float_vector_dict_max_capacity = int32(65)

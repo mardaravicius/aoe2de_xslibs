@@ -203,7 +203,7 @@ _BASE_TESTS = _load_base_test_module()
 class StringIntDictCompatibilityTest(_BASE_TESTS.IntIntDictTest):
     def test_rehash_past_max_capacity_reports_max_capacity_error(self):
         orig = _sid.c_string_int_dict_max_capacity
-        _sid.c_string_int_dict_max_capacity = int32(12)
+        _sid.c_string_int_dict_max_capacity = _sid.c_string_int_dict_initial_capacity
         try:
             xs_dct = _sid.xs_string_int_dict_create()
             expected = {}
@@ -220,9 +220,29 @@ class StringIntDictCompatibilityTest(_BASE_TESTS.IntIntDictTest):
         finally:
             _sid.c_string_int_dict_max_capacity = orig
 
+    def test_rehash_clamps_to_max_capacity_before_reporting_full(self):
+        orig = _sid.c_string_int_dict_max_capacity
+        _sid.c_string_int_dict_max_capacity = int32(26)
+        try:
+            xs_dct = _sid.xs_string_int_dict_create()
+            expected = {}
+            for key in range(18):
+                _sid.xs_string_int_dict_put(xs_dct, _encode_key(int32(key)), int32(key))
+                expected[key] = key
+                self.assertEqual(_sid.c_string_int_dict_no_key_error, _sid.xs_string_int_dict_last_error())
+            self.assertEqual(26, xs_array_get_size(xs_dct))
+            self.assertEqual(
+                _sid.c_string_int_dict_generic_error,
+                _sid.xs_string_int_dict_put(xs_dct, _encode_key(int32(18)), int32(18)),
+            )
+            self.assertEqual(_sid.c_string_int_dict_max_capacity_error, _sid.xs_string_int_dict_last_error())
+            self._assert_dicts_equal(xs_dct, expected)
+        finally:
+            _sid.c_string_int_dict_max_capacity = orig
+
     def test_put_if_absent_past_max_capacity_preserves_existing_entries(self):
         orig = _sid.c_string_int_dict_max_capacity
-        _sid.c_string_int_dict_max_capacity = int32(12)
+        _sid.c_string_int_dict_max_capacity = _sid.c_string_int_dict_initial_capacity
         try:
             xs_dct = _sid.xs_string_int_dict_create()
             expected = {}
@@ -258,7 +278,7 @@ class StringIntDictNativeTest(unittest.TestCase):
         arr = _sid.xs_string_int_dict_keys(xs_dct)
         self.assertEqual(2, xs_array_get_size(arr))
         keys = [xs_array_get_string(arr, int32(i)) for i in range(xs_array_get_size(arr))]
-        self.assertEqual(["one", "two"], keys)
+        self.assertCountEqual(["one", "two"], keys)
 
     def test_to_string_mentions_quoted_string_key(self):
         xs_dct = _sid.xs_string_int_dict_create()

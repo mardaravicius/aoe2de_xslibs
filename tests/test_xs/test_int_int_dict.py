@@ -187,6 +187,25 @@ class IntIntDictTest(unittest.TestCase):
         finally:
             _dict.c_int_int_dict_max_capacity = orig
 
+    def test_rehash_clamps_to_max_capacity_before_reporting_full(self):
+        import xs.int_int_dict as _dict
+
+        orig = _dict.c_int_int_dict_max_capacity
+        _dict.c_int_int_dict_max_capacity = int32(49)
+        try:
+            xs_dct = xs_int_int_dict_create()
+            expected = {}
+            for key in range(18):
+                xs_int_int_dict_put(xs_dct, int32(key), int32(key))
+                expected[key] = key
+                self.assertEqual(c_int_int_dict_no_key_error, xs_int_int_dict_last_error())
+            self.assertEqual(49, xs_array_get_size(xs_dct))
+            self.assertEqual(c_int_int_dict_generic_error, xs_int_int_dict_put(xs_dct, int32(18), int32(18)))
+            self.assertEqual(c_int_int_dict_max_capacity_error, xs_int_int_dict_last_error())
+            self._assert_dicts_equal(xs_dct, expected)
+        finally:
+            _dict.c_int_int_dict_max_capacity = orig
+
     def test_put_if_absent_past_max_capacity_preserves_existing_entries(self):
         if xs_int_int_dict_put.__module__ != "xs.int_int_dict":
             self.skipTest("native int_int_dict only")

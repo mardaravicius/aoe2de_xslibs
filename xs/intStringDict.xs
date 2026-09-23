@@ -186,9 +186,13 @@ int _xsIntStringDictRehashIfNeeded(int dct = -1, int size = 0, int capacity = 0,
         int newValuesCapacity = _xsIntStringDictValuesCapacityFromIntCapacity(capacity) * 2;
         int newCapacity = newValuesCapacity + 2;
         if (newCapacity > cIntStringDictMaxCapacity) {
+            newCapacity = cIntStringDictMaxCapacity;
+        }
+        if (newCapacity <= capacity) {
             _intStringDictLastOperationStatus = cIntStringDictMaxCapacityError;
             return (cIntStringDictGenericError);
         }
+        newValuesCapacity = _xsIntStringDictValuesCapacityFromIntCapacity(newCapacity);
         int tempDataSize = _xsIntStringDictMoveToTempArrays(dct, size, capacity);
         if (tempDataSize < 0) {
             _intStringDictLastOperationStatus = tempDataSize;

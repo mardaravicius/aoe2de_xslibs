@@ -5,514 +5,264 @@ extern const int cStringVectorDictResizeFailedError = -3;
 extern const int cStringVectorDictMaxCapacityError = -4;
 extern const vector cStringVectorDictGenericErrorVector = vector(-1.0, -1.0, -1.0);
 extern const int cStringVectorDictMaxCapacity = 333333330;
+extern const float cStringVectorDictMaxLoadFactor = 0.75;
 extern const int cStringVectorDictInitialCapacity = 16;
-extern const int cStringVectorDictHeaderSize = 5;
-extern const int cStringVectorDictNodeStride = 3;
-extern const int cStringVectorDictValueStride = 3;
+extern const int cStringVectorDictHashConstant = 16777619;
 int _stringVectorDictLastOperationStatus = cStringVectorDictSuccess;
-
-int _xsStringVectorDictEffectiveInitialCapacity() {
-    int capacity = cStringVectorDictInitialCapacity;
-    if (capacity > cStringVectorDictMaxCapacity) {
-        capacity = cStringVectorDictMaxCapacity;
-    }
-    if (capacity < 0) {
-        return (0);
-    }
-    return (capacity);
-}
+int _stringVectorDictTempKeys = -1;
+int _stringVectorDictTempValues = -1;
 
 int _xsStringVectorDictGetKeysArray(int dct = -1) {
     return (xsArrayGetInt(dct, 1));
-}
-
-void _xsStringVectorDictSetKeysArray(int dct = -1, int arr = -1) {
-    xsArraySetInt(dct, 1, arr);
 }
 
 int _xsStringVectorDictGetValuesArray(int dct = -1) {
     return (xsArrayGetInt(dct, 2));
 }
 
-void _xsStringVectorDictSetValuesArray(int dct = -1, int arr = -1) {
-    xsArraySetInt(dct, 2, arr);
-}
-
-int _xsStringVectorDictGetRoot(int dct = -1) {
-    return (xsArrayGetInt(dct, 3));
-}
-
-void _xsStringVectorDictSetRoot(int dct = -1, int root = -1) {
-    xsArraySetInt(dct, 3, root);
-}
-
-int _xsStringVectorDictGetFreeHead(int dct = -1) {
-    return (xsArrayGetInt(dct, 4));
-}
-
-void _xsStringVectorDictSetFreeHead(int dct = -1, int head = -1) {
-    xsArraySetInt(dct, 4, head);
-}
-
-int _xsStringVectorDictCapacityFromDataSize(int dataSize = 0) {
-    return ((dataSize - cStringVectorDictHeaderSize) / cStringVectorDictNodeStride);
-}
-
 int _xsStringVectorDictCapacity(int dct = -1) {
-    return (_xsStringVectorDictCapacityFromDataSize(xsArrayGetSize(dct)));
+    return (xsArrayGetSize(_xsStringVectorDictGetKeysArray(dct)));
 }
 
-int _xsStringVectorDictNodeBase(int node = 0) {
-    return (cStringVectorDictHeaderSize + (node * cStringVectorDictNodeStride));
+int _xsStringVectorDictKeyIndex(int slot = 0) {
+    return (slot);
 }
 
-int _xsStringVectorDictLeftSlot(int node = 0) {
-    return (_xsStringVectorDictNodeBase(node));
+int _xsStringVectorDictValueBase(int slot = 0) {
+    return (slot * 3);
 }
 
-int _xsStringVectorDictRightSlot(int node = 0) {
-    return (_xsStringVectorDictNodeBase(node) + 1);
+string _xsStringVectorDictGetStoredKey(int dct = -1, int slot = 0) {
+    return (xsArrayGetString(_xsStringVectorDictGetKeysArray(dct), _xsStringVectorDictKeyIndex(slot)));
 }
 
-int _xsStringVectorDictHeightSlot(int node = 0) {
-    return (_xsStringVectorDictNodeBase(node) + 2);
+void _xsStringVectorDictSetStoredKey(int dct = -1, int slot = 0, string key = "") {
+    xsArraySetString(_xsStringVectorDictGetKeysArray(dct), _xsStringVectorDictKeyIndex(slot), key);
 }
 
-int _xsStringVectorDictValueBase(int node = 0) {
-    return (node * cStringVectorDictValueStride);
-}
-
-string _xsStringVectorDictGetStoredKey(int dct = -1, int node = 0) {
-    return (xsArrayGetString(_xsStringVectorDictGetKeysArray(dct), node));
-}
-
-void _xsStringVectorDictSetStoredKey(int dct = -1, int node = 0, string key = "") {
-    xsArraySetString(_xsStringVectorDictGetKeysArray(dct), node, key);
-}
-
-vector _xsStringVectorDictGetStoredValue(int dct = -1, int node = 0) {
+vector _xsStringVectorDictGetStoredValue(int dct = -1, int slot = 0) {
     int valuesArr = _xsStringVectorDictGetValuesArray(dct);
-    int base = _xsStringVectorDictValueBase(node);
+    int base = _xsStringVectorDictValueBase(slot);
     return (xsVectorSet(xsArrayGetFloat(valuesArr, base), xsArrayGetFloat(valuesArr, base + 1), xsArrayGetFloat(valuesArr, base + 2)));
 }
 
-void _xsStringVectorDictSetStoredValue(int dct = -1, int node = 0, vector value = vector(0.0, 0.0, 0.0)) {
+void _xsStringVectorDictSetStoredValue(int dct = -1, int slot = 0, vector value = vector(0.0, 0.0, 0.0)) {
     int valuesArr = _xsStringVectorDictGetValuesArray(dct);
-    int base = _xsStringVectorDictValueBase(node);
+    int base = _xsStringVectorDictValueBase(slot);
     xsArraySetFloat(valuesArr, base, xsVectorGetX(value));
     xsArraySetFloat(valuesArr, base + 1, xsVectorGetY(value));
     xsArraySetFloat(valuesArr, base + 2, xsVectorGetZ(value));
 }
 
-int _xsStringVectorDictGetLeft(int dct = -1, int node = 0) {
-    return (xsArrayGetInt(dct, _xsStringVectorDictLeftSlot(node)));
-}
-
-void _xsStringVectorDictSetLeft(int dct = -1, int node = 0, int child = -1) {
-    xsArraySetInt(dct, _xsStringVectorDictLeftSlot(node), child);
-}
-
-int _xsStringVectorDictGetRight(int dct = -1, int node = 0) {
-    return (xsArrayGetInt(dct, _xsStringVectorDictRightSlot(node)));
-}
-
-void _xsStringVectorDictSetRight(int dct = -1, int node = 0, int child = -1) {
-    xsArraySetInt(dct, _xsStringVectorDictRightSlot(node), child);
-}
-
-int _xsStringVectorDictGetHeightOrNext(int dct = -1, int node = 0) {
-    return (xsArrayGetInt(dct, _xsStringVectorDictHeightSlot(node)));
-}
-
-void _xsStringVectorDictSetHeightOrNext(int dct = -1, int node = 0, int value = 0) {
-    xsArraySetInt(dct, _xsStringVectorDictHeightSlot(node), value);
-}
-
-void _xsStringVectorDictInitializeFreeNodes(int dct = -1, int start = 0, int stop = 0, int nextHead = -1) {
-    for (i = start; < stop) {
-        _xsStringVectorDictSetStoredKey(dct, i, "!<[empty");
-        _xsStringVectorDictSetStoredValue(dct, i, vector(0.0, 0.0, 0.0));
-        _xsStringVectorDictSetLeft(dct, i, -1);
-        _xsStringVectorDictSetRight(dct, i, -1);
-        int nextFree = nextHead;
-        if ((i + 1) < stop) {
-            nextFree = i + 1;
-        }
-        _xsStringVectorDictSetHeightOrNext(dct, i, nextFree);
-    }
+void _xsStringVectorDictClearSlot(int dct = -1, int slot = 0) {
+    _xsStringVectorDictSetStoredKey(dct, slot, "!<[empty");
 }
 
 /*
     Creates an empty string-to-vector dictionary.
-    Keys equal to `"!<[empty"` are reserved as the internal empty-key sentinel
-    and cannot be stored. `put` and `putIfAbsent` silently reject them.
+    Keys equal to `"!<[empty"` are reserved as the internal
+    empty-slot sentinel and cannot be stored. `put` and `putIfAbsent` silently reject them.
     @return created dict id, or `cStringVectorDictGenericError` on error
 */
 int xsStringVectorDictCreate() {
-    int capacity = _xsStringVectorDictEffectiveInitialCapacity();
-    int dataSize = cStringVectorDictHeaderSize + (capacity * cStringVectorDictNodeStride);
-    int dct = xsArrayCreateInt(dataSize, -1);
+    int dct = xsArrayCreateInt(3, 0);
     if (dct < 0) {
         return (cStringVectorDictGenericError);
     }
-    int keysArr = xsArrayCreateString(capacity, "!<[empty");
+    int keysArr = xsArrayCreateString(cStringVectorDictInitialCapacity, "!<[empty");
     if (keysArr < 0) {
         xsArrayResizeInt(dct, 0);
         return (cStringVectorDictGenericError);
     }
-    int valuesArr = xsArrayCreateFloat(capacity * cStringVectorDictValueStride, 0.0);
+    int valuesArr = xsArrayCreateFloat(cStringVectorDictInitialCapacity * 3, 0.0);
     if (valuesArr < 0) {
         xsArrayResizeString(keysArr, 0);
         xsArrayResizeInt(dct, 0);
         return (cStringVectorDictGenericError);
     }
     xsArraySetInt(dct, 0, 0);
-    _xsStringVectorDictSetKeysArray(dct, keysArr);
-    _xsStringVectorDictSetValuesArray(dct, valuesArr);
-    _xsStringVectorDictSetRoot(dct, -1);
-    _xsStringVectorDictSetFreeHead(dct, -1);
-    if (capacity > 0) {
-        _xsStringVectorDictInitializeFreeNodes(dct, 0, capacity, -1);
-        _xsStringVectorDictSetFreeHead(dct, 0);
-    }
+    xsArraySetInt(dct, 1, keysArr);
+    xsArraySetInt(dct, 2, valuesArr);
     return (dct);
 }
 
-int _xsStringVectorDictResize(int dct = -1, int newCapacity = 0) {
-    int oldCapacity = _xsStringVectorDictCapacity(dct);
-    if (newCapacity <= oldCapacity) {
-        return (cStringVectorDictSuccess);
+int _xsStringVectorDictHash(string key = "", int capacity = 0) {
+    int h = 0;
+    int n = strLen(key);
+    for (i = 0; < n) {
+        int ch = ord(strCharAt(key, i));
+        h = (h + ch) * cStringVectorDictHashConstant;
     }
-    if (newCapacity > cStringVectorDictMaxCapacity) {
-        return (cStringVectorDictMaxCapacityError);
+    int numSlots = capacity;
+    h = h % numSlots;
+    if (h < 0) {
+        h = h + numSlots;
     }
-    int keysArr = _xsStringVectorDictGetKeysArray(dct);
-    int rKeys = xsArrayResizeString(keysArr, newCapacity);
-    if (rKeys != 1) {
-        return (cStringVectorDictResizeFailedError);
-    }
-    int valuesArr = _xsStringVectorDictGetValuesArray(dct);
-    int newValuesSize = newCapacity * cStringVectorDictValueStride;
-    int rValues = xsArrayResizeFloat(valuesArr, newValuesSize);
-    if (rValues != 1) {
-        return (cStringVectorDictResizeFailedError);
-    }
-    int oldFreeHead = _xsStringVectorDictGetFreeHead(dct);
-    int newDataSize = cStringVectorDictHeaderSize + (newCapacity * cStringVectorDictNodeStride);
-    int r = xsArrayResizeInt(dct, newDataSize);
-    if (r != 1) {
-        return (cStringVectorDictResizeFailedError);
-    }
-    _xsStringVectorDictInitializeFreeNodes(dct, oldCapacity, newCapacity, oldFreeHead);
-    _xsStringVectorDictSetFreeHead(dct, oldCapacity);
-    return (cStringVectorDictSuccess);
-}
-
-int _xsStringVectorDictEnsureCapacity(int dct = -1, int requiredSize = 0) {
-    int capacity = _xsStringVectorDictCapacity(dct);
-    if (requiredSize <= capacity) {
-        return (cStringVectorDictSuccess);
-    }
-    if (requiredSize > cStringVectorDictMaxCapacity) {
-        return (cStringVectorDictMaxCapacityError);
-    }
-    int newCapacity = capacity;
-    if (newCapacity < 1) {
-        newCapacity = 1;
-    }
-    while (newCapacity < requiredSize) {
-        if (newCapacity > (cStringVectorDictMaxCapacity / 2)) {
-            newCapacity = cStringVectorDictMaxCapacity;
-        } else {
-            newCapacity = newCapacity * 2;
-        }
-    }
-    return (_xsStringVectorDictResize(dct, newCapacity));
-}
-
-int _xsStringVectorDictAllocateNode(int dct = -1, string key = "", vector value = vector(0.0, 0.0, 0.0)) {
-    int freeHead = _xsStringVectorDictGetFreeHead(dct);
-    if (freeHead < 0) {
-        return (-1);
-    }
-    _xsStringVectorDictSetFreeHead(dct, _xsStringVectorDictGetHeightOrNext(dct, freeHead));
-    _xsStringVectorDictSetStoredKey(dct, freeHead, key);
-    _xsStringVectorDictSetStoredValue(dct, freeHead, value);
-    _xsStringVectorDictSetLeft(dct, freeHead, -1);
-    _xsStringVectorDictSetRight(dct, freeHead, -1);
-    _xsStringVectorDictSetHeightOrNext(dct, freeHead, 1);
-    return (freeHead);
-}
-
-void _xsStringVectorDictFreeNode(int dct = -1, int node = -1) {
-    _xsStringVectorDictSetStoredKey(dct, node, "!<[empty");
-    _xsStringVectorDictSetStoredValue(dct, node, vector(0.0, 0.0, 0.0));
-    _xsStringVectorDictSetLeft(dct, node, -1);
-    _xsStringVectorDictSetRight(dct, node, -1);
-    _xsStringVectorDictSetHeightOrNext(dct, node, _xsStringVectorDictGetFreeHead(dct));
-    _xsStringVectorDictSetFreeHead(dct, node);
-}
-
-int _xsStringVectorDictHeight(int dct = -1, int node = -1) {
-    if (node < 0) {
-        return (0);
-    }
-    return (_xsStringVectorDictGetHeightOrNext(dct, node));
-}
-
-void _xsStringVectorDictRefreshHeight(int dct = -1, int node = -1) {
-    int leftHeight = _xsStringVectorDictHeight(dct, _xsStringVectorDictGetLeft(dct, node));
-    int rightHeight = _xsStringVectorDictHeight(dct, _xsStringVectorDictGetRight(dct, node));
-    if (leftHeight > rightHeight) {
-        _xsStringVectorDictSetHeightOrNext(dct, node, leftHeight + 1);
-    } else {
-        _xsStringVectorDictSetHeightOrNext(dct, node, rightHeight + 1);
-    }
-}
-
-int _xsStringVectorDictBalanceFactor(int dct = -1, int node = -1) {
-    return (_xsStringVectorDictHeight(dct, _xsStringVectorDictGetLeft(dct, node)) - _xsStringVectorDictHeight(dct, _xsStringVectorDictGetRight(dct, node)));
-}
-
-int _xsStringVectorDictRotateLeft(int dct = -1, int node = -1) {
-    int newRoot = _xsStringVectorDictGetRight(dct, node);
-    int moved = _xsStringVectorDictGetLeft(dct, newRoot);
-    _xsStringVectorDictSetRight(dct, node, moved);
-    _xsStringVectorDictSetLeft(dct, newRoot, node);
-    _xsStringVectorDictRefreshHeight(dct, node);
-    _xsStringVectorDictRefreshHeight(dct, newRoot);
-    return (newRoot);
-}
-
-int _xsStringVectorDictRotateRight(int dct = -1, int node = -1) {
-    int newRoot = _xsStringVectorDictGetLeft(dct, node);
-    int moved = _xsStringVectorDictGetRight(dct, newRoot);
-    _xsStringVectorDictSetLeft(dct, node, moved);
-    _xsStringVectorDictSetRight(dct, newRoot, node);
-    _xsStringVectorDictRefreshHeight(dct, node);
-    _xsStringVectorDictRefreshHeight(dct, newRoot);
-    return (newRoot);
-}
-
-int _xsStringVectorDictRebalance(int dct = -1, int node = -1) {
-    _xsStringVectorDictRefreshHeight(dct, node);
-    int balance = _xsStringVectorDictBalanceFactor(dct, node);
-    if (balance > 1) {
-        int left = _xsStringVectorDictGetLeft(dct, node);
-        if (_xsStringVectorDictBalanceFactor(dct, left) < 0) {
-            _xsStringVectorDictSetLeft(dct, node, _xsStringVectorDictRotateLeft(dct, left));
-        }
-        return (_xsStringVectorDictRotateRight(dct, node));
-    }
-    if (balance < -1) {
-        int right = _xsStringVectorDictGetRight(dct, node);
-        if (_xsStringVectorDictBalanceFactor(dct, right) > 0) {
-            _xsStringVectorDictSetRight(dct, node, _xsStringVectorDictRotateRight(dct, right));
-        }
-        return (_xsStringVectorDictRotateLeft(dct, node));
-    }
-    return (node);
-}
-
-int _xsStringVectorDictFindNode(int dct = -1, string key = "") {
-    int node = _xsStringVectorDictGetRoot(dct);
-    while (node >= 0) {
-        string storedKey = _xsStringVectorDictGetStoredKey(dct, node);
-        if (key == storedKey) {
-            return (node);
-        }
-        if (key < storedKey) {
-            node = _xsStringVectorDictGetLeft(dct, node);
-        } else {
-            node = _xsStringVectorDictGetRight(dct, node);
-        }
-    }
-    return (-1);
-}
-
-int _xsStringVectorDictInsertNode(int dct = -1, int node = -1, string key = "", vector value = vector(0.0, 0.0, 0.0)) {
-    if (node < 0) {
-        return (_xsStringVectorDictAllocateNode(dct, key, value));
-    }
-    string storedKey = _xsStringVectorDictGetStoredKey(dct, node);
-    if (key == storedKey) {
-        _xsStringVectorDictSetStoredValue(dct, node, value);
-        return (node);
-    }
-    if (key < storedKey) {
-        _xsStringVectorDictSetLeft(dct, node, _xsStringVectorDictInsertNode(dct, _xsStringVectorDictGetLeft(dct, node), key, value));
-    } else {
-        _xsStringVectorDictSetRight(dct, node, _xsStringVectorDictInsertNode(dct, _xsStringVectorDictGetRight(dct, node), key, value));
-    }
-    return (_xsStringVectorDictRebalance(dct, node));
-}
-
-int _xsStringVectorDictMinNode(int dct = -1, int node = -1) {
-    int current = node;
-    while (current >= 0) {
-        int left = _xsStringVectorDictGetLeft(dct, current);
-        if (left < 0) {
-            return (current);
-        }
-        current = left;
-    }
-    return (-1);
-}
-
-int _xsStringVectorDictRemoveMin(int dct = -1, int node = -1) {
-    int left = _xsStringVectorDictGetLeft(dct, node);
-    if (left < 0) {
-        int right = _xsStringVectorDictGetRight(dct, node);
-        _xsStringVectorDictFreeNode(dct, node);
-        return (right);
-    }
-    _xsStringVectorDictSetLeft(dct, node, _xsStringVectorDictRemoveMin(dct, left));
-    return (_xsStringVectorDictRebalance(dct, node));
-}
-
-int _xsStringVectorDictRemoveNode(int dct = -1, int node = -1, string key = "") {
-    if (node < 0) {
-        return (-1);
-    }
-    string storedKey = _xsStringVectorDictGetStoredKey(dct, node);
-    if (key < storedKey) {
-        _xsStringVectorDictSetLeft(dct, node, _xsStringVectorDictRemoveNode(dct, _xsStringVectorDictGetLeft(dct, node), key));
-        return (_xsStringVectorDictRebalance(dct, node));
-    }
-    if (key > storedKey) {
-        _xsStringVectorDictSetRight(dct, node, _xsStringVectorDictRemoveNode(dct, _xsStringVectorDictGetRight(dct, node), key));
-        return (_xsStringVectorDictRebalance(dct, node));
-    }
-    int left = _xsStringVectorDictGetLeft(dct, node);
-    int right = _xsStringVectorDictGetRight(dct, node);
-    if (left < 0) {
-        _xsStringVectorDictFreeNode(dct, node);
-        return (right);
-    }
-    if (right < 0) {
-        _xsStringVectorDictFreeNode(dct, node);
-        return (left);
-    }
-    int successor = _xsStringVectorDictMinNode(dct, right);
-    _xsStringVectorDictSetStoredKey(dct, node, _xsStringVectorDictGetStoredKey(dct, successor));
-    _xsStringVectorDictSetStoredValue(dct, node, _xsStringVectorDictGetStoredValue(dct, successor));
-    _xsStringVectorDictSetRight(dct, node, _xsStringVectorDictRemoveMin(dct, right));
-    return (_xsStringVectorDictRebalance(dct, node));
-}
-
-int _xsStringVectorDictFindSuccessorNode(int dct = -1, string key = "") {
-    int node = _xsStringVectorDictGetRoot(dct);
-    int successor = -1;
-    while (node >= 0) {
-        string storedKey = _xsStringVectorDictGetStoredKey(dct, node);
-        if (key < storedKey) {
-            successor = node;
-            node = _xsStringVectorDictGetLeft(dct, node);
-        } else if (key > storedKey) {
-            node = _xsStringVectorDictGetRight(dct, node);
-        } else {
-            int right = _xsStringVectorDictGetRight(dct, node);
-            if (right >= 0) {
-                return (_xsStringVectorDictMinNode(dct, right));
-            }
-            return (successor);
-        }
-    }
-    return (-1);
-}
-
-int _xsStringVectorDictKeysFill(int dct = -1, int node = -1, int arr = -1, int idx = 0) {
-    if (node < 0) {
-        return (idx);
-    }
-    idx = _xsStringVectorDictKeysFill(dct, _xsStringVectorDictGetLeft(dct, node), arr, idx);
-    xsArraySetString(arr, idx, _xsStringVectorDictGetStoredKey(dct, node));
-    idx++;
-    return (_xsStringVectorDictKeysFill(dct, _xsStringVectorDictGetRight(dct, node), arr, idx));
-}
-
-int _xsStringVectorDictValuesFill(int dct = -1, int node = -1, int arr = -1, int idx = 0) {
-    if (node < 0) {
-        return (idx);
-    }
-    idx = _xsStringVectorDictValuesFill(dct, _xsStringVectorDictGetLeft(dct, node), arr, idx);
-    if (idx < 0) {
-        return (idx);
-    }
-    int r = xsArraySetVector(arr, idx, _xsStringVectorDictGetStoredValue(dct, node));
-    if (r != 1) {
-        return (cStringVectorDictResizeFailedError);
-    }
-    idx++;
-    return (_xsStringVectorDictValuesFill(dct, _xsStringVectorDictGetRight(dct, node), arr, idx));
-}
-
-bool _xsStringVectorDictEqualsWalk(int a = -1, int b = -1, int node = -1) {
-    if (node < 0) {
-        return (true);
-    }
-    if (_xsStringVectorDictEqualsWalk(a, b, _xsStringVectorDictGetLeft(a, node)) == false) {
-        return (false);
-    }
-    string key = _xsStringVectorDictGetStoredKey(a, node);
-    vector val = _xsStringVectorDictGetStoredValue(a, node);
-    int other = _xsStringVectorDictFindNode(b, key);
-    if (other < 0) {
-        return (false);
-    }
-    if (_xsStringVectorDictGetStoredValue(b, other) != val) {
-        return (false);
-    }
-    return (_xsStringVectorDictEqualsWalk(a, b, _xsStringVectorDictGetRight(a, node)));
-}
-
-int _xsStringVectorDictUpdateWalk(int source = -1, int dct = -1, int node = -1) {
-    if (node < 0) {
-        return (cStringVectorDictSuccess);
-    }
-    int leftResult = _xsStringVectorDictUpdateWalk(source, dct, _xsStringVectorDictGetLeft(dct, node));
-    if (leftResult != cStringVectorDictSuccess) {
-        return (leftResult);
-    }
-    string key = _xsStringVectorDictGetStoredKey(dct, node);
-    vector val = _xsStringVectorDictGetStoredValue(dct, node);
-    int existing = _xsStringVectorDictFindNode(source, key);
-    if (existing >= 0) {
-        _xsStringVectorDictSetStoredValue(source, existing, val);
-        _stringVectorDictLastOperationStatus = cStringVectorDictSuccess;
-    } else {
-        int size = xsArrayGetInt(source, 0);
-        int resizeResult = _xsStringVectorDictEnsureCapacity(source, size + 1);
-        if (resizeResult != cStringVectorDictSuccess) {
-            _stringVectorDictLastOperationStatus = resizeResult;
-            return (resizeResult);
-        }
-        _xsStringVectorDictSetRoot(source, _xsStringVectorDictInsertNode(source, _xsStringVectorDictGetRoot(source), key, val));
-        xsArraySetInt(source, 0, size + 1);
-        _stringVectorDictLastOperationStatus = cStringVectorDictNoKeyError;
-    }
-    return (_xsStringVectorDictUpdateWalk(source, dct, _xsStringVectorDictGetRight(dct, node)));
-}
-
-string _xsStringVectorDictToStringContents(int dct = -1, int node = -1) {
-    if (node < 0) {
-        return ("");
-    }
-    string left = _xsStringVectorDictToStringContents(dct, _xsStringVectorDictGetLeft(dct, node));
-    string current = (("\"" + _xsStringVectorDictGetStoredKey(dct, node)) + "\": ") + ("" + _xsStringVectorDictGetStoredValue(dct, node));
-    string combined = current;
-    if (left != "") {
-        combined = (left + ", ") + current;
-    }
-    string right = _xsStringVectorDictToStringContents(dct, _xsStringVectorDictGetRight(dct, node));
-    if (right != "") {
-        combined = combined + (", " + right);
-    }
-    return (combined);
+    return (h);
 }
 
 /*
-    Inserts or updates a key-value pair. Sets last error on completion.
+    Returns slot index containing key, or -1 if not found.
+*/
+int _xsStringVectorDictFindSlot(int dct = -1, string key = "", int capacity = 0) {
+    int numSlots = capacity;
+    int home = _xsStringVectorDictHash(key, capacity);
+    int slot = home;
+    int steps = 0;
+    while (steps < numSlots) {
+        string storedKey = _xsStringVectorDictGetStoredKey(dct, slot);
+        if (storedKey == "!<[empty") {
+            return (-1);
+        }
+        if (storedKey == key) {
+            return (slot);
+        }
+        slot++;
+        if (slot >= capacity) {
+            slot = 0;
+        }
+        steps++;
+    }
+    return (-1);
+}
+
+vector _xsStringVectorDictUpsert(int dct = -1, string key = "", vector val = vector(0.0, 0.0, 0.0), int capacity = 0) {
+    int numSlots = capacity;
+    int home = _xsStringVectorDictHash(key, capacity);
+    int slot = home;
+    int steps = 0;
+    while (steps < numSlots) {
+        string storedKey = _xsStringVectorDictGetStoredKey(dct, slot);
+        if (storedKey == "!<[empty") {
+            _xsStringVectorDictSetStoredKey(dct, slot, key);
+            _xsStringVectorDictSetStoredValue(dct, slot, val);
+            _stringVectorDictLastOperationStatus = cStringVectorDictNoKeyError;
+            return (cStringVectorDictGenericErrorVector);
+        }
+        if (storedKey == key) {
+            vector oldVal = _xsStringVectorDictGetStoredValue(dct, slot);
+            _xsStringVectorDictSetStoredValue(dct, slot, val);
+            _stringVectorDictLastOperationStatus = cStringVectorDictSuccess;
+            return (oldVal);
+        }
+        slot++;
+        if (slot >= capacity) {
+            slot = 0;
+        }
+        steps++;
+    }
+    _stringVectorDictLastOperationStatus = cStringVectorDictMaxCapacityError;
+    return (cStringVectorDictGenericErrorVector);
+}
+
+int _xsStringVectorDictMoveToTempArrays(int dct = -1, int size = 0, int capacity = 0) {
+    int tempDataSize = size;
+    int tempFloatSize = size * 3;
+    int maxSlots = cStringVectorDictMaxCapacity;
+    if (_stringVectorDictTempKeys < 0) {
+        _stringVectorDictTempKeys = xsArrayCreateString(tempDataSize, "!<[empty");
+        if (_stringVectorDictTempKeys < 0) {
+            return (cStringVectorDictResizeFailedError);
+        }
+    } else {
+        int tempKeysCapacity = xsArrayGetSize(_stringVectorDictTempKeys);
+        if (tempKeysCapacity < tempDataSize) {
+            if (tempDataSize > maxSlots) {
+                return (cStringVectorDictMaxCapacityError);
+            }
+            int rKeys = xsArrayResizeString(_stringVectorDictTempKeys, tempDataSize);
+            if (rKeys != 1) {
+                return (cStringVectorDictResizeFailedError);
+            }
+        }
+    }
+    if (_stringVectorDictTempValues < 0) {
+        _stringVectorDictTempValues = xsArrayCreateFloat(tempFloatSize, 0.0);
+        if (_stringVectorDictTempValues < 0) {
+            return (cStringVectorDictResizeFailedError);
+        }
+    } else {
+        int tempValuesCapacity = xsArrayGetSize(_stringVectorDictTempValues);
+        if (tempValuesCapacity < tempFloatSize) {
+            if (tempDataSize > maxSlots) {
+                return (cStringVectorDictMaxCapacityError);
+            }
+            int rValues = xsArrayResizeFloat(_stringVectorDictTempValues, tempFloatSize);
+            if (rValues != 1) {
+                return (cStringVectorDictResizeFailedError);
+            }
+        }
+    }
+    int t = 0;
+    for (i = 0; < capacity) {
+        string storedKey = _xsStringVectorDictGetStoredKey(dct, i);
+        if (storedKey != "!<[empty") {
+            xsArraySetString(_stringVectorDictTempKeys, t, storedKey);
+            vector value = _xsStringVectorDictGetStoredValue(dct, i);
+            int base = t * 3;
+            xsArraySetFloat(_stringVectorDictTempValues, base, xsVectorGetX(value));
+            xsArraySetFloat(_stringVectorDictTempValues, base + 1, xsVectorGetY(value));
+            xsArraySetFloat(_stringVectorDictTempValues, base + 2, xsVectorGetZ(value));
+            t++;
+        }
+    }
+    return (tempDataSize);
+}
+
+void _xsStringVectorDictClearSlots(int dct = -1, int capacity = -1) {
+    for (j = 0; < capacity) {
+        _xsStringVectorDictClearSlot(dct, j);
+    }
+}
+
+int _xsStringVectorDictRehashIfNeeded(int dct = -1, int size = 0, int capacity = 0, int requiredSize = -1) {
+    if (requiredSize < 0) {
+        requiredSize = size;
+    }
+    float loadFactor = (0.0 + requiredSize) / capacity;
+    if (loadFactor > cStringVectorDictMaxLoadFactor) {
+        int storeStatus = _stringVectorDictLastOperationStatus;
+        int newCapacity = capacity * 2;
+        if (newCapacity > cStringVectorDictMaxCapacity) {
+            newCapacity = cStringVectorDictMaxCapacity;
+        }
+        if (newCapacity <= capacity) {
+            _stringVectorDictLastOperationStatus = cStringVectorDictMaxCapacityError;
+            return (cStringVectorDictGenericError);
+        }
+        int tempDataSize = _xsStringVectorDictMoveToTempArrays(dct, size, capacity);
+        if (tempDataSize < 0) {
+            _stringVectorDictLastOperationStatus = tempDataSize;
+            return (cStringVectorDictGenericError);
+        }
+        int valuesArr = _xsStringVectorDictGetValuesArray(dct);
+        int rValues = xsArrayResizeFloat(valuesArr, newCapacity * 3);
+        if (rValues != 1) {
+            _stringVectorDictLastOperationStatus = cStringVectorDictResizeFailedError;
+            return (cStringVectorDictGenericError);
+        }
+        int keysArr = _xsStringVectorDictGetKeysArray(dct);
+        int rKeys = xsArrayResizeString(keysArr, newCapacity);
+        if (rKeys != 1) {
+            _stringVectorDictLastOperationStatus = cStringVectorDictResizeFailedError;
+            return (cStringVectorDictGenericError);
+        }
+        _xsStringVectorDictClearSlots(dct, newCapacity);
+        for (t = 0; < tempDataSize) {
+            int base = t * 3;
+            _xsStringVectorDictUpsert(dct, xsArrayGetString(_stringVectorDictTempKeys, t), xsVectorSet(xsArrayGetFloat(_stringVectorDictTempValues, base), xsArrayGetFloat(_stringVectorDictTempValues, base + 1), xsArrayGetFloat(_stringVectorDictTempValues, base + 2)), newCapacity);
+            if ((_stringVectorDictLastOperationStatus < 0) && (_stringVectorDictLastOperationStatus != cStringVectorDictNoKeyError)) {
+                return (cStringVectorDictGenericError);
+            }
+        }
+        _stringVectorDictLastOperationStatus = storeStatus;
+    }
+    return (cStringVectorDictSuccess);
+}
+
+/*
+    Inserts or updates a key-value pair. Triggers a rehash when load factor exceeds the threshold.
+    Sets last error on completion.
     If `key` equals `"!<[empty"`, the call is a no-op and returns
     `cStringVectorDictGenericErrorVector` with last error set to `cStringVectorDictGenericError`.
     @return previous value if the key already existed, or `cStringVectorDictGenericErrorVector`
@@ -523,28 +273,34 @@ vector xsStringVectorDictPut(int dct = -1, string key = "", vector val = vector(
         _stringVectorDictLastOperationStatus = cStringVectorDictGenericError;
         return (cStringVectorDictGenericErrorVector);
     }
-    int existing = _xsStringVectorDictFindNode(dct, key);
-    if (existing >= 0) {
-        vector oldVal = _xsStringVectorDictGetStoredValue(dct, existing);
-        _xsStringVectorDictSetStoredValue(dct, existing, val);
+    int size = xsArrayGetInt(dct, 0);
+    int capacity = _xsStringVectorDictCapacity(dct);
+    int slot = _xsStringVectorDictFindSlot(dct, key, capacity);
+    if (slot >= 0) {
+        vector oldVal = _xsStringVectorDictGetStoredValue(dct, slot);
+        _xsStringVectorDictSetStoredValue(dct, slot, val);
         _stringVectorDictLastOperationStatus = cStringVectorDictSuccess;
         return (oldVal);
     }
-    int size = xsArrayGetInt(dct, 0);
-    int r = _xsStringVectorDictEnsureCapacity(dct, size + 1);
+    int r = _xsStringVectorDictRehashIfNeeded(dct, size, capacity, size + 1);
     if (r != cStringVectorDictSuccess) {
-        _stringVectorDictLastOperationStatus = r;
         return (cStringVectorDictGenericErrorVector);
     }
-    _xsStringVectorDictSetRoot(dct, _xsStringVectorDictInsertNode(dct, _xsStringVectorDictGetRoot(dct), key, val));
-    xsArraySetInt(dct, 0, size + 1);
-    _stringVectorDictLastOperationStatus = cStringVectorDictNoKeyError;
-    return (cStringVectorDictGenericErrorVector);
+    capacity = _xsStringVectorDictCapacity(dct);
+    vector previousValue = _xsStringVectorDictUpsert(dct, key, val, capacity);
+    if (_stringVectorDictLastOperationStatus == cStringVectorDictNoKeyError) {
+        xsArraySetInt(dct, 0, size + 1);
+        return (cStringVectorDictGenericErrorVector);
+    }
+    if (_stringVectorDictLastOperationStatus != cStringVectorDictSuccess) {
+        return (cStringVectorDictGenericErrorVector);
+    }
+    return (previousValue);
 }
 
 /*
     Creates a dict with provided key-value pairs. The first key that equals
-    the reserved empty-key sentinel will stop further insertion.
+    `"!<[empty"` will stop further insertion.
 */
 int xsStringVectorDict(string k1 = "!<[empty", vector v1 = vector(0.0, 0.0, 0.0), string k2 = "!<[empty", vector v2 = vector(0.0, 0.0, 0.0), string k3 = "!<[empty", vector v3 = vector(0.0, 0.0, 0.0), string k4 = "!<[empty", vector v4 = vector(0.0, 0.0, 0.0), string k5 = "!<[empty", vector v5 = vector(0.0, 0.0, 0.0), string k6 = "!<[empty", vector v6 = vector(0.0, 0.0, 0.0)) {
     int dct = xsStringVectorDictCreate();
@@ -582,10 +338,11 @@ int xsStringVectorDict(string k1 = "!<[empty", vector v1 = vector(0.0, 0.0, 0.0)
     Returns the value associated with the given key. Sets last error on completion.
 */
 vector xsStringVectorDictGet(int dct = -1, string key = "", vector dft = cStringVectorDictGenericErrorVector) {
-    int node = _xsStringVectorDictFindNode(dct, key);
-    if (node >= 0) {
+    int capacity = _xsStringVectorDictCapacity(dct);
+    int slot = _xsStringVectorDictFindSlot(dct, key, capacity);
+    if (slot >= 0) {
         _stringVectorDictLastOperationStatus = cStringVectorDictSuccess;
-        return (_xsStringVectorDictGetStoredValue(dct, node));
+        return (_xsStringVectorDictGetStoredValue(dct, slot));
     }
     _stringVectorDictLastOperationStatus = cStringVectorDictNoKeyError;
     return (dft);
@@ -593,22 +350,50 @@ vector xsStringVectorDictGet(int dct = -1, string key = "", vector dft = cString
 
 /*
     Removes the entry with the given key from the dict. Sets last error on completion.
+    Uses backward shift deletion to maintain linear probing invariant (no tombstones).
 */
 vector xsStringVectorDictRemove(int dct = -1, string key = "") {
-    int node = _xsStringVectorDictFindNode(dct, key);
-    if (node < 0) {
+    int size = xsArrayGetInt(dct, 0);
+    int capacity = _xsStringVectorDictCapacity(dct);
+    int numSlots = capacity;
+    int slot = _xsStringVectorDictFindSlot(dct, key, capacity);
+    if (slot < 0) {
         _stringVectorDictLastOperationStatus = cStringVectorDictNoKeyError;
         return (cStringVectorDictGenericErrorVector);
     }
-    vector oldVal = _xsStringVectorDictGetStoredValue(dct, node);
-    _xsStringVectorDictSetRoot(dct, _xsStringVectorDictRemoveNode(dct, _xsStringVectorDictGetRoot(dct), key));
-    xsArraySetInt(dct, 0, xsArrayGetInt(dct, 0) - 1);
+    vector foundVal = _xsStringVectorDictGetStoredValue(dct, slot);
+    int g = slot;
+    int q = g + 1;
+    if (q >= capacity) {
+        q = 0;
+    }
+    int shiftSteps = 0;
+    string qKey = _xsStringVectorDictGetStoredKey(dct, q);
+    while ((qKey != "!<[empty") && (shiftSteps < numSlots)) {
+        int qHome = _xsStringVectorDictHash(qKey, capacity);
+        int distG = ((g - qHome) + numSlots) % numSlots;
+        int distQ = ((q - qHome) + numSlots) % numSlots;
+        if (distG < distQ) {
+            _xsStringVectorDictSetStoredKey(dct, g, qKey);
+            _xsStringVectorDictSetStoredValue(dct, g, _xsStringVectorDictGetStoredValue(dct, q));
+            g = q;
+        }
+        q++;
+        if (q >= capacity) {
+            q = 0;
+        }
+        shiftSteps++;
+        qKey = _xsStringVectorDictGetStoredKey(dct, q);
+    }
+    _xsStringVectorDictClearSlot(dct, g);
+    xsArraySetInt(dct, 0, size - 1);
     _stringVectorDictLastOperationStatus = cStringVectorDictSuccess;
-    return (oldVal);
+    return (foundVal);
 }
 
 bool xsStringVectorDictContains(int dct = -1, string key = "") {
-    return (_xsStringVectorDictFindNode(dct, key) >= 0);
+    int capacity = _xsStringVectorDictCapacity(dct);
+    return (_xsStringVectorDictFindSlot(dct, key, capacity) >= 0);
 }
 
 int xsStringVectorDictSize(int dct = -1) {
@@ -619,40 +404,28 @@ int xsStringVectorDictSize(int dct = -1) {
     Removes all entries from the dict and shrinks the backing arrays.
 */
 int xsStringVectorDictClear(int dct = -1) {
-    int targetCapacity = _xsStringVectorDictEffectiveInitialCapacity();
-    int currentCapacity = _xsStringVectorDictCapacity(dct);
-    if (currentCapacity > targetCapacity) {
-        int oldKeysArr = _xsStringVectorDictGetKeysArray(dct);
-        int newKeysArr = xsArrayCreateString(targetCapacity, "!<[empty");
+    int capacity = _xsStringVectorDictCapacity(dct);
+    if (capacity > cStringVectorDictInitialCapacity) {
+        int newKeysArr = xsArrayCreateString(cStringVectorDictInitialCapacity, "!<[empty");
         if (newKeysArr < 0) {
             return (cStringVectorDictGenericError);
         }
-        int newValuesArr = xsArrayCreateFloat(targetCapacity * cStringVectorDictValueStride, 0.0);
+        int newValuesArr = xsArrayCreateFloat(cStringVectorDictInitialCapacity * 3, 0.0);
         if (newValuesArr < 0) {
             xsArrayResizeString(newKeysArr, 0);
             return (cStringVectorDictGenericError);
         }
-        int newDataSize = cStringVectorDictHeaderSize + (targetCapacity * cStringVectorDictNodeStride);
-        int r = xsArrayResizeInt(dct, newDataSize);
-        if (r != 1) {
-            xsArrayResizeString(newKeysArr, 0);
-            xsArrayResizeFloat(newValuesArr, 0);
-            return (cStringVectorDictGenericError);
-        }
+        int oldKeysArr = _xsStringVectorDictGetKeysArray(dct);
         int oldValuesArr = _xsStringVectorDictGetValuesArray(dct);
-        _xsStringVectorDictSetKeysArray(dct, newKeysArr);
-        _xsStringVectorDictSetValuesArray(dct, newValuesArr);
+        xsArraySetInt(dct, 0, 0);
+        xsArraySetInt(dct, 1, newKeysArr);
+        xsArraySetInt(dct, 2, newValuesArr);
         xsArrayResizeString(oldKeysArr, 0);
         xsArrayResizeFloat(oldValuesArr, 0);
-        currentCapacity = targetCapacity;
+        return (cStringVectorDictSuccess);
     }
+    _xsStringVectorDictClearSlots(dct, capacity);
     xsArraySetInt(dct, 0, 0);
-    _xsStringVectorDictSetRoot(dct, -1);
-    _xsStringVectorDictSetFreeHead(dct, -1);
-    if (currentCapacity > 0) {
-        _xsStringVectorDictInitializeFreeNodes(dct, 0, currentCapacity, -1);
-        _xsStringVectorDictSetFreeHead(dct, 0);
-    }
     return (cStringVectorDictSuccess);
 }
 
@@ -660,9 +433,8 @@ int xsStringVectorDictClear(int dct = -1) {
     Returns a deep copy of the dict.
 */
 int xsStringVectorDictCopy(int dct = -1) {
-    int dataSize = xsArrayGetSize(dct);
     int capacity = _xsStringVectorDictCapacity(dct);
-    int newDct = xsArrayCreateInt(dataSize, -1);
+    int newDct = xsArrayCreateInt(3, 0);
     if (newDct < 0) {
         return (cStringVectorDictResizeFailedError);
     }
@@ -671,25 +443,25 @@ int xsStringVectorDictCopy(int dct = -1) {
         xsArrayResizeInt(newDct, 0);
         return (cStringVectorDictResizeFailedError);
     }
-    int newValuesArr = xsArrayCreateFloat(capacity * cStringVectorDictValueStride, 0.0);
+    int newValuesArr = xsArrayCreateFloat(capacity * 3, 0.0);
     if (newValuesArr < 0) {
         xsArrayResizeString(newKeysArr, 0);
         xsArrayResizeInt(newDct, 0);
         return (cStringVectorDictResizeFailedError);
     }
-    for (i = 0; < dataSize) {
-        xsArraySetInt(newDct, i, xsArrayGetInt(dct, i));
-    }
-    _xsStringVectorDictSetKeysArray(newDct, newKeysArr);
-    _xsStringVectorDictSetValuesArray(newDct, newValuesArr);
-    int keysArr = _xsStringVectorDictGetKeysArray(dct);
-    for (j = 0; < capacity) {
-        xsArraySetString(newKeysArr, j, xsArrayGetString(keysArr, j));
-    }
-    int valuesArr = _xsStringVectorDictGetValuesArray(dct);
-    int valuesSize = capacity * cStringVectorDictValueStride;
-    for (k = 0; < valuesSize) {
-        xsArraySetFloat(newValuesArr, k, xsArrayGetFloat(valuesArr, k));
+    xsArraySetInt(newDct, 0, xsArrayGetInt(dct, 0));
+    xsArraySetInt(newDct, 1, newKeysArr);
+    xsArraySetInt(newDct, 2, newValuesArr);
+    for (i = 0; < capacity) {
+        string storedKey = _xsStringVectorDictGetStoredKey(dct, i);
+        if (storedKey != "!<[empty") {
+            xsArraySetString(newKeysArr, _xsStringVectorDictKeyIndex(i), storedKey);
+            vector value = _xsStringVectorDictGetStoredValue(dct, i);
+            int base = _xsStringVectorDictValueBase(i);
+            xsArraySetFloat(newValuesArr, base, xsVectorGetX(value));
+            xsArraySetFloat(newValuesArr, base + 1, xsVectorGetY(value));
+            xsArraySetFloat(newValuesArr, base + 2, xsVectorGetZ(value));
+        }
     }
     return (newDct);
 }
@@ -698,53 +470,92 @@ int xsStringVectorDictCopy(int dct = -1) {
     Returns a string representation of the dict in the format `{"k1" - (x1, y1, z1), ...}`.
 */
 string xsStringVectorDictToString(int dct = -1) {
-    return (("{" + _xsStringVectorDictToStringContents(dct, _xsStringVectorDictGetRoot(dct))) + "}");
+    int capacity = _xsStringVectorDictCapacity(dct);
+    string s = "{";
+    bool first = true;
+    for (i = 0; < capacity) {
+        string key = _xsStringVectorDictGetStoredKey(dct, i);
+        if (key != "!<[empty") {
+            if (first) {
+                first = false;
+            } else {
+                s = s + ", ";
+            }
+            s = s + ("\"" + key + "\": " + _xsStringVectorDictGetStoredValue(dct, i));
+        }
+    }
+    s = s + "}";
+    return (s);
 }
 
 int xsStringVectorDictLastError() {
     return (_stringVectorDictLastOperationStatus);
 }
 
+string _xsStringVectorDictFindNextOccupied(int dct = -1, int start = 0, int capacity = 0) {
+    int slot = start;
+    while (slot < capacity) {
+        string storedKey = _xsStringVectorDictGetStoredKey(dct, slot);
+        if (storedKey != "!<[empty") {
+            _stringVectorDictLastOperationStatus = cStringVectorDictSuccess;
+            return (storedKey);
+        }
+        slot++;
+    }
+    _stringVectorDictLastOperationStatus = cStringVectorDictNoKeyError;
+    return ("-1");
+}
+
 /*
     Returns the next key in the dict for stateless iteration. Sets last error on completion.
+    Order is arbitrary.
 */
 string xsStringVectorDictNextKey(int dct = -1, bool isFirst = true, string prevKey = "!<[empty") {
-    int nextNode = -1;
+    int capacity = _xsStringVectorDictCapacity(dct);
     if (isFirst) {
-        nextNode = _xsStringVectorDictMinNode(dct, _xsStringVectorDictGetRoot(dct));
-    } else {
-        int node = _xsStringVectorDictFindNode(dct, prevKey);
-        if (node < 0) {
-            _stringVectorDictLastOperationStatus = cStringVectorDictNoKeyError;
-            return ("-1");
-        }
-        nextNode = _xsStringVectorDictFindSuccessorNode(dct, prevKey);
+        return (_xsStringVectorDictFindNextOccupied(dct, 0, capacity));
     }
-    if (nextNode < 0) {
+    int slot = _xsStringVectorDictFindSlot(dct, prevKey, capacity);
+    if (slot < 0) {
         _stringVectorDictLastOperationStatus = cStringVectorDictNoKeyError;
         return ("-1");
     }
-    _stringVectorDictLastOperationStatus = cStringVectorDictSuccess;
-    return (_xsStringVectorDictGetStoredKey(dct, nextNode));
+    int nextStart = slot + 1;
+    return (_xsStringVectorDictFindNextOccupied(dct, nextStart, capacity));
 }
 
 bool xsStringVectorDictHasNext(int dct = -1, bool isFirst = true, string prevKey = "!<[empty") {
-    if (isFirst) {
-        return (_xsStringVectorDictGetRoot(dct) >= 0);
+    int capacity = _xsStringVectorDictCapacity(dct);
+    int start = 0;
+    if (isFirst == false) {
+        int slot = _xsStringVectorDictFindSlot(dct, prevKey, capacity);
+        if (slot < 0) {
+            return (false);
+        }
+        start = slot + 1;
     }
-    if (_xsStringVectorDictFindNode(dct, prevKey) < 0) {
-        return (false);
+    while (start < capacity) {
+        if (_xsStringVectorDictGetStoredKey(dct, start) != "!<[empty") {
+            return (true);
+        }
+        start++;
     }
-    return (_xsStringVectorDictFindSuccessorNode(dct, prevKey) >= 0);
+    return (false);
 }
 
 /*
     Inserts all key-value pairs from another dict into the source dict, overwriting existing keys.
 */
 int xsStringVectorDictUpdate(int source = -1, int dct = -1) {
-    int result = _xsStringVectorDictUpdateWalk(source, dct, _xsStringVectorDictGetRoot(dct));
-    if (result != cStringVectorDictSuccess) {
-        return (result);
+    int capacity = _xsStringVectorDictCapacity(dct);
+    for (i = 0; < capacity) {
+        string key = _xsStringVectorDictGetStoredKey(dct, i);
+        if (key != "!<[empty") {
+            xsStringVectorDictPut(source, key, _xsStringVectorDictGetStoredValue(dct, i));
+            if ((_stringVectorDictLastOperationStatus != cStringVectorDictSuccess) && (_stringVectorDictLastOperationStatus != cStringVectorDictNoKeyError)) {
+                return (_stringVectorDictLastOperationStatus);
+            }
+        }
     }
     _stringVectorDictLastOperationStatus = cStringVectorDictSuccess;
     return (cStringVectorDictSuccess);
@@ -752,7 +563,7 @@ int xsStringVectorDictUpdate(int source = -1, int dct = -1) {
 
 /*
     Inserts the key-value pair only if the key is not already present. Sets last error on completion.
-    If `key` equals the reserved empty-key sentinel, the call is a no-op and returns
+    If `key` equals `"!<[empty"`, the call is a no-op and returns
     `cStringVectorDictGenericErrorVector` with last error set to `cStringVectorDictGenericError`.
 */
 vector xsStringVectorDictPutIfAbsent(int dct = -1, string key = "", vector val = vector(0.0, 0.0, 0.0)) {
@@ -760,25 +571,31 @@ vector xsStringVectorDictPutIfAbsent(int dct = -1, string key = "", vector val =
         _stringVectorDictLastOperationStatus = cStringVectorDictGenericError;
         return (cStringVectorDictGenericErrorVector);
     }
-    int existing = _xsStringVectorDictFindNode(dct, key);
-    if (existing >= 0) {
-        _stringVectorDictLastOperationStatus = cStringVectorDictSuccess;
-        return (_xsStringVectorDictGetStoredValue(dct, existing));
-    }
     int size = xsArrayGetInt(dct, 0);
-    int r = _xsStringVectorDictEnsureCapacity(dct, size + 1);
+    int capacity = _xsStringVectorDictCapacity(dct);
+    int slot = _xsStringVectorDictFindSlot(dct, key, capacity);
+    if (slot >= 0) {
+        _stringVectorDictLastOperationStatus = cStringVectorDictSuccess;
+        return (_xsStringVectorDictGetStoredValue(dct, slot));
+    }
+    int r = _xsStringVectorDictRehashIfNeeded(dct, size, capacity, size + 1);
     if (r != cStringVectorDictSuccess) {
-        _stringVectorDictLastOperationStatus = r;
         return (cStringVectorDictGenericErrorVector);
     }
-    _xsStringVectorDictSetRoot(dct, _xsStringVectorDictInsertNode(dct, _xsStringVectorDictGetRoot(dct), key, val));
-    xsArraySetInt(dct, 0, size + 1);
-    _stringVectorDictLastOperationStatus = cStringVectorDictNoKeyError;
-    return (cStringVectorDictGenericErrorVector);
+    capacity = _xsStringVectorDictCapacity(dct);
+    vector result = _xsStringVectorDictUpsert(dct, key, val, capacity);
+    if (_stringVectorDictLastOperationStatus == cStringVectorDictNoKeyError) {
+        xsArraySetInt(dct, 0, size + 1);
+        return (cStringVectorDictGenericErrorVector);
+    }
+    if (_stringVectorDictLastOperationStatus != cStringVectorDictSuccess) {
+        return (cStringVectorDictGenericErrorVector);
+    }
+    return (result);
 }
 
 /*
-    Returns a new string array containing all keys in the dict. Order is lexicographic.
+    Returns a new string array containing all keys in the dict. Order is arbitrary.
 */
 int xsStringVectorDictKeys(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
@@ -794,7 +611,15 @@ int xsStringVectorDictKeys(int dct = -1, int outArr = -1) {
             return (cStringVectorDictResizeFailedError);
         }
     }
-    _xsStringVectorDictKeysFill(dct, _xsStringVectorDictGetRoot(dct), arr);
+    int capacity = _xsStringVectorDictCapacity(dct);
+    int idx = 0;
+    for (i = 0; < capacity) {
+        string storedKey = _xsStringVectorDictGetStoredKey(dct, i);
+        if (storedKey != "!<[empty") {
+            xsArraySetString(arr, idx, storedKey);
+            idx++;
+        }
+    }
     return (arr);
 }
 
@@ -815,9 +640,17 @@ int xsStringVectorDictValues(int dct = -1, int outArr = -1) {
             return (cStringVectorDictResizeFailedError);
         }
     }
-    int r = _xsStringVectorDictValuesFill(dct, _xsStringVectorDictGetRoot(dct), arr);
-    if (r < 0) {
-        return (cStringVectorDictResizeFailedError);
+    int capacity = _xsStringVectorDictCapacity(dct);
+    int idx = 0;
+    for (i = 0; < capacity) {
+        string storedKey = _xsStringVectorDictGetStoredKey(dct, i);
+        if (storedKey != "!<[empty") {
+            int r = xsArraySetVector(arr, idx, _xsStringVectorDictGetStoredValue(dct, i));
+            if (r != 1) {
+                return (cStringVectorDictResizeFailedError);
+            }
+            idx++;
+        }
     }
     return (arr);
 }
@@ -826,8 +659,23 @@ int xsStringVectorDictValues(int dct = -1, int outArr = -1) {
     Returns true if both dicts contain the same key-value pairs.
 */
 bool xsStringVectorDictEquals(int a = -1, int b = -1) {
-    if (xsArrayGetInt(a, 0) != xsArrayGetInt(b, 0)) {
+    int sizeA = xsArrayGetInt(a, 0);
+    int sizeB = xsArrayGetInt(b, 0);
+    if (sizeA != sizeB) {
         return (false);
     }
-    return (_xsStringVectorDictEqualsWalk(a, b, _xsStringVectorDictGetRoot(a)));
+    int capacity = _xsStringVectorDictCapacity(a);
+    for (i = 0; < capacity) {
+        string key = _xsStringVectorDictGetStoredKey(a, i);
+        if (key != "!<[empty") {
+            vector val = _xsStringVectorDictGetStoredValue(a, i);
+            if (xsStringVectorDictGet(b, key) != val) {
+                return (false);
+            }
+            if (xsStringVectorDictLastError() != cStringVectorDictSuccess) {
+                return (false);
+            }
+        }
+    }
+    return (true);
 }

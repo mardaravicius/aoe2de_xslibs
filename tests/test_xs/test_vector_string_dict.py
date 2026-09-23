@@ -243,6 +243,26 @@ class VectorStringDictCompatibilityTest(_BASE_TESTS.IntIntDictTest):
         finally:
             _vsd.c_vector_string_dict_max_capacity = orig
 
+    def test_rehash_clamps_to_max_capacity_before_reporting_full(self):
+        orig = _vsd.c_vector_string_dict_max_capacity
+        _vsd.c_vector_string_dict_max_capacity = int32(74)
+        try:
+            xs_dct = _vsd.xs_vector_string_dict_create()
+            expected = {}
+            for key in range(18):
+                _vsd.xs_vector_string_dict_put(xs_dct, _encode_key(int32(key)), _encode_value(int32(key)))
+                expected[key] = key
+                self.assertEqual(_vsd.c_vector_string_dict_no_key_error, _vsd.xs_vector_string_dict_last_error())
+            self.assertEqual(74, xs_array_get_size(xs_dct))
+            self.assertEqual(
+                "-1",
+                _vsd.xs_vector_string_dict_put(xs_dct, _encode_key(int32(18)), _encode_value(int32(18))),
+            )
+            self.assertEqual(_vsd.c_vector_string_dict_max_capacity_error, _vsd.xs_vector_string_dict_last_error())
+            self._assert_dicts_equal(xs_dct, expected)
+        finally:
+            _vsd.c_vector_string_dict_max_capacity = orig
+
     def test_put_if_absent_past_max_capacity_preserves_existing_entries(self):
         orig = _vsd.c_vector_string_dict_max_capacity
         _vsd.c_vector_string_dict_max_capacity = int32(50)

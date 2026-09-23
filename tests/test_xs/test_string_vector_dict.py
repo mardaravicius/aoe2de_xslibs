@@ -246,7 +246,7 @@ _BASE_TESTS = _load_base_test_module()
 class StringVectorDictCompatibilityTest(_BASE_TESTS.IntIntDictTest):
     def test_rehash_past_max_capacity_reports_max_capacity_error(self):
         orig = _svd.c_string_vector_dict_max_capacity
-        _svd.c_string_vector_dict_max_capacity = int32(12)
+        _svd.c_string_vector_dict_max_capacity = _svd.c_string_vector_dict_initial_capacity
         try:
             xs_dct = _svd.xs_string_vector_dict_create()
             expected = {}
@@ -263,9 +263,29 @@ class StringVectorDictCompatibilityTest(_BASE_TESTS.IntIntDictTest):
         finally:
             _svd.c_string_vector_dict_max_capacity = orig
 
+    def test_rehash_clamps_to_max_capacity_before_reporting_full(self):
+        orig = _svd.c_string_vector_dict_max_capacity
+        _svd.c_string_vector_dict_max_capacity = int32(24)
+        try:
+            xs_dct = _svd.xs_string_vector_dict_create()
+            expected = {}
+            for key in range(18):
+                _svd.xs_string_vector_dict_put(xs_dct, _encode_key(int32(key)), _encode_value(int32(key)))
+                expected[key] = key
+                self.assertEqual(_svd.c_string_vector_dict_no_key_error, _svd.xs_string_vector_dict_last_error())
+            self.assertEqual(24, xs_array_get_size(xs_array_get_int(xs_dct, int32(1))))
+            self.assertEqual(
+                _svd.c_string_vector_dict_generic_error_vector,
+                _svd.xs_string_vector_dict_put(xs_dct, _encode_key(int32(18)), _encode_value(int32(18))),
+            )
+            self.assertEqual(_svd.c_string_vector_dict_max_capacity_error, _svd.xs_string_vector_dict_last_error())
+            self._assert_dicts_equal(xs_dct, expected)
+        finally:
+            _svd.c_string_vector_dict_max_capacity = orig
+
     def test_put_if_absent_past_max_capacity_preserves_existing_entries(self):
         orig = _svd.c_string_vector_dict_max_capacity
-        _svd.c_string_vector_dict_max_capacity = int32(12)
+        _svd.c_string_vector_dict_max_capacity = _svd.c_string_vector_dict_initial_capacity
         try:
             xs_dct = _svd.xs_string_vector_dict_create()
             expected = {}
@@ -304,14 +324,9 @@ class StringVectorDictNativeTest(unittest.TestCase):
         vals_arr = _svd.xs_string_vector_dict_values(xs_dct)
         self.assertEqual(2, xs_array_get_size(keys_arr))
         self.assertEqual(2, xs_array_get_size(vals_arr))
-        self.assertEqual(
-            ["one", "two"],
-            [xs_array_get_string(keys_arr, int32(i)) for i in range(xs_array_get_size(keys_arr))],
-        )
-        self.assertEqual(
-            [v1, v2],
-            [xs_array_get_vector(vals_arr, int32(i)) for i in range(xs_array_get_size(vals_arr))],
-        )
+        keys = [xs_array_get_string(keys_arr, int32(i)) for i in range(xs_array_get_size(keys_arr))]
+        vals = [xs_array_get_vector(vals_arr, int32(i)) for i in range(xs_array_get_size(vals_arr))]
+        self.assertCountEqual([("one", v1), ("two", v2)], list(zip(keys, vals)))
 
     def test_values_returns_resize_error_for_wrong_type_output_array(self):
         xs_dct = _svd.xs_string_vector_dict_create()
@@ -543,27 +558,34 @@ class StringVectorDictAllocationCleanupTest(unittest.TestCase):
         self.assertEqual(0, calls["resize_string"])
         self.assertEqual(0, calls["resize_float"])
 
-    def test_clear_preserves_entries_when_int_resize_fails(self):
+    def test_clear_preserves_entries_when_replacement_values_allocation_fails(self):
         xs_dct = _svd.xs_string_vector_dict_create()
         for k in range(40):
             _svd.xs_string_vector_dict_put(xs_dct, f"k{k}", vector(float(k), float(k + 1), float(k + 2)))
 
         keys_arr = xs_array_get_int(xs_dct, int32(1))
         values_arr = xs_array_get_int(xs_dct, int32(2))
-        old_data_size = xs_array_get_size(xs_dct)
         old_keys_size = xs_array_get_size(keys_arr)
         old_values_size = xs_array_get_size(values_arr)
         old_size = _svd.xs_string_vector_dict_size(xs_dct)
+        created: dict[str, int32] = {}
 
-        def _resize_int(arr_id, new_size):
-            return int32(0)
+        def _create_string(*args, **kwargs):
+            arr = self.orig_create_string(*args, **kwargs)
+            created["keys"] = arr
+            return arr
 
-        _svd.xs_array_resize_int = _resize_int
+        def _create_float(*args, **kwargs):
+            return int32(-1)
+
+        _svd.xs_array_create_string = _create_string
+        _svd.xs_array_create_float = _create_float
 
         self.assertEqual(_svd.c_string_vector_dict_generic_error, _svd.xs_string_vector_dict_clear(xs_dct))
-        self.assertEqual(old_data_size, xs_array_get_size(xs_dct))
+        self.assertEqual(3, xs_array_get_size(xs_dct))
         self.assertEqual(old_keys_size, xs_array_get_size(keys_arr))
         self.assertEqual(old_values_size, xs_array_get_size(values_arr))
+        self.assertEqual(0, xs_array_get_size(created["keys"]))
         self.assertEqual(old_size, _svd.xs_string_vector_dict_size(xs_dct))
         self.assertEqual(vector(12.0, 13.0, 14.0), _svd.xs_string_vector_dict_get(xs_dct, "k12"))
         self.assertEqual(_svd.c_string_vector_dict_success, _svd.xs_string_vector_dict_last_error())

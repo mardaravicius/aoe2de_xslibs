@@ -209,6 +209,26 @@ class VectorIntDictCompatibilityTest(_BASE_TESTS.IntIntDictTest):
         finally:
             _vid.c_vector_int_dict_max_capacity = orig
 
+    def test_rehash_clamps_to_max_capacity_before_reporting_full(self):
+        orig = _vid.c_vector_int_dict_max_capacity
+        _vid.c_vector_int_dict_max_capacity = int32(97)
+        try:
+            xs_dct = _vid.xs_vector_int_dict_create()
+            expected = {}
+            for key in range(18):
+                _vid.xs_vector_int_dict_put(xs_dct, _encode_key(int32(key)), int32(key))
+                expected[key] = key
+                self.assertEqual(_vid.c_vector_int_dict_no_key_error, _vid.xs_vector_int_dict_last_error())
+            self.assertEqual(97, xs_array_get_size(xs_dct))
+            self.assertEqual(
+                _vid.c_vector_int_dict_generic_error,
+                _vid.xs_vector_int_dict_put(xs_dct, _encode_key(int32(18)), int32(18)),
+            )
+            self.assertEqual(_vid.c_vector_int_dict_max_capacity_error, _vid.xs_vector_int_dict_last_error())
+            self._assert_dicts_equal(xs_dct, expected)
+        finally:
+            _vid.c_vector_int_dict_max_capacity = orig
+
     def test_put_if_absent_past_max_capacity_preserves_existing_entries(self):
         orig = _vid.c_vector_int_dict_max_capacity
         _vid.c_vector_int_dict_max_capacity = int32(65)

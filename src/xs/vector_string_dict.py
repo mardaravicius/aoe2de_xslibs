@@ -219,8 +219,11 @@ def _xs_vector_string_dict_rehash_if_needed(dct: int32 = int32(-1), size: int32 
         new_values_capacity: int32 = _xs_vector_string_dict_num_slots(capacity) * 2
         new_capacity: int32 = (new_values_capacity * 3) + 2
         if new_capacity > c_vector_string_dict_max_capacity:
+            new_capacity = c_vector_string_dict_max_capacity
+        if new_capacity <= capacity:
             _vector_string_dict_last_operation_status = c_vector_string_dict_max_capacity_error
             return c_vector_string_dict_generic_error
+        new_values_capacity = _xs_vector_string_dict_num_slots(new_capacity)
         temp_data_size: int32 = _xs_vector_string_dict_move_to_temp_arrays(dct, size, capacity)
         if temp_data_size < 0:
             _vector_string_dict_last_operation_status = temp_data_size

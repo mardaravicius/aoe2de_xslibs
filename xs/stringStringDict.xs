@@ -4,490 +4,235 @@ extern const int cStringStringDictNoKeyError = -2;
 extern const int cStringStringDictResizeFailedError = -3;
 extern const int cStringStringDictMaxCapacityError = -4;
 extern const int cStringStringDictMaxCapacity = 333333331;
+extern const float cStringStringDictMaxLoadFactor = 0.75;
 extern const int cStringStringDictInitialCapacity = 16;
-extern const int cStringStringDictHeaderSize = 4;
-extern const int cStringStringDictNodeStride = 3;
-extern const int cStringStringDictStringStride = 2;
+extern const int cStringStringDictHashConstant = 16777619;
 int _stringStringDictLastOperationStatus = cStringStringDictSuccess;
-
-int _xsStringStringDictEffectiveInitialCapacity() {
-    int capacity = cStringStringDictInitialCapacity;
-    if (capacity > cStringStringDictMaxCapacity) {
-        capacity = cStringStringDictMaxCapacity;
-    }
-    if (capacity < 0) {
-        return (0);
-    }
-    return (capacity);
-}
+int _stringStringDictTempKeys = -1;
+int _stringStringDictTempValues = -1;
 
 int _xsStringStringDictGetStringsArray(int dct = -1) {
     return (xsArrayGetInt(dct, 1));
 }
 
-void _xsStringStringDictSetStringsArray(int dct = -1, int arr = -1) {
-    xsArraySetInt(dct, 1, arr);
-}
-
-int _xsStringStringDictGetRoot(int dct = -1) {
-    return (xsArrayGetInt(dct, 2));
-}
-
-void _xsStringStringDictSetRoot(int dct = -1, int root = -1) {
-    xsArraySetInt(dct, 2, root);
-}
-
-int _xsStringStringDictGetFreeHead(int dct = -1) {
-    return (xsArrayGetInt(dct, 3));
-}
-
-void _xsStringStringDictSetFreeHead(int dct = -1, int head = -1) {
-    xsArraySetInt(dct, 3, head);
-}
-
-int _xsStringStringDictCapacityFromDataSize(int dataSize = 0) {
-    return ((dataSize - cStringStringDictHeaderSize) / cStringStringDictNodeStride);
-}
-
 int _xsStringStringDictCapacity(int dct = -1) {
-    return (_xsStringStringDictCapacityFromDataSize(xsArrayGetSize(dct)));
+    return (xsArrayGetSize(_xsStringStringDictGetStringsArray(dct)) / 2);
 }
 
-int _xsStringStringDictNodeBase(int node = 0) {
-    return (cStringStringDictHeaderSize + (node * cStringStringDictNodeStride));
+int _xsStringStringDictKeyIndex(int slot = 0) {
+    return (slot * 2);
 }
 
-int _xsStringStringDictLeftSlot(int node = 0) {
-    return (_xsStringStringDictNodeBase(node));
+int _xsStringStringDictValueIndex(int slot = 0) {
+    return (_xsStringStringDictKeyIndex(slot) + 1);
 }
 
-int _xsStringStringDictRightSlot(int node = 0) {
-    return (_xsStringStringDictNodeBase(node) + 1);
+string _xsStringStringDictGetStoredKey(int dct = -1, int slot = 0) {
+    return (xsArrayGetString(_xsStringStringDictGetStringsArray(dct), _xsStringStringDictKeyIndex(slot)));
 }
 
-int _xsStringStringDictHeightSlot(int node = 0) {
-    return (_xsStringStringDictNodeBase(node) + 2);
+void _xsStringStringDictSetStoredKey(int dct = -1, int slot = 0, string key = "") {
+    xsArraySetString(_xsStringStringDictGetStringsArray(dct), _xsStringStringDictKeyIndex(slot), key);
 }
 
-int _xsStringStringDictStringBase(int node = 0) {
-    return (node * cStringStringDictStringStride);
+string _xsStringStringDictGetStoredValue(int dct = -1, int slot = 0) {
+    return (xsArrayGetString(_xsStringStringDictGetStringsArray(dct), _xsStringStringDictValueIndex(slot)));
 }
 
-int _xsStringStringDictKeySlot(int node = 0) {
-    return (_xsStringStringDictStringBase(node));
+void _xsStringStringDictSetStoredValue(int dct = -1, int slot = 0, string value = "") {
+    xsArraySetString(_xsStringStringDictGetStringsArray(dct), _xsStringStringDictValueIndex(slot), value);
 }
 
-int _xsStringStringDictValueSlot(int node = 0) {
-    return (_xsStringStringDictStringBase(node) + 1);
-}
-
-string _xsStringStringDictGetStoredKey(int dct = -1, int node = 0) {
-    return (xsArrayGetString(_xsStringStringDictGetStringsArray(dct), _xsStringStringDictKeySlot(node)));
-}
-
-void _xsStringStringDictSetStoredKey(int dct = -1, int node = 0, string key = "") {
-    xsArraySetString(_xsStringStringDictGetStringsArray(dct), _xsStringStringDictKeySlot(node), key);
-}
-
-string _xsStringStringDictGetStoredValue(int dct = -1, int node = 0) {
-    return (xsArrayGetString(_xsStringStringDictGetStringsArray(dct), _xsStringStringDictValueSlot(node)));
-}
-
-void _xsStringStringDictSetStoredValue(int dct = -1, int node = 0, string value = "") {
-    xsArraySetString(_xsStringStringDictGetStringsArray(dct), _xsStringStringDictValueSlot(node), value);
-}
-
-int _xsStringStringDictGetLeft(int dct = -1, int node = 0) {
-    return (xsArrayGetInt(dct, _xsStringStringDictLeftSlot(node)));
-}
-
-void _xsStringStringDictSetLeft(int dct = -1, int node = 0, int child = -1) {
-    xsArraySetInt(dct, _xsStringStringDictLeftSlot(node), child);
-}
-
-int _xsStringStringDictGetRight(int dct = -1, int node = 0) {
-    return (xsArrayGetInt(dct, _xsStringStringDictRightSlot(node)));
-}
-
-void _xsStringStringDictSetRight(int dct = -1, int node = 0, int child = -1) {
-    xsArraySetInt(dct, _xsStringStringDictRightSlot(node), child);
-}
-
-int _xsStringStringDictGetHeightOrNext(int dct = -1, int node = 0) {
-    return (xsArrayGetInt(dct, _xsStringStringDictHeightSlot(node)));
-}
-
-void _xsStringStringDictSetHeightOrNext(int dct = -1, int node = 0, int value = 0) {
-    xsArraySetInt(dct, _xsStringStringDictHeightSlot(node), value);
-}
-
-void _xsStringStringDictInitializeFreeNodes(int dct = -1, int start = 0, int stop = 0, int nextHead = -1) {
-    for (i = start; < stop) {
-        _xsStringStringDictSetStoredKey(dct, i, "!<[empty");
-        _xsStringStringDictSetStoredValue(dct, i, "");
-        _xsStringStringDictSetLeft(dct, i, -1);
-        _xsStringStringDictSetRight(dct, i, -1);
-        int nextFree = nextHead;
-        if ((i + 1) < stop) {
-            nextFree = i + 1;
-        }
-        _xsStringStringDictSetHeightOrNext(dct, i, nextFree);
-    }
+void _xsStringStringDictClearSlot(int dct = -1, int slot = 0) {
+    _xsStringStringDictSetStoredKey(dct, slot, "!<[empty");
 }
 
 /*
     Creates an empty string-to-string dictionary.
-    Keys equal to `"!<[empty"` are reserved as the internal empty-key sentinel
-    and cannot be stored. `put` and `putIfAbsent` silently reject them.
+    Keys equal to `"!<[empty"` are reserved as the internal
+    empty-slot sentinel and cannot be stored. `put` and `putIfAbsent` silently reject them.
     @return created dict id, or `cStringStringDictGenericError` on error
 */
 int xsStringStringDictCreate() {
-    int capacity = _xsStringStringDictEffectiveInitialCapacity();
-    int dataSize = cStringStringDictHeaderSize + (capacity * cStringStringDictNodeStride);
-    int dct = xsArrayCreateInt(dataSize, -1);
+    int dct = xsArrayCreateInt(2, 0);
     if (dct < 0) {
         return (cStringStringDictGenericError);
     }
-    int stringsArr = xsArrayCreateString(capacity * cStringStringDictStringStride, "");
+    int stringsArr = xsArrayCreateString(cStringStringDictInitialCapacity * 2, "!<[empty");
     if (stringsArr < 0) {
         xsArrayResizeInt(dct, 0);
         return (cStringStringDictGenericError);
     }
     xsArraySetInt(dct, 0, 0);
-    _xsStringStringDictSetStringsArray(dct, stringsArr);
-    _xsStringStringDictSetRoot(dct, -1);
-    _xsStringStringDictSetFreeHead(dct, -1);
-    if (capacity > 0) {
-        _xsStringStringDictInitializeFreeNodes(dct, 0, capacity, -1);
-        _xsStringStringDictSetFreeHead(dct, 0);
-    }
+    xsArraySetInt(dct, 1, stringsArr);
     return (dct);
 }
 
-int _xsStringStringDictResize(int dct = -1, int newCapacity = 0) {
-    int oldCapacity = _xsStringStringDictCapacity(dct);
-    if (newCapacity <= oldCapacity) {
-        return (cStringStringDictSuccess);
+int _xsStringStringDictHash(string key = "", int capacity = 0) {
+    int h = 0;
+    int n = strLen(key);
+    for (i = 0; < n) {
+        int ch = ord(strCharAt(key, i));
+        h = (h + ch) * cStringStringDictHashConstant;
     }
-    if (newCapacity > cStringStringDictMaxCapacity) {
-        return (cStringStringDictMaxCapacityError);
+    int numSlots = capacity;
+    h = h % numSlots;
+    if (h < 0) {
+        h = h + numSlots;
     }
-    int stringsArr = _xsStringStringDictGetStringsArray(dct);
-    int newStringsSize = newCapacity * cStringStringDictStringStride;
-    int rStrings = xsArrayResizeString(stringsArr, newStringsSize);
-    if (rStrings != 1) {
-        return (cStringStringDictResizeFailedError);
-    }
-    int oldFreeHead = _xsStringStringDictGetFreeHead(dct);
-    int newDataSize = cStringStringDictHeaderSize + (newCapacity * cStringStringDictNodeStride);
-    int r = xsArrayResizeInt(dct, newDataSize);
-    if (r != 1) {
-        return (cStringStringDictResizeFailedError);
-    }
-    _xsStringStringDictInitializeFreeNodes(dct, oldCapacity, newCapacity, oldFreeHead);
-    _xsStringStringDictSetFreeHead(dct, oldCapacity);
-    return (cStringStringDictSuccess);
-}
-
-int _xsStringStringDictEnsureCapacity(int dct = -1, int requiredSize = 0) {
-    int capacity = _xsStringStringDictCapacity(dct);
-    if (requiredSize <= capacity) {
-        return (cStringStringDictSuccess);
-    }
-    if (requiredSize > cStringStringDictMaxCapacity) {
-        return (cStringStringDictMaxCapacityError);
-    }
-    int newCapacity = capacity;
-    if (newCapacity < 1) {
-        newCapacity = 1;
-    }
-    while (newCapacity < requiredSize) {
-        if (newCapacity > (cStringStringDictMaxCapacity / 2)) {
-            newCapacity = cStringStringDictMaxCapacity;
-        } else {
-            newCapacity = newCapacity * 2;
-        }
-    }
-    return (_xsStringStringDictResize(dct, newCapacity));
-}
-
-int _xsStringStringDictAllocateNode(int dct = -1, string key = "", string value = "") {
-    int freeHead = _xsStringStringDictGetFreeHead(dct);
-    if (freeHead < 0) {
-        return (-1);
-    }
-    _xsStringStringDictSetFreeHead(dct, _xsStringStringDictGetHeightOrNext(dct, freeHead));
-    _xsStringStringDictSetStoredKey(dct, freeHead, key);
-    _xsStringStringDictSetStoredValue(dct, freeHead, value);
-    _xsStringStringDictSetLeft(dct, freeHead, -1);
-    _xsStringStringDictSetRight(dct, freeHead, -1);
-    _xsStringStringDictSetHeightOrNext(dct, freeHead, 1);
-    return (freeHead);
-}
-
-void _xsStringStringDictFreeNode(int dct = -1, int node = -1) {
-    _xsStringStringDictSetStoredKey(dct, node, "!<[empty");
-    _xsStringStringDictSetStoredValue(dct, node, "");
-    _xsStringStringDictSetLeft(dct, node, -1);
-    _xsStringStringDictSetRight(dct, node, -1);
-    _xsStringStringDictSetHeightOrNext(dct, node, _xsStringStringDictGetFreeHead(dct));
-    _xsStringStringDictSetFreeHead(dct, node);
-}
-
-int _xsStringStringDictHeight(int dct = -1, int node = -1) {
-    if (node < 0) {
-        return (0);
-    }
-    return (_xsStringStringDictGetHeightOrNext(dct, node));
-}
-
-void _xsStringStringDictRefreshHeight(int dct = -1, int node = -1) {
-    int leftHeight = _xsStringStringDictHeight(dct, _xsStringStringDictGetLeft(dct, node));
-    int rightHeight = _xsStringStringDictHeight(dct, _xsStringStringDictGetRight(dct, node));
-    if (leftHeight > rightHeight) {
-        _xsStringStringDictSetHeightOrNext(dct, node, leftHeight + 1);
-    } else {
-        _xsStringStringDictSetHeightOrNext(dct, node, rightHeight + 1);
-    }
-}
-
-int _xsStringStringDictBalanceFactor(int dct = -1, int node = -1) {
-    return (_xsStringStringDictHeight(dct, _xsStringStringDictGetLeft(dct, node)) - _xsStringStringDictHeight(dct, _xsStringStringDictGetRight(dct, node)));
-}
-
-int _xsStringStringDictRotateLeft(int dct = -1, int node = -1) {
-    int newRoot = _xsStringStringDictGetRight(dct, node);
-    int moved = _xsStringStringDictGetLeft(dct, newRoot);
-    _xsStringStringDictSetRight(dct, node, moved);
-    _xsStringStringDictSetLeft(dct, newRoot, node);
-    _xsStringStringDictRefreshHeight(dct, node);
-    _xsStringStringDictRefreshHeight(dct, newRoot);
-    return (newRoot);
-}
-
-int _xsStringStringDictRotateRight(int dct = -1, int node = -1) {
-    int newRoot = _xsStringStringDictGetLeft(dct, node);
-    int moved = _xsStringStringDictGetRight(dct, newRoot);
-    _xsStringStringDictSetLeft(dct, node, moved);
-    _xsStringStringDictSetRight(dct, newRoot, node);
-    _xsStringStringDictRefreshHeight(dct, node);
-    _xsStringStringDictRefreshHeight(dct, newRoot);
-    return (newRoot);
-}
-
-int _xsStringStringDictRebalance(int dct = -1, int node = -1) {
-    _xsStringStringDictRefreshHeight(dct, node);
-    int balance = _xsStringStringDictBalanceFactor(dct, node);
-    if (balance > 1) {
-        int left = _xsStringStringDictGetLeft(dct, node);
-        if (_xsStringStringDictBalanceFactor(dct, left) < 0) {
-            _xsStringStringDictSetLeft(dct, node, _xsStringStringDictRotateLeft(dct, left));
-        }
-        return (_xsStringStringDictRotateRight(dct, node));
-    }
-    if (balance < -1) {
-        int right = _xsStringStringDictGetRight(dct, node);
-        if (_xsStringStringDictBalanceFactor(dct, right) > 0) {
-            _xsStringStringDictSetRight(dct, node, _xsStringStringDictRotateRight(dct, right));
-        }
-        return (_xsStringStringDictRotateLeft(dct, node));
-    }
-    return (node);
-}
-
-int _xsStringStringDictFindNode(int dct = -1, string key = "") {
-    int node = _xsStringStringDictGetRoot(dct);
-    while (node >= 0) {
-        string storedKey = _xsStringStringDictGetStoredKey(dct, node);
-        if (key == storedKey) {
-            return (node);
-        }
-        if (key < storedKey) {
-            node = _xsStringStringDictGetLeft(dct, node);
-        } else {
-            node = _xsStringStringDictGetRight(dct, node);
-        }
-    }
-    return (-1);
-}
-
-int _xsStringStringDictInsertNode(int dct = -1, int node = -1, string key = "", string value = "") {
-    if (node < 0) {
-        return (_xsStringStringDictAllocateNode(dct, key, value));
-    }
-    string storedKey = _xsStringStringDictGetStoredKey(dct, node);
-    if (key == storedKey) {
-        _xsStringStringDictSetStoredValue(dct, node, value);
-        return (node);
-    }
-    if (key < storedKey) {
-        _xsStringStringDictSetLeft(dct, node, _xsStringStringDictInsertNode(dct, _xsStringStringDictGetLeft(dct, node), key, value));
-    } else {
-        _xsStringStringDictSetRight(dct, node, _xsStringStringDictInsertNode(dct, _xsStringStringDictGetRight(dct, node), key, value));
-    }
-    return (_xsStringStringDictRebalance(dct, node));
-}
-
-int _xsStringStringDictMinNode(int dct = -1, int node = -1) {
-    int current = node;
-    while (current >= 0) {
-        int left = _xsStringStringDictGetLeft(dct, current);
-        if (left < 0) {
-            return (current);
-        }
-        current = left;
-    }
-    return (-1);
-}
-
-int _xsStringStringDictRemoveMin(int dct = -1, int node = -1) {
-    int left = _xsStringStringDictGetLeft(dct, node);
-    if (left < 0) {
-        int right = _xsStringStringDictGetRight(dct, node);
-        _xsStringStringDictFreeNode(dct, node);
-        return (right);
-    }
-    _xsStringStringDictSetLeft(dct, node, _xsStringStringDictRemoveMin(dct, left));
-    return (_xsStringStringDictRebalance(dct, node));
-}
-
-int _xsStringStringDictRemoveNode(int dct = -1, int node = -1, string key = "") {
-    if (node < 0) {
-        return (-1);
-    }
-    string storedKey = _xsStringStringDictGetStoredKey(dct, node);
-    if (key < storedKey) {
-        _xsStringStringDictSetLeft(dct, node, _xsStringStringDictRemoveNode(dct, _xsStringStringDictGetLeft(dct, node), key));
-        return (_xsStringStringDictRebalance(dct, node));
-    }
-    if (key > storedKey) {
-        _xsStringStringDictSetRight(dct, node, _xsStringStringDictRemoveNode(dct, _xsStringStringDictGetRight(dct, node), key));
-        return (_xsStringStringDictRebalance(dct, node));
-    }
-    int left = _xsStringStringDictGetLeft(dct, node);
-    int right = _xsStringStringDictGetRight(dct, node);
-    if (left < 0) {
-        _xsStringStringDictFreeNode(dct, node);
-        return (right);
-    }
-    if (right < 0) {
-        _xsStringStringDictFreeNode(dct, node);
-        return (left);
-    }
-    int successor = _xsStringStringDictMinNode(dct, right);
-    _xsStringStringDictSetStoredKey(dct, node, _xsStringStringDictGetStoredKey(dct, successor));
-    _xsStringStringDictSetStoredValue(dct, node, _xsStringStringDictGetStoredValue(dct, successor));
-    _xsStringStringDictSetRight(dct, node, _xsStringStringDictRemoveMin(dct, right));
-    return (_xsStringStringDictRebalance(dct, node));
-}
-
-int _xsStringStringDictFindSuccessorNode(int dct = -1, string key = "") {
-    int node = _xsStringStringDictGetRoot(dct);
-    int successor = -1;
-    while (node >= 0) {
-        string storedKey = _xsStringStringDictGetStoredKey(dct, node);
-        if (key < storedKey) {
-            successor = node;
-            node = _xsStringStringDictGetLeft(dct, node);
-        } else if (key > storedKey) {
-            node = _xsStringStringDictGetRight(dct, node);
-        } else {
-            int right = _xsStringStringDictGetRight(dct, node);
-            if (right >= 0) {
-                return (_xsStringStringDictMinNode(dct, right));
-            }
-            return (successor);
-        }
-    }
-    return (-1);
-}
-
-int _xsStringStringDictKeysFill(int dct = -1, int node = -1, int arr = -1, int idx = 0) {
-    if (node < 0) {
-        return (idx);
-    }
-    idx = _xsStringStringDictKeysFill(dct, _xsStringStringDictGetLeft(dct, node), arr, idx);
-    xsArraySetString(arr, idx, _xsStringStringDictGetStoredKey(dct, node));
-    idx++;
-    return (_xsStringStringDictKeysFill(dct, _xsStringStringDictGetRight(dct, node), arr, idx));
-}
-
-int _xsStringStringDictValuesFill(int dct = -1, int node = -1, int arr = -1, int idx = 0) {
-    if (node < 0) {
-        return (idx);
-    }
-    idx = _xsStringStringDictValuesFill(dct, _xsStringStringDictGetLeft(dct, node), arr, idx);
-    xsArraySetString(arr, idx, _xsStringStringDictGetStoredValue(dct, node));
-    idx++;
-    return (_xsStringStringDictValuesFill(dct, _xsStringStringDictGetRight(dct, node), arr, idx));
-}
-
-bool _xsStringStringDictEqualsWalk(int a = -1, int b = -1, int node = -1) {
-    if (node < 0) {
-        return (true);
-    }
-    if (_xsStringStringDictEqualsWalk(a, b, _xsStringStringDictGetLeft(a, node)) == false) {
-        return (false);
-    }
-    string key = _xsStringStringDictGetStoredKey(a, node);
-    string val = _xsStringStringDictGetStoredValue(a, node);
-    int other = _xsStringStringDictFindNode(b, key);
-    if (other < 0) {
-        return (false);
-    }
-    if (_xsStringStringDictGetStoredValue(b, other) != val) {
-        return (false);
-    }
-    return (_xsStringStringDictEqualsWalk(a, b, _xsStringStringDictGetRight(a, node)));
-}
-
-int _xsStringStringDictUpdateWalk(int source = -1, int dct = -1, int node = -1) {
-    if (node < 0) {
-        return (cStringStringDictSuccess);
-    }
-    int leftResult = _xsStringStringDictUpdateWalk(source, dct, _xsStringStringDictGetLeft(dct, node));
-    if (leftResult != cStringStringDictSuccess) {
-        return (leftResult);
-    }
-    string key = _xsStringStringDictGetStoredKey(dct, node);
-    string val = _xsStringStringDictGetStoredValue(dct, node);
-    int existing = _xsStringStringDictFindNode(source, key);
-    if (existing >= 0) {
-        _xsStringStringDictSetStoredValue(source, existing, val);
-        _stringStringDictLastOperationStatus = cStringStringDictSuccess;
-    } else {
-        int size = xsArrayGetInt(source, 0);
-        int resizeResult = _xsStringStringDictEnsureCapacity(source, size + 1);
-        if (resizeResult != cStringStringDictSuccess) {
-            _stringStringDictLastOperationStatus = resizeResult;
-            return (resizeResult);
-        }
-        _xsStringStringDictSetRoot(source, _xsStringStringDictInsertNode(source, _xsStringStringDictGetRoot(source), key, val));
-        xsArraySetInt(source, 0, size + 1);
-        _stringStringDictLastOperationStatus = cStringStringDictNoKeyError;
-    }
-    return (_xsStringStringDictUpdateWalk(source, dct, _xsStringStringDictGetRight(dct, node)));
-}
-
-string _xsStringStringDictToStringContents(int dct = -1, int node = -1) {
-    if (node < 0) {
-        return ("");
-    }
-    string left = _xsStringStringDictToStringContents(dct, _xsStringStringDictGetLeft(dct, node));
-    string current = ((("\"" + _xsStringStringDictGetStoredKey(dct, node)) + "\": \"") + _xsStringStringDictGetStoredValue(dct, node)) + "\"";
-    string combined = current;
-    if (left != "") {
-        combined = (left + ", ") + current;
-    }
-    string right = _xsStringStringDictToStringContents(dct, _xsStringStringDictGetRight(dct, node));
-    if (right != "") {
-        combined = combined + (", " + right);
-    }
-    return (combined);
+    return (h);
 }
 
 /*
-    Inserts or updates a key-value pair. Sets last error on completion.
+    Returns slot index containing key, or -1 if not found.
+*/
+int _xsStringStringDictFindSlot(int dct = -1, string key = "", int capacity = 0) {
+    int numSlots = capacity;
+    int home = _xsStringStringDictHash(key, capacity);
+    int slot = home;
+    int steps = 0;
+    while (steps < numSlots) {
+        string storedKey = _xsStringStringDictGetStoredKey(dct, slot);
+        if (storedKey == "!<[empty") {
+            return (-1);
+        }
+        if (storedKey == key) {
+            return (slot);
+        }
+        slot++;
+        if (slot >= capacity) {
+            slot = 0;
+        }
+        steps++;
+    }
+    return (-1);
+}
+
+string _xsStringStringDictUpsert(int dct = -1, string key = "", string val = "", int capacity = 0) {
+    int numSlots = capacity;
+    int home = _xsStringStringDictHash(key, capacity);
+    int slot = home;
+    int steps = 0;
+    while (steps < numSlots) {
+        string storedKey = _xsStringStringDictGetStoredKey(dct, slot);
+        if (storedKey == "!<[empty") {
+            _xsStringStringDictSetStoredKey(dct, slot, key);
+            _xsStringStringDictSetStoredValue(dct, slot, val);
+            _stringStringDictLastOperationStatus = cStringStringDictNoKeyError;
+            return ("-1");
+        }
+        if (storedKey == key) {
+            string oldVal = _xsStringStringDictGetStoredValue(dct, slot);
+            _xsStringStringDictSetStoredValue(dct, slot, val);
+            _stringStringDictLastOperationStatus = cStringStringDictSuccess;
+            return (oldVal);
+        }
+        slot++;
+        if (slot >= capacity) {
+            slot = 0;
+        }
+        steps++;
+    }
+    _stringStringDictLastOperationStatus = cStringStringDictMaxCapacityError;
+    return ("-1");
+}
+
+int _xsStringStringDictMoveToTempArrays(int dct = -1, int size = 0, int capacity = 0) {
+    int tempDataSize = size;
+    int maxSlots = cStringStringDictMaxCapacity;
+    if (_stringStringDictTempKeys < 0) {
+        _stringStringDictTempKeys = xsArrayCreateString(tempDataSize, "!<[empty");
+        if (_stringStringDictTempKeys < 0) {
+            return (cStringStringDictResizeFailedError);
+        }
+    } else {
+        int tempKeysCapacity = xsArrayGetSize(_stringStringDictTempKeys);
+        if (tempKeysCapacity < tempDataSize) {
+            if (tempDataSize > maxSlots) {
+                return (cStringStringDictMaxCapacityError);
+            }
+            int rKeys = xsArrayResizeString(_stringStringDictTempKeys, tempDataSize);
+            if (rKeys != 1) {
+                return (cStringStringDictResizeFailedError);
+            }
+        }
+    }
+    if (_stringStringDictTempValues < 0) {
+        _stringStringDictTempValues = xsArrayCreateString(tempDataSize);
+        if (_stringStringDictTempValues < 0) {
+            return (cStringStringDictResizeFailedError);
+        }
+    } else {
+        int tempValuesCapacity = xsArrayGetSize(_stringStringDictTempValues);
+        if (tempValuesCapacity < tempDataSize) {
+            if (tempDataSize > maxSlots) {
+                return (cStringStringDictMaxCapacityError);
+            }
+            int rValues = xsArrayResizeString(_stringStringDictTempValues, tempDataSize);
+            if (rValues != 1) {
+                return (cStringStringDictResizeFailedError);
+            }
+        }
+    }
+    int t = 0;
+    for (i = 0; < capacity) {
+        string storedKey = _xsStringStringDictGetStoredKey(dct, i);
+        if (storedKey != "!<[empty") {
+            xsArraySetString(_stringStringDictTempKeys, t, storedKey);
+            xsArraySetString(_stringStringDictTempValues, t, _xsStringStringDictGetStoredValue(dct, i));
+            t++;
+        }
+    }
+    return (tempDataSize);
+}
+
+void _xsStringStringDictClearSlots(int dct = -1, int capacity = -1) {
+    for (j = 0; < capacity) {
+        _xsStringStringDictClearSlot(dct, j);
+    }
+}
+
+int _xsStringStringDictRehashIfNeeded(int dct = -1, int size = 0, int capacity = 0, int requiredSize = -1) {
+    if (requiredSize < 0) {
+        requiredSize = size;
+    }
+    float loadFactor = (0.0 + requiredSize) / capacity;
+    if (loadFactor > cStringStringDictMaxLoadFactor) {
+        int storeStatus = _stringStringDictLastOperationStatus;
+        int newCapacity = capacity * 2;
+        if (newCapacity > cStringStringDictMaxCapacity) {
+            newCapacity = cStringStringDictMaxCapacity;
+        }
+        if (newCapacity <= capacity) {
+            _stringStringDictLastOperationStatus = cStringStringDictMaxCapacityError;
+            return (cStringStringDictGenericError);
+        }
+        int tempDataSize = _xsStringStringDictMoveToTempArrays(dct, size, capacity);
+        if (tempDataSize < 0) {
+            _stringStringDictLastOperationStatus = tempDataSize;
+            return (cStringStringDictGenericError);
+        }
+        int stringsArr = _xsStringStringDictGetStringsArray(dct);
+        int rStrings = xsArrayResizeString(stringsArr, newCapacity * 2);
+        if (rStrings != 1) {
+            _stringStringDictLastOperationStatus = cStringStringDictResizeFailedError;
+            return (cStringStringDictGenericError);
+        }
+        _xsStringStringDictClearSlots(dct, newCapacity);
+        for (t = 0; < tempDataSize) {
+            _xsStringStringDictUpsert(dct, xsArrayGetString(_stringStringDictTempKeys, t), xsArrayGetString(_stringStringDictTempValues, t), newCapacity);
+            if ((_stringStringDictLastOperationStatus < 0) && (_stringStringDictLastOperationStatus != cStringStringDictNoKeyError)) {
+                return (cStringStringDictGenericError);
+            }
+        }
+        _stringStringDictLastOperationStatus = storeStatus;
+    }
+    return (cStringStringDictSuccess);
+}
+
+/*
+    Inserts or updates a key-value pair. Triggers a rehash when load factor exceeds the threshold.
+    Sets last error on completion.
     If `key` equals `"!<[empty"`, the call is a no-op and returns
     `"-1"` with last error set to `cStringStringDictGenericError`.
     @return previous value if the key already existed, or `"-1"`
@@ -498,28 +243,34 @@ string xsStringStringDictPut(int dct = -1, string key = "", string val = "") {
         _stringStringDictLastOperationStatus = cStringStringDictGenericError;
         return ("-1");
     }
-    int existing = _xsStringStringDictFindNode(dct, key);
-    if (existing >= 0) {
-        string oldVal = _xsStringStringDictGetStoredValue(dct, existing);
-        _xsStringStringDictSetStoredValue(dct, existing, val);
+    int size = xsArrayGetInt(dct, 0);
+    int capacity = _xsStringStringDictCapacity(dct);
+    int slot = _xsStringStringDictFindSlot(dct, key, capacity);
+    if (slot >= 0) {
+        string oldVal = _xsStringStringDictGetStoredValue(dct, slot);
+        _xsStringStringDictSetStoredValue(dct, slot, val);
         _stringStringDictLastOperationStatus = cStringStringDictSuccess;
         return (oldVal);
     }
-    int size = xsArrayGetInt(dct, 0);
-    int r = _xsStringStringDictEnsureCapacity(dct, size + 1);
+    int r = _xsStringStringDictRehashIfNeeded(dct, size, capacity, size + 1);
     if (r != cStringStringDictSuccess) {
-        _stringStringDictLastOperationStatus = r;
         return ("-1");
     }
-    _xsStringStringDictSetRoot(dct, _xsStringStringDictInsertNode(dct, _xsStringStringDictGetRoot(dct), key, val));
-    xsArraySetInt(dct, 0, size + 1);
-    _stringStringDictLastOperationStatus = cStringStringDictNoKeyError;
-    return ("-1");
+    capacity = _xsStringStringDictCapacity(dct);
+    string previousValue = _xsStringStringDictUpsert(dct, key, val, capacity);
+    if (_stringStringDictLastOperationStatus == cStringStringDictNoKeyError) {
+        xsArraySetInt(dct, 0, size + 1);
+        return ("-1");
+    }
+    if (_stringStringDictLastOperationStatus != cStringStringDictSuccess) {
+        return ("-1");
+    }
+    return (previousValue);
 }
 
 /*
     Creates a dict with provided key-value pairs. The first key that equals
-    the reserved empty-key sentinel will stop further insertion.
+    `"!<[empty"` will stop further insertion.
 */
 int xsStringStringDict(string k1 = "!<[empty", string v1 = "", string k2 = "!<[empty", string v2 = "", string k3 = "!<[empty", string v3 = "", string k4 = "!<[empty", string v4 = "", string k5 = "!<[empty", string v5 = "", string k6 = "!<[empty", string v6 = "") {
     int dct = xsStringStringDictCreate();
@@ -557,10 +308,11 @@ int xsStringStringDict(string k1 = "!<[empty", string v1 = "", string k2 = "!<[e
     Returns the value associated with the given key. Sets last error on completion.
 */
 string xsStringStringDictGet(int dct = -1, string key = "", string dft = "-1") {
-    int node = _xsStringStringDictFindNode(dct, key);
-    if (node >= 0) {
+    int capacity = _xsStringStringDictCapacity(dct);
+    int slot = _xsStringStringDictFindSlot(dct, key, capacity);
+    if (slot >= 0) {
         _stringStringDictLastOperationStatus = cStringStringDictSuccess;
-        return (_xsStringStringDictGetStoredValue(dct, node));
+        return (_xsStringStringDictGetStoredValue(dct, slot));
     }
     _stringStringDictLastOperationStatus = cStringStringDictNoKeyError;
     return (dft);
@@ -568,22 +320,50 @@ string xsStringStringDictGet(int dct = -1, string key = "", string dft = "-1") {
 
 /*
     Removes the entry with the given key from the dict. Sets last error on completion.
+    Uses backward shift deletion to maintain linear probing invariant (no tombstones).
 */
 string xsStringStringDictRemove(int dct = -1, string key = "") {
-    int node = _xsStringStringDictFindNode(dct, key);
-    if (node < 0) {
+    int size = xsArrayGetInt(dct, 0);
+    int capacity = _xsStringStringDictCapacity(dct);
+    int numSlots = capacity;
+    int slot = _xsStringStringDictFindSlot(dct, key, capacity);
+    if (slot < 0) {
         _stringStringDictLastOperationStatus = cStringStringDictNoKeyError;
         return ("-1");
     }
-    string oldVal = _xsStringStringDictGetStoredValue(dct, node);
-    _xsStringStringDictSetRoot(dct, _xsStringStringDictRemoveNode(dct, _xsStringStringDictGetRoot(dct), key));
-    xsArraySetInt(dct, 0, xsArrayGetInt(dct, 0) - 1);
+    string foundVal = _xsStringStringDictGetStoredValue(dct, slot);
+    int g = slot;
+    int q = g + 1;
+    if (q >= capacity) {
+        q = 0;
+    }
+    int shiftSteps = 0;
+    string qKey = _xsStringStringDictGetStoredKey(dct, q);
+    while ((qKey != "!<[empty") && (shiftSteps < numSlots)) {
+        int qHome = _xsStringStringDictHash(qKey, capacity);
+        int distG = ((g - qHome) + numSlots) % numSlots;
+        int distQ = ((q - qHome) + numSlots) % numSlots;
+        if (distG < distQ) {
+            _xsStringStringDictSetStoredKey(dct, g, qKey);
+            _xsStringStringDictSetStoredValue(dct, g, _xsStringStringDictGetStoredValue(dct, q));
+            g = q;
+        }
+        q++;
+        if (q >= capacity) {
+            q = 0;
+        }
+        shiftSteps++;
+        qKey = _xsStringStringDictGetStoredKey(dct, q);
+    }
+    _xsStringStringDictClearSlot(dct, g);
+    xsArraySetInt(dct, 0, size - 1);
     _stringStringDictLastOperationStatus = cStringStringDictSuccess;
-    return (oldVal);
+    return (foundVal);
 }
 
 bool xsStringStringDictContains(int dct = -1, string key = "") {
-    return (_xsStringStringDictFindNode(dct, key) >= 0);
+    int capacity = _xsStringStringDictCapacity(dct);
+    return (_xsStringStringDictFindSlot(dct, key, capacity) >= 0);
 }
 
 int xsStringStringDictSize(int dct = -1) {
@@ -594,32 +374,20 @@ int xsStringStringDictSize(int dct = -1) {
     Removes all entries from the dict and shrinks the backing arrays.
 */
 int xsStringStringDictClear(int dct = -1) {
-    int targetCapacity = _xsStringStringDictEffectiveInitialCapacity();
-    int currentCapacity = _xsStringStringDictCapacity(dct);
-    if (currentCapacity > targetCapacity) {
-        int newStringsSize = targetCapacity * cStringStringDictStringStride;
-        int oldStringsArr = _xsStringStringDictGetStringsArray(dct);
-        int newStringsArr = xsArrayCreateString(newStringsSize, "");
+    int capacity = _xsStringStringDictCapacity(dct);
+    if (capacity > cStringStringDictInitialCapacity) {
+        int newStringsArr = xsArrayCreateString(cStringStringDictInitialCapacity * 2, "!<[empty");
         if (newStringsArr < 0) {
             return (cStringStringDictGenericError);
         }
-        int newDataSize = cStringStringDictHeaderSize + (targetCapacity * cStringStringDictNodeStride);
-        int r = xsArrayResizeInt(dct, newDataSize);
-        if (r != 1) {
-            xsArrayResizeString(newStringsArr, 0);
-            return (cStringStringDictGenericError);
-        }
-        _xsStringStringDictSetStringsArray(dct, newStringsArr);
+        int oldStringsArr = _xsStringStringDictGetStringsArray(dct);
+        xsArraySetInt(dct, 0, 0);
+        xsArraySetInt(dct, 1, newStringsArr);
         xsArrayResizeString(oldStringsArr, 0);
-        currentCapacity = targetCapacity;
+        return (cStringStringDictSuccess);
     }
+    _xsStringStringDictClearSlots(dct, capacity);
     xsArraySetInt(dct, 0, 0);
-    _xsStringStringDictSetRoot(dct, -1);
-    _xsStringStringDictSetFreeHead(dct, -1);
-    if (currentCapacity > 0) {
-        _xsStringStringDictInitializeFreeNodes(dct, 0, currentCapacity, -1);
-        _xsStringStringDictSetFreeHead(dct, 0);
-    }
     return (cStringStringDictSuccess);
 }
 
@@ -627,24 +395,24 @@ int xsStringStringDictClear(int dct = -1) {
     Returns a deep copy of the dict.
 */
 int xsStringStringDictCopy(int dct = -1) {
-    int dataSize = xsArrayGetSize(dct);
     int capacity = _xsStringStringDictCapacity(dct);
-    int newDct = xsArrayCreateInt(dataSize, -1);
+    int newDct = xsArrayCreateInt(2, 0);
     if (newDct < 0) {
         return (cStringStringDictResizeFailedError);
     }
-    int newStringsArr = xsArrayCreateString(capacity * cStringStringDictStringStride, "");
+    int newStringsArr = xsArrayCreateString(capacity * 2, "!<[empty");
     if (newStringsArr < 0) {
         xsArrayResizeInt(newDct, 0);
         return (cStringStringDictResizeFailedError);
     }
-    for (i = 0; < dataSize) {
-        xsArraySetInt(newDct, i, xsArrayGetInt(dct, i));
-    }
-    _xsStringStringDictSetStringsArray(newDct, newStringsArr);
-    int stringsArr = _xsStringStringDictGetStringsArray(dct);
-    for (j = 0; < capacity * cStringStringDictStringStride) {
-        xsArraySetString(newStringsArr, j, xsArrayGetString(stringsArr, j));
+    xsArraySetInt(newDct, 0, xsArrayGetInt(dct, 0));
+    xsArraySetInt(newDct, 1, newStringsArr);
+    for (i = 0; < capacity) {
+        string storedKey = _xsStringStringDictGetStoredKey(dct, i);
+        if (storedKey != "!<[empty") {
+            xsArraySetString(newStringsArr, _xsStringStringDictKeyIndex(i), storedKey);
+            xsArraySetString(newStringsArr, _xsStringStringDictValueIndex(i), _xsStringStringDictGetStoredValue(dct, i));
+        }
     }
     return (newDct);
 }
@@ -653,53 +421,92 @@ int xsStringStringDictCopy(int dct = -1) {
     Returns a string representation of the dict in the format `{"k1" - "v1", "k2" - "v2", ...}`.
 */
 string xsStringStringDictToString(int dct = -1) {
-    return (("{" + _xsStringStringDictToStringContents(dct, _xsStringStringDictGetRoot(dct))) + "}");
+    int capacity = _xsStringStringDictCapacity(dct);
+    string s = "{";
+    bool first = true;
+    for (i = 0; < capacity) {
+        string key = _xsStringStringDictGetStoredKey(dct, i);
+        if (key != "!<[empty") {
+            if (first) {
+                first = false;
+            } else {
+                s = s + ", ";
+            }
+            s = s + ("\"" + key + "\": \"" + _xsStringStringDictGetStoredValue(dct, i) + "\"");
+        }
+    }
+    s = s + "}";
+    return (s);
 }
 
 int xsStringStringDictLastError() {
     return (_stringStringDictLastOperationStatus);
 }
 
+string _xsStringStringDictFindNextOccupied(int dct = -1, int start = 0, int capacity = 0) {
+    int slot = start;
+    while (slot < capacity) {
+        string storedKey = _xsStringStringDictGetStoredKey(dct, slot);
+        if (storedKey != "!<[empty") {
+            _stringStringDictLastOperationStatus = cStringStringDictSuccess;
+            return (storedKey);
+        }
+        slot++;
+    }
+    _stringStringDictLastOperationStatus = cStringStringDictNoKeyError;
+    return ("-1");
+}
+
 /*
     Returns the next key in the dict for stateless iteration. Sets last error on completion.
+    Order is arbitrary.
 */
 string xsStringStringDictNextKey(int dct = -1, bool isFirst = true, string prevKey = "!<[empty") {
-    int nextNode = -1;
+    int capacity = _xsStringStringDictCapacity(dct);
     if (isFirst) {
-        nextNode = _xsStringStringDictMinNode(dct, _xsStringStringDictGetRoot(dct));
-    } else {
-        int node = _xsStringStringDictFindNode(dct, prevKey);
-        if (node < 0) {
-            _stringStringDictLastOperationStatus = cStringStringDictNoKeyError;
-            return ("-1");
-        }
-        nextNode = _xsStringStringDictFindSuccessorNode(dct, prevKey);
+        return (_xsStringStringDictFindNextOccupied(dct, 0, capacity));
     }
-    if (nextNode < 0) {
+    int slot = _xsStringStringDictFindSlot(dct, prevKey, capacity);
+    if (slot < 0) {
         _stringStringDictLastOperationStatus = cStringStringDictNoKeyError;
         return ("-1");
     }
-    _stringStringDictLastOperationStatus = cStringStringDictSuccess;
-    return (_xsStringStringDictGetStoredKey(dct, nextNode));
+    int nextStart = slot + 1;
+    return (_xsStringStringDictFindNextOccupied(dct, nextStart, capacity));
 }
 
 bool xsStringStringDictHasNext(int dct = -1, bool isFirst = true, string prevKey = "!<[empty") {
-    if (isFirst) {
-        return (_xsStringStringDictGetRoot(dct) >= 0);
+    int capacity = _xsStringStringDictCapacity(dct);
+    int start = 0;
+    if (isFirst == false) {
+        int slot = _xsStringStringDictFindSlot(dct, prevKey, capacity);
+        if (slot < 0) {
+            return (false);
+        }
+        start = slot + 1;
     }
-    if (_xsStringStringDictFindNode(dct, prevKey) < 0) {
-        return (false);
+    while (start < capacity) {
+        if (_xsStringStringDictGetStoredKey(dct, start) != "!<[empty") {
+            return (true);
+        }
+        start++;
     }
-    return (_xsStringStringDictFindSuccessorNode(dct, prevKey) >= 0);
+    return (false);
 }
 
 /*
     Inserts all key-value pairs from another dict into the source dict, overwriting existing keys.
 */
 int xsStringStringDictUpdate(int source = -1, int dct = -1) {
-    int result = _xsStringStringDictUpdateWalk(source, dct, _xsStringStringDictGetRoot(dct));
-    if (result != cStringStringDictSuccess) {
-        return (result);
+    int capacity = _xsStringStringDictCapacity(dct);
+    for (i = 0; < capacity) {
+        string key = _xsStringStringDictGetStoredKey(dct, i);
+        if (key != "!<[empty") {
+            xsStringStringDictPut(source, key, _xsStringStringDictGetStoredValue(dct, i));
+            if ((_stringStringDictLastOperationStatus != cStringStringDictSuccess) && (_stringStringDictLastOperationStatus != cStringStringDictNoKeyError)) {
+                return (_stringStringDictLastOperationStatus);
+            }
+        }
     }
     _stringStringDictLastOperationStatus = cStringStringDictSuccess;
     return (cStringStringDictSuccess);
@@ -707,7 +514,7 @@ int xsStringStringDictUpdate(int source = -1, int dct = -1) {
 
 /*
     Inserts the key-value pair only if the key is not already present. Sets last error on completion.
-    If `key` equals the reserved empty-key sentinel, the call is a no-op and returns
+    If `key` equals `"!<[empty"`, the call is a no-op and returns
     `"-1"` with last error set to `cStringStringDictGenericError`.
 */
 string xsStringStringDictPutIfAbsent(int dct = -1, string key = "", string val = "") {
@@ -715,25 +522,31 @@ string xsStringStringDictPutIfAbsent(int dct = -1, string key = "", string val =
         _stringStringDictLastOperationStatus = cStringStringDictGenericError;
         return ("-1");
     }
-    int existing = _xsStringStringDictFindNode(dct, key);
-    if (existing >= 0) {
-        _stringStringDictLastOperationStatus = cStringStringDictSuccess;
-        return (_xsStringStringDictGetStoredValue(dct, existing));
-    }
     int size = xsArrayGetInt(dct, 0);
-    int r = _xsStringStringDictEnsureCapacity(dct, size + 1);
+    int capacity = _xsStringStringDictCapacity(dct);
+    int slot = _xsStringStringDictFindSlot(dct, key, capacity);
+    if (slot >= 0) {
+        _stringStringDictLastOperationStatus = cStringStringDictSuccess;
+        return (_xsStringStringDictGetStoredValue(dct, slot));
+    }
+    int r = _xsStringStringDictRehashIfNeeded(dct, size, capacity, size + 1);
     if (r != cStringStringDictSuccess) {
-        _stringStringDictLastOperationStatus = r;
         return ("-1");
     }
-    _xsStringStringDictSetRoot(dct, _xsStringStringDictInsertNode(dct, _xsStringStringDictGetRoot(dct), key, val));
-    xsArraySetInt(dct, 0, size + 1);
-    _stringStringDictLastOperationStatus = cStringStringDictNoKeyError;
-    return ("-1");
+    capacity = _xsStringStringDictCapacity(dct);
+    string result = _xsStringStringDictUpsert(dct, key, val, capacity);
+    if (_stringStringDictLastOperationStatus == cStringStringDictNoKeyError) {
+        xsArraySetInt(dct, 0, size + 1);
+        return ("-1");
+    }
+    if (_stringStringDictLastOperationStatus != cStringStringDictSuccess) {
+        return ("-1");
+    }
+    return (result);
 }
 
 /*
-    Returns a new string array containing all keys in the dict. Order is lexicographic.
+    Returns a new string array containing all keys in the dict. Order is arbitrary.
 */
 int xsStringStringDictKeys(int dct = -1, int outArr = -1) {
     int size = xsArrayGetInt(dct, 0);
@@ -749,7 +562,15 @@ int xsStringStringDictKeys(int dct = -1, int outArr = -1) {
             return (cStringStringDictResizeFailedError);
         }
     }
-    _xsStringStringDictKeysFill(dct, _xsStringStringDictGetRoot(dct), arr);
+    int capacity = _xsStringStringDictCapacity(dct);
+    int idx = 0;
+    for (i = 0; < capacity) {
+        string storedKey = _xsStringStringDictGetStoredKey(dct, i);
+        if (storedKey != "!<[empty") {
+            xsArraySetString(arr, idx, storedKey);
+            idx++;
+        }
+    }
     return (arr);
 }
 
@@ -770,7 +591,15 @@ int xsStringStringDictValues(int dct = -1, int outArr = -1) {
             return (cStringStringDictResizeFailedError);
         }
     }
-    _xsStringStringDictValuesFill(dct, _xsStringStringDictGetRoot(dct), arr);
+    int capacity = _xsStringStringDictCapacity(dct);
+    int idx = 0;
+    for (i = 0; < capacity) {
+        string storedKey = _xsStringStringDictGetStoredKey(dct, i);
+        if (storedKey != "!<[empty") {
+            xsArraySetString(arr, idx, _xsStringStringDictGetStoredValue(dct, i));
+            idx++;
+        }
+    }
     return (arr);
 }
 
@@ -778,8 +607,23 @@ int xsStringStringDictValues(int dct = -1, int outArr = -1) {
     Returns true if both dicts contain the same key-value pairs.
 */
 bool xsStringStringDictEquals(int a = -1, int b = -1) {
-    if (xsArrayGetInt(a, 0) != xsArrayGetInt(b, 0)) {
+    int sizeA = xsArrayGetInt(a, 0);
+    int sizeB = xsArrayGetInt(b, 0);
+    if (sizeA != sizeB) {
         return (false);
     }
-    return (_xsStringStringDictEqualsWalk(a, b, _xsStringStringDictGetRoot(a)));
+    int capacity = _xsStringStringDictCapacity(a);
+    for (i = 0; < capacity) {
+        string key = _xsStringStringDictGetStoredKey(a, i);
+        if (key != "!<[empty") {
+            string val = _xsStringStringDictGetStoredValue(a, i);
+            if (xsStringStringDictGet(b, key) != val) {
+                return (false);
+            }
+            if (xsStringStringDictLastError() != cStringStringDictSuccess) {
+                return (false);
+            }
+        }
+    }
+    return (true);
 }

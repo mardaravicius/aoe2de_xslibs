@@ -174,6 +174,9 @@ int _xsIntVectorDictRehashIfNeeded(int dct = -1, int size = 0, int capacity = 0,
         int storeStatus = _intVectorDictLastOperationStatus;
         int newCapacity = ((capacity - 1) * 2) + 1;
         if (newCapacity > cIntVectorDictMaxCapacity) {
+            newCapacity = cIntVectorDictMaxCapacity;
+        }
+        if (newCapacity <= capacity) {
             _intVectorDictLastOperationStatus = cIntVectorDictMaxCapacityError;
             return (cIntVectorDictGenericError);
         }

@@ -8,7 +8,7 @@ It adds growable lists, `int`/`float`/`vector`/`string` dictionary variants, bit
 XS gives you arrays, vectors, and primitive types, but larger scripts quickly run into a few missing building blocks:
 
 - dynamic array with an api inspired by python list
-- hash tables and tree maps with an api inspired by python dictionary
+- hash tables with an api inspired by python dictionary
 - bitwise operations as xs functions
 - a pseudo-random number generator with good random distribution based on the mersenne twister algorithm
 
@@ -66,9 +66,9 @@ You do not need the Python tooling for that.
 | `floatIntDict.xs` | Hash map from `float` keys to `int` values |
 | `floatStringDict.xs` | Hash map from `float` keys to `string` values |
 | `floatVectorDict.xs` | Hash map from `float` keys to `vector` values |
-| `stringIntDict.xs` | AVL tree map from `string` keys to `int` values |
-| `stringStringDict.xs` | AVL tree map from `string` keys to `string` values |
-| `stringVectorDict.xs` | AVL tree map from `string` keys to `vector` values |
+| `stringIntDict.xs` | Hash map from `string` keys to `int` values |
+| `stringStringDict.xs` | Hash map from `string` keys to `string` values |
+| `stringVectorDict.xs` | Hash map from `string` keys to `vector` values |
 | `vectorIntDict.xs` | Hash map from `vector` keys to `int` values |
 | `vectorStringDict.xs` | Hash map from `vector` keys to `string` values |
 | `vectorVectorDict.xs` | Hash map from `vector` keys to `vector` values |
@@ -988,8 +988,8 @@ void placeCamps() {
 
 ## 15. String to Int Dictionary
 
-`stringIntDict.xs` provides an AVL tree map from `string` keys to `int` values.
-It supports dynamic string keys and iterates in lexicographic key order.
+`stringIntDict.xs` provides a hash map from `string` keys to `int` values.
+The exported implementation uses open addressing with linear probing and resizes automatically when the load factor grows past `cStringIntDictMaxLoadFactor`. Iteration order is arbitrary.
 
 ### Constants
 
@@ -1001,6 +1001,7 @@ It supports dynamic string keys and iterates in lexicographic key order.
 | `cStringIntDictResizeFailedError` | `-3` | Resize allocation failed |
 | `cStringIntDictMaxCapacityError` | `-4` | Exceeded maximum capacity |
 | `cStringIntDictMaxCapacity` | `249999998` | Hard upper limit |
+| `cStringIntDictMaxLoadFactor` | `0.75` | Resize trigger threshold |
 
 The reserved key string `!<[empty` is used internally and cannot be stored.
 
@@ -1025,7 +1026,7 @@ int    xsStringIntDictClear(int dct)
 // Bulk operations
 int    xsStringIntDictUpdate(int source, int dct)
 int    xsStringIntDictCopy(int dct)
-int    xsStringIntDictKeys(int dct)              // returns a raw XS string array in lexicographic order
+int    xsStringIntDictKeys(int dct)              // returns a raw XS string array
 int    xsStringIntDictValues(int dct)            // returns a raw XS int array matching `Keys`
 bool   xsStringIntDictEquals(int a, int b)
 
@@ -1067,8 +1068,8 @@ void trackScoresByName() {
 
 ## 16. String to String Dictionary
 
-`stringStringDict.xs` provides an AVL tree map from `string` keys to `string` values.
-It supports dynamic string keys and iterates in lexicographic key order.
+`stringStringDict.xs` provides a hash map from `string` keys to `string` values.
+The exported implementation uses open addressing with linear probing and resizes automatically when the load factor grows past `cStringStringDictMaxLoadFactor`. Iteration order is arbitrary.
 
 ### Constants
 
@@ -1080,6 +1081,7 @@ It supports dynamic string keys and iterates in lexicographic key order.
 | `cStringStringDictResizeFailedError` | `-3` | Resize allocation failed |
 | `cStringStringDictMaxCapacityError` | `-4` | Exceeded maximum capacity |
 | `cStringStringDictMaxCapacity` | `333333331` | Hard upper limit |
+| `cStringStringDictMaxLoadFactor` | `0.75` | Resize trigger threshold |
 
 The reserved key string `!<[empty` is used internally and cannot be stored.
 
@@ -1104,7 +1106,7 @@ int    xsStringStringDictClear(int dct)
 // Bulk operations
 int    xsStringStringDictUpdate(int source, int dct)
 int    xsStringStringDictCopy(int dct)
-int    xsStringStringDictKeys(int dct)           // returns a raw XS string array in lexicographic order
+int    xsStringStringDictKeys(int dct)           // returns a raw XS string array
 int    xsStringStringDictValues(int dct)         // returns a raw XS string array matching `Keys`
 bool   xsStringStringDictEquals(int a, int b)
 
@@ -1143,8 +1145,8 @@ void mapAliases() {
 
 ## 17. String to Vector Dictionary
 
-`stringVectorDict.xs` provides an AVL tree map from `string` keys to `vector` values.
-It supports dynamic string keys and iterates in lexicographic key order.
+`stringVectorDict.xs` provides a hash map from `string` keys to `vector` values.
+The exported implementation uses open addressing with linear probing and resizes automatically when the load factor grows past `cStringVectorDictMaxLoadFactor`. Iteration order is arbitrary.
 
 ### Constants
 
@@ -1157,6 +1159,7 @@ It supports dynamic string keys and iterates in lexicographic key order.
 | `cStringVectorDictMaxCapacityError` | `-4` | Exceeded maximum capacity |
 | `cStringVectorDictGenericErrorVector` | `vector(-1.0, -1.0, -1.0)` | Error return for vector-valued operations |
 | `cStringVectorDictMaxCapacity` | `333333330` | Hard upper limit |
+| `cStringVectorDictMaxLoadFactor` | `0.75` | Resize trigger threshold |
 
 The reserved key string `!<[empty` is used internally and cannot be stored.
 
@@ -1181,7 +1184,7 @@ int    xsStringVectorDictClear(int dct)
 // Bulk operations
 int    xsStringVectorDictUpdate(int source, int dct)
 int    xsStringVectorDictCopy(int dct)
-int    xsStringVectorDictKeys(int dct)           // returns a raw XS string array in lexicographic order
+int    xsStringVectorDictKeys(int dct)           // returns a raw XS string array
 int    xsStringVectorDictValues(int dct)         // returns a raw XS vector array matching `Keys`
 bool   xsStringVectorDictEquals(int a, int b)
 

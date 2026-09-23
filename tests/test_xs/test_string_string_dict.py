@@ -236,7 +236,7 @@ _BASE_TESTS = _load_base_test_module()
 class StringStringDictCompatibilityTest(_BASE_TESTS.IntIntDictTest):
     def test_rehash_past_max_capacity_reports_max_capacity_error(self):
         orig = _ssd.c_string_string_dict_max_capacity
-        _ssd.c_string_string_dict_max_capacity = int32(12)
+        _ssd.c_string_string_dict_max_capacity = _ssd.c_string_string_dict_initial_capacity
         try:
             xs_dct = _ssd.xs_string_string_dict_create()
             expected = {}
@@ -253,9 +253,29 @@ class StringStringDictCompatibilityTest(_BASE_TESTS.IntIntDictTest):
         finally:
             _ssd.c_string_string_dict_max_capacity = orig
 
+    def test_rehash_clamps_to_max_capacity_before_reporting_full(self):
+        orig = _ssd.c_string_string_dict_max_capacity
+        _ssd.c_string_string_dict_max_capacity = int32(24)
+        try:
+            xs_dct = _ssd.xs_string_string_dict_create()
+            expected = {}
+            for key in range(18):
+                _ssd.xs_string_string_dict_put(xs_dct, _encode_key(int32(key)), _encode_value(int32(key)))
+                expected[key] = key
+                self.assertEqual(_ssd.c_string_string_dict_no_key_error, _ssd.xs_string_string_dict_last_error())
+            self.assertEqual(48, xs_array_get_size(xs_array_get_int(xs_dct, int32(1))))
+            self.assertEqual(
+                "-1",
+                _ssd.xs_string_string_dict_put(xs_dct, _encode_key(int32(18)), _encode_value(int32(18))),
+            )
+            self.assertEqual(_ssd.c_string_string_dict_max_capacity_error, _ssd.xs_string_string_dict_last_error())
+            self._assert_dicts_equal(xs_dct, expected)
+        finally:
+            _ssd.c_string_string_dict_max_capacity = orig
+
     def test_put_if_absent_past_max_capacity_preserves_existing_entries(self):
         orig = _ssd.c_string_string_dict_max_capacity
-        _ssd.c_string_string_dict_max_capacity = int32(12)
+        _ssd.c_string_string_dict_max_capacity = _ssd.c_string_string_dict_initial_capacity
         try:
             xs_dct = _ssd.xs_string_string_dict_create()
             expected = {}
@@ -291,17 +311,19 @@ class StringStringDictNativeTest(unittest.TestCase):
         arr = _ssd.xs_string_string_dict_keys(xs_dct)
         self.assertEqual(2, xs_array_get_size(arr))
         keys = [xs_array_get_string(arr, int32(i)) for i in range(xs_array_get_size(arr))]
-        self.assertEqual(["one", "two"], keys)
+        self.assertCountEqual(["one", "two"], keys)
 
     def test_values_returns_string_array(self):
         xs_dct = _ssd.xs_string_string_dict_create()
         _ssd.xs_string_string_dict_put(xs_dct, "one", "uno")
         _ssd.xs_string_string_dict_put(xs_dct, "two", "dos")
 
+        keys_arr = _ssd.xs_string_string_dict_keys(xs_dct)
         arr = _ssd.xs_string_string_dict_values(xs_dct)
         self.assertEqual(2, xs_array_get_size(arr))
+        keys = [xs_array_get_string(keys_arr, int32(i)) for i in range(xs_array_get_size(keys_arr))]
         values = [xs_array_get_string(arr, int32(i)) for i in range(xs_array_get_size(arr))]
-        self.assertEqual(["uno", "dos"], values)
+        self.assertCountEqual([("one", "uno"), ("two", "dos")], list(zip(keys, values)))
 
     def test_to_string_mentions_quoted_string_key_and_value(self):
         xs_dct = _ssd.xs_string_string_dict_create()
@@ -442,27 +464,22 @@ class StringStringDictAllocationCleanupTest(unittest.TestCase):
         self.assertEqual(0, calls["create_string"])
         self.assertEqual(0, calls["resize_string"])
 
-    def test_clear_rolls_back_string_array_when_int_resize_fails(self):
+    def test_clear_preserves_entries_when_replacement_string_array_allocation_fails(self):
         xs_dct = _ssd.xs_string_string_dict_create()
         for k in range(40):
             _ssd.xs_string_string_dict_put(xs_dct, f"k{k}", f"v{k}")
 
         strings_arr = xs_array_get_int(xs_dct, int32(1))
-        old_data_size = xs_array_get_size(xs_dct)
         old_strings_size = xs_array_get_size(strings_arr)
         old_size = _ssd.xs_string_string_dict_size(xs_dct)
 
-        def _resize_string(arr_id, new_size):
-            return self.orig_resize_string(arr_id, new_size)
+        def _create_string(*args, **kwargs):
+            return int32(-1)
 
-        def _resize_int(arr_id, new_size):
-            return int32(0)
-
-        _ssd.xs_array_resize_string = _resize_string
-        _ssd.xs_array_resize_int = _resize_int
+        _ssd.xs_array_create_string = _create_string
 
         self.assertEqual(_ssd.c_string_string_dict_generic_error, _ssd.xs_string_string_dict_clear(xs_dct))
-        self.assertEqual(old_data_size, xs_array_get_size(xs_dct))
+        self.assertEqual(2, xs_array_get_size(xs_dct))
         self.assertEqual(old_strings_size, xs_array_get_size(strings_arr))
         self.assertEqual(old_size, _ssd.xs_string_string_dict_size(xs_dct))
         self.assertEqual("v12", _ssd.xs_string_string_dict_get(xs_dct, "k12"))

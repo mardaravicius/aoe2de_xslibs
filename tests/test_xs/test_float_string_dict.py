@@ -234,6 +234,24 @@ class FloatStringDictTest(unittest.TestCase):
         finally:
             _fsd.c_float_string_dict_max_capacity = orig
 
+    def test_rehash_clamps_to_max_capacity_before_reporting_full(self):
+        orig = _fsd.c_float_string_dict_max_capacity
+        _fsd.c_float_string_dict_max_capacity = int32(26)
+        try:
+            xs_dct = xs_float_string_dict_create()
+            expected: dict[int, str] = {}
+            for key in range(18):
+                float_key = float32(key) + float32(0.5)
+                xs_float_string_dict_put(xs_dct, float_key, f"v{key}")
+                expected[_canonical_bits(float_key)] = f"v{key}"
+                self.assertEqual(c_float_string_dict_no_key_error, xs_float_string_dict_last_error())
+            self.assertEqual(26, xs_array_get_size(xs_dct))
+            self.assertEqual("-1", xs_float_string_dict_put(xs_dct, float32(18.5), "v18"))
+            self.assertEqual(c_float_string_dict_max_capacity_error, xs_float_string_dict_last_error())
+            self._assert_dict_matches(xs_dct, expected)
+        finally:
+            _fsd.c_float_string_dict_max_capacity = orig
+
     def test_put_if_absent_past_max_capacity_preserves_existing_entries(self):
         orig = _fsd.c_float_string_dict_max_capacity
         _fsd.c_float_string_dict_max_capacity = int32(18)

@@ -137,6 +137,9 @@ int _xsIntIntDictRehashIfNeeded(int dct = -1, int size = 0, int capacity = 0, in
         int storeStatus = _intIntDictLastOperationStatus;
         int newCapacity = ((capacity - 1) * 2) + 1;
         if (newCapacity > cIntIntDictMaxCapacity) {
+            newCapacity = cIntIntDictMaxCapacity;
+        }
+        if (newCapacity <= capacity) {
             _intIntDictLastOperationStatus = cIntIntDictMaxCapacityError;
             return (cIntIntDictGenericError);
         }
