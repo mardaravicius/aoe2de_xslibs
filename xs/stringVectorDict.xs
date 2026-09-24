@@ -93,10 +93,9 @@ int _xsStringVectorDictHash(string key = "", int capacity = 0) {
         int ch = ord(strCharAt(key, i));
         h = (h + ch) * cStringVectorDictHashConstant;
     }
-    int numSlots = capacity;
-    h = h % numSlots;
+    h = h % capacity;
     if (h < 0) {
-        h = h + numSlots;
+        h = h + capacity;
     }
     return (h);
 }
@@ -128,8 +127,7 @@ int _xsStringVectorDictFindSlot(int dct = -1, string key = "", int capacity = 0)
 
 vector _xsStringVectorDictUpsert(int dct = -1, string key = "", vector val = vector(0.0, 0.0, 0.0), int capacity = 0) {
     int numSlots = capacity;
-    int home = _xsStringVectorDictHash(key, capacity);
-    int slot = home;
+    int slot = _xsStringVectorDictHash(key, capacity);
     int steps = 0;
     while (steps < numSlots) {
         string storedKey = _xsStringVectorDictGetStoredKey(dct, slot);

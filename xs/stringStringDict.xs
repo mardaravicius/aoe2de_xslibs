@@ -75,10 +75,9 @@ int _xsStringStringDictHash(string key = "", int capacity = 0) {
         int ch = ord(strCharAt(key, i));
         h = (h + ch) * cStringStringDictHashConstant;
     }
-    int numSlots = capacity;
-    h = h % numSlots;
+    h = h % capacity;
     if (h < 0) {
-        h = h + numSlots;
+        h = h + capacity;
     }
     return (h);
 }
@@ -110,8 +109,7 @@ int _xsStringStringDictFindSlot(int dct = -1, string key = "", int capacity = 0)
 
 string _xsStringStringDictUpsert(int dct = -1, string key = "", string val = "", int capacity = 0) {
     int numSlots = capacity;
-    int home = _xsStringStringDictHash(key, capacity);
-    int slot = home;
+    int slot = _xsStringStringDictHash(key, capacity);
     int steps = 0;
     while (steps < numSlots) {
         string storedKey = _xsStringStringDictGetStoredKey(dct, slot);

@@ -91,10 +91,9 @@ def _xs_string_string_dict_hash(key: str = "", capacity: int32 = int32(0)) -> in
     for i in i32range(0, n):
         ch: int32 = ord(str_char_at(key, i))
         h = (h + ch) * c_string_string_dict_hash_constant
-    num_slots: int32 = capacity
-    h = h % num_slots
+    h %= capacity
     if h < 0:
-        h += num_slots
+        h += capacity
     return h
 
 
@@ -122,8 +121,7 @@ def _xs_string_string_dict_upsert(dct: int32 = int32(-1), key: str = "", val: st
                                    capacity: int32 = int32(0)) -> str:
     global _string_string_dict_last_operation_status
     num_slots: int32 = capacity
-    home: int32 = _xs_string_string_dict_hash(key, capacity)
-    slot: int32 = home
+    slot: int32 = _xs_string_string_dict_hash(key, capacity)
     steps: int32 = int32(0)
     while steps < num_slots:
         stored_key: str = _xs_string_string_dict_get_stored_key(dct, slot)

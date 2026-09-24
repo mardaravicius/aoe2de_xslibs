@@ -107,8 +107,7 @@ int _xsStringIntDictFindSlot(int dct = -1, string key = "", int capacity = 0) {
 
 int _xsStringIntDictUpsert(int dct = -1, string key = "", int val = 0, int capacity = 0) {
     int numSlots = _xsStringIntDictKeysCapacityFromIntCapacity(capacity);
-    int home = _xsStringIntDictHash(key, capacity);
-    int slot = home;
+    int slot = _xsStringIntDictHash(key, capacity);
     int steps = 0;
     while (steps < numSlots) {
         string storedKey = _xsStringIntDictGetStoredKey(dct, slot);
