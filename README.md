@@ -1,7 +1,7 @@
 # aoe2de_xslibs
 
 A reusable XS library pack for Age of Empires II: Definitive Edition.
-It adds growable lists, `int`/`float`/`vector`/`string` dictionary variants, bitwise helpers, and a Mersenne Twister random number generator.
+It adds growable lists, `int`/`float`/`vector`/`string` dictionary variants, and a Mersenne Twister random number generator.
 
 ## Why these libraries?
 
@@ -71,7 +71,7 @@ You do not need the Python tooling for that.
 | `vectorIntDict.xs` | Hash map from `vector` keys to `int` values |
 | `vectorStringDict.xs` | Hash map from `vector` keys to `string` values |
 | `vectorVectorDict.xs` | Hash map from `vector` keys to `vector` values |
-| `random.xs` | Bitwise helpers and MT19937 random number functions |
+| `random.xs` | MT19937 random number functions |
 
 ## 2. Add them to your script
 
@@ -1479,7 +1479,7 @@ void randomTeams() {
 
 ## 22. Larger example
 
-The example below shows `Int List`, `IntIntDict`, bitwise flags, and the MT RNG working together in one script.
+The example below shows `Int List`, `IntIntDict`, and the MT RNG working together in one script.
 
 ```cpp
 include "intList.xs";
