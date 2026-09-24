@@ -2,7 +2,7 @@ import subprocess
 from pathlib import Path
 from types import ModuleType
 
-import xs.binary_functions as binary_functions
+import xs.random as random
 import xs.bool_list as bool_list
 import xs.float_list as float_list
 import xs.float_int_dict as float_int_dict
@@ -41,7 +41,7 @@ def main() -> None:
         (vector_int_dict, "vectorIntDict"),
         (vector_string_dict, "vectorStringDict"),
         (vector_vector_dict, "vectorVectorDict"),
-        (binary_functions, "binaryFunctions"),
+        (random, "random"),
     ]
     for module, name in xs_modules:
         xs = PythonToXsConverter.to_xs_file(module, indent=True)

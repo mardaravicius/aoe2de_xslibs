@@ -9,7 +9,6 @@ XS gives you arrays, vectors, and primitive types, but larger scripts quickly ru
 
 - dynamic array with an api inspired by python list
 - hash tables with an api inspired by python dictionary
-- bitwise operations as xs functions
 - a pseudo-random number generator with good random distribution based on the mersenne twister algorithm
 
 This repo packages those missing pieces as drop-in `.xs` files.
@@ -72,7 +71,7 @@ You do not need the Python tooling for that.
 | `vectorIntDict.xs` | Hash map from `vector` keys to `int` values |
 | `vectorStringDict.xs` | Hash map from `vector` keys to `string` values |
 | `vectorVectorDict.xs` | Hash map from `vector` keys to `vector` values |
-| `binaryFunctions.xs` | Bitwise helpers and MT19937 random number functions |
+| `random.xs` | Bitwise helpers and MT19937 random number functions |
 
 ## 2. Add them to your script
 
@@ -88,7 +87,7 @@ There are three straightforward ways to use the libraries.
    ```cpp
    include "intList.xs";
    include "intIntDict.xs";
-   include "binaryFunctions.xs";
+   include "random.xs";
    ```
 
 ### Option B - Copy and paste the file contents
@@ -1451,20 +1450,9 @@ void remapTargets() {
 }
 ```
 
-## 21. Binary Operations
+## 21. Random Numbers
 
-`binaryFunctions.xs` provides software implementations of common 32-bit bitwise operations.
-Most are already implemented within xs itself, so it contains the only one not currently supported: the `>>>` equivalent `xsBitShiftRightLogical`. 
-
-### API
-
-```cpp
-int xsBitShiftRightLogical(int x, int n)
-```
-
-## 22. Random Numbers
-
-`binaryFunctions.xs` also includes a Mersenne Twister (`MT19937`) pseudo-random number generator.
+`random.xs` also includes a Mersenne Twister (`MT19937`) pseudo-random number generator.
 Seed it once with `xsMtSeed`, then draw values with `xsMtRandom`, `xsMtRandomFloat`, `xsMtRandomBool` or `xsMtRandomUniformRange`.
 
 ### API
@@ -1489,7 +1477,7 @@ void randomTeams() {
 }
 ```
 
-## 23. Larger example
+## 22. Larger example
 
 The example below shows `Int List`, `IntIntDict`, bitwise flags, and the MT RNG working together in one script.
 
