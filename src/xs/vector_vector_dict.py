@@ -13,7 +13,8 @@ c_vector_vector_dict_max_capacity_error: XsExternConst[int32] = int32(-4)
 c_vector_vector_dict_generic_error_vector: XsExternConst[XsVector] = vector(-1.0, -1.0, -1.0)
 c_vector_vector_dict_max_capacity: XsExternConst[int32] = int32(999999997)
 c_vector_vector_dict_max_load_factor: XsExternConst[float32] = float32(0.75)
-c_vector_vector_dict_empty_key: XsExternConst[XsVector] = vector(-9999999.0, -9999999.0, -9999999.0)
+c_vector_vector_dict_empty_key_float: XsExternConst[float32] = float32(-9999999.0)
+c_vector_vector_dict_empty_key: XsExternConst[XsVector] = vector(c_vector_vector_dict_empty_key_float, c_vector_vector_dict_empty_key_float, c_vector_vector_dict_empty_key_float)
 c_vector_vector_dict_initial_capacity: XsExternConst[int32] = int32(97)
 c_vector_vector_dict_hash_constant: XsExternConst[int32] = int32(16777619)
 _vector_vector_dict_last_operation_status: int32 = c_vector_vector_dict_success
@@ -77,12 +78,12 @@ def xs_vector_vector_dict_create() -> int32:
     canonicalized; avoid NaN and signed-zero components.
     :return: created dict id, or `c_vector_vector_dict_generic_error` on error
     """
-    dct: int32 = xs_array_create_float(c_vector_vector_dict_initial_capacity, xs_vector_get_x(c_vector_vector_dict_empty_key))
+    dct: int32 = xs_array_create_float(c_vector_vector_dict_initial_capacity, c_vector_vector_dict_empty_key_float)
     if dct < 0:
         return c_vector_vector_dict_generic_error
     for i in i32range(2, c_vector_vector_dict_initial_capacity, 6):
-        xs_array_set_float(dct, i, xs_vector_get_y(c_vector_vector_dict_empty_key))
-        xs_array_set_float(dct, i + 1, xs_vector_get_z(c_vector_vector_dict_empty_key))
+        xs_array_set_float(dct, i, c_vector_vector_dict_empty_key_float)
+        xs_array_set_float(dct, i + 1, c_vector_vector_dict_empty_key_float)
     _xs_vector_vector_dict_set_size(dct, int32(0))
     return dct
 

@@ -6,7 +6,8 @@ extern const int cVectorIntDictMaxCapacityError = -4;
 extern const vector cVectorIntDictGenericErrorVector = vector(-1.0, -1.0, -1.0);
 extern const int cVectorIntDictMaxCapacity = 999999997;
 extern const float cVectorIntDictMaxLoadFactor = 0.75;
-extern const vector cVectorIntDictEmptyKey = vector(-9999999.0, -9999999.0, -9999999.0);
+extern const float cVectorIntDictEmptyKeyFloat = -9999999.0;
+extern const vector cVectorIntDictEmptyKey = vector(cVectorIntDictEmptyKeyFloat, cVectorIntDictEmptyKeyFloat, cVectorIntDictEmptyKeyFloat);
 extern const int cVectorIntDictInitialCapacity = 65;
 extern const int cVectorIntDictHashConstant = 16777619;
 int _vectorIntDictLastOperationStatus = cVectorIntDictSuccess;
@@ -55,14 +56,14 @@ void _xsVectorIntDictSetSlot(int dct = -1, int slot = 1, vector key = vector(0.0
     @return created dict id, or `cVectorIntDictGenericError` on error
 */
 int xsVectorIntDictCreate() {
-    int dct = xsArrayCreateFloat(cVectorIntDictInitialCapacity, xsVectorGetX(cVectorIntDictEmptyKey));
+    int dct = xsArrayCreateFloat(cVectorIntDictInitialCapacity, cVectorIntDictEmptyKeyFloat);
     if (dct < 0) {
         return (cVectorIntDictGenericError);
     }
     int i = 2;
     while (i < cVectorIntDictInitialCapacity) {
-        xsArraySetFloat(dct, i, xsVectorGetY(cVectorIntDictEmptyKey));
-        xsArraySetFloat(dct, i + 1, xsVectorGetZ(cVectorIntDictEmptyKey));
+        xsArraySetFloat(dct, i, cVectorIntDictEmptyKeyFloat);
+        xsArraySetFloat(dct, i + 1, cVectorIntDictEmptyKeyFloat);
         i = i + 4;
     }
     _xsVectorIntDictSetSize(dct, 0);
