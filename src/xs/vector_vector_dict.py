@@ -45,7 +45,9 @@ def _xs_vector_vector_dict_set_stored_key(dct: int32 = int32(-1), slot: int32 = 
 
 
 def _xs_vector_vector_dict_clear_slot(dct: int32 = int32(-1), slot: int32 = int32(1)) -> None:
-    _xs_vector_vector_dict_set_stored_key(dct, slot, c_vector_vector_dict_empty_key)
+    xs_array_set_float(dct, slot, c_vector_vector_dict_empty_key_float)
+    xs_array_set_float(dct, slot + 1, c_vector_vector_dict_empty_key_float)
+    xs_array_set_float(dct, slot + 2, c_vector_vector_dict_empty_key_float)
 
 
 def _xs_vector_vector_dict_set_stored_value(dct: int32 = int32(-1), slot: int32 = int32(1),
@@ -149,7 +151,7 @@ def _xs_vector_vector_dict_move_to_temp_array(dct: int32 = int32(-1), size: int3
     global _vector_vector_dict_temp_array
     temp_data_size: int32 = size * 6
     if _vector_vector_dict_temp_array < 0:
-        _vector_vector_dict_temp_array = xs_array_create_float(temp_data_size, xs_vector_get_x(c_vector_vector_dict_empty_key))
+        _vector_vector_dict_temp_array = xs_array_create_float(temp_data_size, c_vector_vector_dict_empty_key_float)
         if _vector_vector_dict_temp_array < 0:
             return c_vector_vector_dict_resize_failed_error
     else:
@@ -161,8 +163,8 @@ def _xs_vector_vector_dict_move_to_temp_array(dct: int32 = int32(-1), size: int3
             if r != 1:
                 return c_vector_vector_dict_resize_failed_error
     for temp_idx in i32range(2, temp_data_size, 6):
-        xs_array_set_float(_vector_vector_dict_temp_array, temp_idx, xs_vector_get_y(c_vector_vector_dict_empty_key))
-        xs_array_set_float(_vector_vector_dict_temp_array, temp_idx + 1, xs_vector_get_z(c_vector_vector_dict_empty_key))
+        xs_array_set_float(_vector_vector_dict_temp_array, temp_idx, c_vector_vector_dict_empty_key_float)
+        xs_array_set_float(_vector_vector_dict_temp_array, temp_idx + 1, c_vector_vector_dict_empty_key_float)
     t: int32 = int32(0)
     for slot_idx in i32range(1, capacity, 6):
         stored_key: XsVector = _xs_vector_vector_dict_get_stored_key(dct, slot_idx)
@@ -394,12 +396,12 @@ def xs_vector_vector_dict_copy(dct: int32 = int32(-1)) -> int32:
     Returns a deep copy of the dict.
     """
     capacity: int32 = xs_array_get_size(dct)
-    new_dct: int32 = xs_array_create_float(capacity, xs_vector_get_x(c_vector_vector_dict_empty_key))
+    new_dct: int32 = xs_array_create_float(capacity, c_vector_vector_dict_empty_key_float)
     if new_dct < 0:
         return c_vector_vector_dict_resize_failed_error
     for temp_idx in i32range(2, capacity, 6):
-        xs_array_set_float(new_dct, temp_idx, xs_vector_get_y(c_vector_vector_dict_empty_key))
-        xs_array_set_float(new_dct, temp_idx + 1, xs_vector_get_z(c_vector_vector_dict_empty_key))
+        xs_array_set_float(new_dct, temp_idx, c_vector_vector_dict_empty_key_float)
+        xs_array_set_float(new_dct, temp_idx + 1, c_vector_vector_dict_empty_key_float)
     for slot_idx in i32range(1, capacity, 6):
         stored_key: XsVector = _xs_vector_vector_dict_get_stored_key(dct, slot_idx)
         if stored_key != c_vector_vector_dict_empty_key:

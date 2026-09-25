@@ -52,16 +52,18 @@ def _xs_float_string_dict_get_values_array(dct: int32 = int32(-1)) -> int32:
     return xs_array_get_int(dct, 1)
 
 
-def _xs_float_string_dict_value_slot(slot: int32 = int32(2)) -> int32:
-    return slot - 2
+def _xs_float_string_dict_get_stored_value(dct: int32 = int32(-1), slot: int32 = int32(2),
+                                            values_arr: int32 = int32(-2)) -> str:
+    if values_arr < -1:
+        values_arr = _xs_float_string_dict_get_values_array(dct)
+    return xs_array_get_string(values_arr, slot - 2)
 
 
-def _xs_float_string_dict_get_stored_value(dct: int32 = int32(-1), slot: int32 = int32(2)) -> str:
-    return xs_array_get_string(_xs_float_string_dict_get_values_array(dct), _xs_float_string_dict_value_slot(slot))
-
-
-def _xs_float_string_dict_set_stored_value(dct: int32 = int32(-1), slot: int32 = int32(2), value: str = "") -> None:
-    xs_array_set_string(_xs_float_string_dict_get_values_array(dct), _xs_float_string_dict_value_slot(slot), value)
+def _xs_float_string_dict_set_stored_value(dct: int32 = int32(-1), slot: int32 = int32(2), value: str = "",
+                                            values_arr: int32 = int32(-2)) -> None:
+    if values_arr < -1:
+        values_arr = _xs_float_string_dict_get_values_array(dct)
+    xs_array_set_string(values_arr, slot - 2, value)
 
 
 def _xs_float_string_dict_clear_slot(dct: int32 = int32(-1), slot: int32 = int32(2)) -> None:
@@ -122,6 +124,7 @@ def _xs_float_string_dict_upsert(dct: int32 = int32(-1), key: float32 = float32(
     global _float_string_dict_last_operation_status
     key_bits: int32 = _xs_float_string_dict_key_bits(key)
     num_slots: int32 = _xs_float_string_dict_values_capacity_from_int_capacity(capacity)
+    values_arr: int32 = _xs_float_string_dict_get_values_array(dct)
     home: int32 = _xs_float_string_dict_hash(key, capacity)
     slot: int32 = home
     steps: int32 = int32(0)
@@ -129,12 +132,12 @@ def _xs_float_string_dict_upsert(dct: int32 = int32(-1), key: float32 = float32(
         stored_key_bits: int32 = xs_array_get_int(dct, slot)
         if stored_key_bits == c_float_string_dict_empty_key_bits:
             xs_array_set_int(dct, slot, key_bits)
-            _xs_float_string_dict_set_stored_value(dct, slot, val)
+            _xs_float_string_dict_set_stored_value(dct, slot, val, values_arr)
             _float_string_dict_last_operation_status = c_float_string_dict_no_key_error
             return "-1"
         if stored_key_bits == key_bits:
-            old_val: str = _xs_float_string_dict_get_stored_value(dct, slot)
-            _xs_float_string_dict_set_stored_value(dct, slot, val)
+            old_val: str = _xs_float_string_dict_get_stored_value(dct, slot, values_arr)
+            _xs_float_string_dict_set_stored_value(dct, slot, val, values_arr)
             _float_string_dict_last_operation_status = c_float_string_dict_success
             return old_val
         slot += 1
@@ -148,40 +151,40 @@ def _xs_float_string_dict_upsert(dct: int32 = int32(-1), key: float32 = float32(
 def _xs_float_string_dict_move_to_temp_arrays(dct: int32 = int32(-1), size: int32 = int32(0),
                                               capacity: int32 = int32(0)) -> int32:
     global _float_string_dict_temp_keys, _float_string_dict_temp_values
-    temp_data_size: int32 = size
     max_values_capacity: int32 = c_float_string_dict_max_capacity - 2
     if _float_string_dict_temp_keys < 0:
-        _float_string_dict_temp_keys = xs_array_create_int(temp_data_size, c_float_string_dict_empty_key_bits)
+        _float_string_dict_temp_keys = xs_array_create_int(size, c_float_string_dict_empty_key_bits)
         if _float_string_dict_temp_keys < 0:
             return c_float_string_dict_resize_failed_error
     else:
         temp_keys_capacity: int32 = xs_array_get_size(_float_string_dict_temp_keys)
-        if temp_keys_capacity < temp_data_size:
-            if temp_data_size > max_values_capacity:
+        if temp_keys_capacity < size:
+            if size > max_values_capacity:
                 return c_float_string_dict_max_capacity_error
-            r_keys: int32 = xs_array_resize_int(_float_string_dict_temp_keys, temp_data_size)
+            r_keys: int32 = xs_array_resize_int(_float_string_dict_temp_keys, size)
             if r_keys != 1:
                 return c_float_string_dict_resize_failed_error
     if _float_string_dict_temp_values < 0:
-        _float_string_dict_temp_values = xs_array_create_string(temp_data_size)
+        _float_string_dict_temp_values = xs_array_create_string(size)
         if _float_string_dict_temp_values < 0:
             return c_float_string_dict_resize_failed_error
     else:
         temp_values_capacity: int32 = xs_array_get_size(_float_string_dict_temp_values)
-        if temp_values_capacity < temp_data_size:
-            if temp_data_size > max_values_capacity:
+        if temp_values_capacity < size:
+            if size > max_values_capacity:
                 return c_float_string_dict_max_capacity_error
-            r_values: int32 = xs_array_resize_string(_float_string_dict_temp_values, temp_data_size)
+            r_values: int32 = xs_array_resize_string(_float_string_dict_temp_values, size)
             if r_values != 1:
                 return c_float_string_dict_resize_failed_error
+    values_arr: int32 = _xs_float_string_dict_get_values_array(dct)
     t: int32 = int32(0)
     for i in i32range(2, capacity):
         stored_key_bits: int32 = xs_array_get_int(dct, i)
         if stored_key_bits != c_float_string_dict_empty_key_bits:
             xs_array_set_int(_float_string_dict_temp_keys, t, stored_key_bits)
-            xs_array_set_string(_float_string_dict_temp_values, t, _xs_float_string_dict_get_stored_value(dct, i))
+            xs_array_set_string(_float_string_dict_temp_values, t, _xs_float_string_dict_get_stored_value(dct, i, values_arr))
             t += 1
-    return temp_data_size
+    return size
 
 
 def _xs_float_string_dict_clear_slots(dct: int32 = int32(-1), capacity: int32 = int32(-1)) -> None:

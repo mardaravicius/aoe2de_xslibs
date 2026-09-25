@@ -38,32 +38,37 @@ def _xs_string_string_dict_capacity(dct: int32 = int32(-1)) -> int32:
     return xs_array_get_size(_xs_string_string_dict_get_strings_array(dct)) // 2
 
 
-def _xs_string_string_dict_key_index(slot: int32 = int32(0)) -> int32:
-    return slot * 2
+def _xs_string_string_dict_get_stored_key(dct: int32 = int32(-1), slot: int32 = int32(0),
+                                           strings_arr: int32 = int32(-2)) -> str:
+    if strings_arr < -1:
+        strings_arr = _xs_string_string_dict_get_strings_array(dct)
+    return xs_array_get_string(strings_arr, slot * 2)
 
 
-def _xs_string_string_dict_value_index(slot: int32 = int32(0)) -> int32:
-    return _xs_string_string_dict_key_index(slot) + 1
+def _xs_string_string_dict_set_stored_key(dct: int32 = int32(-1), slot: int32 = int32(0), key: str = "",
+                                           strings_arr: int32 = int32(-2)) -> None:
+    if strings_arr < -1:
+        strings_arr = _xs_string_string_dict_get_strings_array(dct)
+    xs_array_set_string(strings_arr, slot * 2, key)
 
 
-def _xs_string_string_dict_get_stored_key(dct: int32 = int32(-1), slot: int32 = int32(0)) -> str:
-    return xs_array_get_string(_xs_string_string_dict_get_strings_array(dct), _xs_string_string_dict_key_index(slot))
+def _xs_string_string_dict_get_stored_value(dct: int32 = int32(-1), slot: int32 = int32(0),
+                                             strings_arr: int32 = int32(-2)) -> str:
+    if strings_arr < -1:
+        strings_arr = _xs_string_string_dict_get_strings_array(dct)
+    return xs_array_get_string(strings_arr, slot * 2 + 1)
 
 
-def _xs_string_string_dict_set_stored_key(dct: int32 = int32(-1), slot: int32 = int32(0), key: str = "") -> None:
-    xs_array_set_string(_xs_string_string_dict_get_strings_array(dct), _xs_string_string_dict_key_index(slot), key)
+def _xs_string_string_dict_set_stored_value(dct: int32 = int32(-1), slot: int32 = int32(0), value: str = "",
+                                             strings_arr: int32 = int32(-2)) -> None:
+    if strings_arr < -1:
+        strings_arr = _xs_string_string_dict_get_strings_array(dct)
+    xs_array_set_string(strings_arr, slot * 2 + 1, value)
 
 
-def _xs_string_string_dict_get_stored_value(dct: int32 = int32(-1), slot: int32 = int32(0)) -> str:
-    return xs_array_get_string(_xs_string_string_dict_get_strings_array(dct), _xs_string_string_dict_value_index(slot))
-
-
-def _xs_string_string_dict_set_stored_value(dct: int32 = int32(-1), slot: int32 = int32(0), value: str = "") -> None:
-    xs_array_set_string(_xs_string_string_dict_get_strings_array(dct), _xs_string_string_dict_value_index(slot), value)
-
-
-def _xs_string_string_dict_clear_slot(dct: int32 = int32(-1), slot: int32 = int32(0)) -> None:
-    _xs_string_string_dict_set_stored_key(dct, slot, "!<[empty")
+def _xs_string_string_dict_clear_slot(dct: int32 = int32(-1), slot: int32 = int32(0),
+                                       strings_arr: int32 = int32(-2)) -> None:
+    _xs_string_string_dict_set_stored_key(dct, slot, "!<[empty", strings_arr)
 
 
 def xs_string_string_dict_create() -> int32:
@@ -100,12 +105,12 @@ def _xs_string_string_dict_hash(key: str = "", capacity: int32 = int32(0)) -> in
 def _xs_string_string_dict_find_slot(dct: int32 = int32(-1), key: str = "",
                                       capacity: int32 = int32(0)) -> int32:
     """Returns slot index containing key, or -1 if not found."""
-    num_slots: int32 = capacity
+    strings_arr: int32 = _xs_string_string_dict_get_strings_array(dct)
     home: int32 = _xs_string_string_dict_hash(key, capacity)
     slot: int32 = home
     steps: int32 = int32(0)
-    while steps < num_slots:
-        stored_key: str = _xs_string_string_dict_get_stored_key(dct, slot)
+    while steps < capacity:
+        stored_key: str = _xs_string_string_dict_get_stored_key(dct, slot, strings_arr)
         if stored_key == "!<[empty":
             return int32(-1)
         if stored_key == key:
@@ -120,19 +125,19 @@ def _xs_string_string_dict_find_slot(dct: int32 = int32(-1), key: str = "",
 def _xs_string_string_dict_upsert(dct: int32 = int32(-1), key: str = "", val: str = "",
                                    capacity: int32 = int32(0)) -> str:
     global _string_string_dict_last_operation_status
-    num_slots: int32 = capacity
+    strings_arr: int32 = _xs_string_string_dict_get_strings_array(dct)
     slot: int32 = _xs_string_string_dict_hash(key, capacity)
     steps: int32 = int32(0)
-    while steps < num_slots:
-        stored_key: str = _xs_string_string_dict_get_stored_key(dct, slot)
+    while steps < capacity:
+        stored_key: str = _xs_string_string_dict_get_stored_key(dct, slot, strings_arr)
         if stored_key == "!<[empty":
-            _xs_string_string_dict_set_stored_key(dct, slot, key)
-            _xs_string_string_dict_set_stored_value(dct, slot, val)
+            _xs_string_string_dict_set_stored_key(dct, slot, key, strings_arr)
+            _xs_string_string_dict_set_stored_value(dct, slot, val, strings_arr)
             _string_string_dict_last_operation_status = c_string_string_dict_no_key_error
             return "-1"
         if stored_key == key:
-            old_val: str = _xs_string_string_dict_get_stored_value(dct, slot)
-            _xs_string_string_dict_set_stored_value(dct, slot, val)
+            old_val: str = _xs_string_string_dict_get_stored_value(dct, slot, strings_arr)
+            _xs_string_string_dict_set_stored_value(dct, slot, val, strings_arr)
             _string_string_dict_last_operation_status = c_string_string_dict_success
             return old_val
         slot += 1
@@ -146,45 +151,45 @@ def _xs_string_string_dict_upsert(dct: int32 = int32(-1), key: str = "", val: st
 def _xs_string_string_dict_move_to_temp_arrays(dct: int32 = int32(-1), size: int32 = int32(0),
                                                 capacity: int32 = int32(0)) -> int32:
     global _string_string_dict_temp_keys, _string_string_dict_temp_values
-    temp_data_size: int32 = size
-    max_slots: int32 = c_string_string_dict_max_capacity
     if _string_string_dict_temp_keys < 0:
-        _string_string_dict_temp_keys = xs_array_create_string(temp_data_size, "!<[empty")
+        _string_string_dict_temp_keys = xs_array_create_string(size, "!<[empty")
         if _string_string_dict_temp_keys < 0:
             return c_string_string_dict_resize_failed_error
     else:
         temp_keys_capacity: int32 = xs_array_get_size(_string_string_dict_temp_keys)
-        if temp_keys_capacity < temp_data_size:
-            if temp_data_size > max_slots:
+        if temp_keys_capacity < size:
+            if size > c_string_string_dict_max_capacity:
                 return c_string_string_dict_max_capacity_error
-            r_keys: int32 = xs_array_resize_string(_string_string_dict_temp_keys, temp_data_size)
+            r_keys: int32 = xs_array_resize_string(_string_string_dict_temp_keys, size)
             if r_keys != 1:
                 return c_string_string_dict_resize_failed_error
     if _string_string_dict_temp_values < 0:
-        _string_string_dict_temp_values = xs_array_create_string(temp_data_size)
+        _string_string_dict_temp_values = xs_array_create_string(size)
         if _string_string_dict_temp_values < 0:
             return c_string_string_dict_resize_failed_error
     else:
         temp_values_capacity: int32 = xs_array_get_size(_string_string_dict_temp_values)
-        if temp_values_capacity < temp_data_size:
-            if temp_data_size > max_slots:
+        if temp_values_capacity < size:
+            if size > c_string_string_dict_max_capacity:
                 return c_string_string_dict_max_capacity_error
-            r_values: int32 = xs_array_resize_string(_string_string_dict_temp_values, temp_data_size)
+            r_values: int32 = xs_array_resize_string(_string_string_dict_temp_values, size)
             if r_values != 1:
                 return c_string_string_dict_resize_failed_error
+    strings_arr: int32 = _xs_string_string_dict_get_strings_array(dct)
     t: int32 = int32(0)
     for i in i32range(0, capacity):
-        stored_key: str = _xs_string_string_dict_get_stored_key(dct, i)
+        stored_key: str = _xs_string_string_dict_get_stored_key(dct, i, strings_arr)
         if stored_key != "!<[empty":
             xs_array_set_string(_string_string_dict_temp_keys, t, stored_key)
-            xs_array_set_string(_string_string_dict_temp_values, t, _xs_string_string_dict_get_stored_value(dct, i))
+            xs_array_set_string(_string_string_dict_temp_values, t, _xs_string_string_dict_get_stored_value(dct, i, strings_arr))
             t += 1
-    return temp_data_size
+    return size
 
 
 def _xs_string_string_dict_clear_slots(dct: int32 = int32(-1), capacity: int32 = int32(-1)) -> None:
+    strings_arr: int32 = _xs_string_string_dict_get_strings_array(dct)
     for j in i32range(0, capacity):
-        _xs_string_string_dict_clear_slot(dct, j)
+        _xs_string_string_dict_clear_slot(dct, j, strings_arr)
 
 
 def _xs_string_string_dict_rehash_if_needed(dct: int32 = int32(-1), size: int32 = int32(0),
@@ -325,33 +330,33 @@ def xs_string_string_dict_remove(dct: int32 = int32(-1), key: str = "") -> str:
     global _string_string_dict_last_operation_status
     size: int32 = xs_array_get_int(dct, 0)
     capacity: int32 = _xs_string_string_dict_capacity(dct)
-    num_slots: int32 = capacity
+    strings_arr: int32 = _xs_string_string_dict_get_strings_array(dct)
     slot: int32 = _xs_string_string_dict_find_slot(dct, key, capacity)
     if slot < 0:
         _string_string_dict_last_operation_status = c_string_string_dict_no_key_error
         return "-1"
-    found_val: str = _xs_string_string_dict_get_stored_value(dct, slot)
+    found_val: str = _xs_string_string_dict_get_stored_value(dct, slot, strings_arr)
 
     g: int32 = slot
     q: int32 = g + 1
     if q >= capacity:
         q = int32(0)
     shift_steps: int32 = int32(0)
-    q_key: str = _xs_string_string_dict_get_stored_key(dct, q)
-    while q_key != "!<[empty" and shift_steps < num_slots:
+    q_key: str = _xs_string_string_dict_get_stored_key(dct, q, strings_arr)
+    while q_key != "!<[empty" and shift_steps < capacity:
         q_home: int32 = _xs_string_string_dict_hash(q_key, capacity)
-        dist_g: int32 = (g - q_home + num_slots) % num_slots
-        dist_q: int32 = (q - q_home + num_slots) % num_slots
+        dist_g: int32 = (g - q_home + capacity) % capacity
+        dist_q: int32 = (q - q_home + capacity) % capacity
         if dist_g < dist_q:
-            _xs_string_string_dict_set_stored_key(dct, g, q_key)
-            _xs_string_string_dict_set_stored_value(dct, g, _xs_string_string_dict_get_stored_value(dct, q))
+            _xs_string_string_dict_set_stored_key(dct, g, q_key, strings_arr)
+            _xs_string_string_dict_set_stored_value(dct, g, _xs_string_string_dict_get_stored_value(dct, q, strings_arr), strings_arr)
             g = q
         q += 1
         if q >= capacity:
             q = int32(0)
         shift_steps += 1
-        q_key = _xs_string_string_dict_get_stored_key(dct, q)
-    _xs_string_string_dict_clear_slot(dct, g)
+        q_key = _xs_string_string_dict_get_stored_key(dct, q, strings_arr)
+    _xs_string_string_dict_clear_slot(dct, g, strings_arr)
     xs_array_set_int(dct, 0, size - 1)
     _string_string_dict_last_operation_status = c_string_string_dict_success
     return found_val
@@ -399,12 +404,12 @@ def xs_string_string_dict_copy(dct: int32 = int32(-1)) -> int32:
         return c_string_string_dict_resize_failed_error
     xs_array_set_int(new_dct, 0, xs_array_get_int(dct, 0))
     xs_array_set_int(new_dct, 1, new_strings_arr)
+    strings_arr: int32 = _xs_string_string_dict_get_strings_array(dct)
     for i in i32range(0, capacity):
-        stored_key: str = _xs_string_string_dict_get_stored_key(dct, i)
+        stored_key: str = _xs_string_string_dict_get_stored_key(dct, i, strings_arr)
         if stored_key != "!<[empty":
-            xs_array_set_string(new_strings_arr, _xs_string_string_dict_key_index(i), stored_key)
-            xs_array_set_string(new_strings_arr, _xs_string_string_dict_value_index(i),
-                                _xs_string_string_dict_get_stored_value(dct, i))
+            xs_array_set_string(new_strings_arr, i * 2, stored_key)
+            xs_array_set_string(new_strings_arr, i * 2 + 1, _xs_string_string_dict_get_stored_value(dct, i, strings_arr))
     return new_dct
 
 
@@ -413,16 +418,17 @@ def xs_string_string_dict_to_string(dct: int32 = int32(-1)) -> str:
     Returns a string representation of the dict in the format `{"k1": "v1", "k2": "v2", ...}`.
     """
     capacity: int32 = _xs_string_string_dict_capacity(dct)
+    strings_arr: int32 = _xs_string_string_dict_get_strings_array(dct)
     s: str = "{"
     first: bool = True
     for i in i32range(0, capacity):
-        key: str = _xs_string_string_dict_get_stored_key(dct, i)
+        key: str = _xs_string_string_dict_get_stored_key(dct, i, strings_arr)
         if key != "!<[empty":
             if first:
                 first = False
             else:
                 s += ", "
-            s += f'"{key}": "{_xs_string_string_dict_get_stored_value(dct, i)}"'
+            s += f'"{key}": "{_xs_string_string_dict_get_stored_value(dct, i, strings_arr)}"'
     s += "}"
     return s
 
@@ -434,9 +440,10 @@ def xs_string_string_dict_last_error() -> int32:
 def _xs_string_string_dict_find_next_occupied(dct: int32 = int32(-1), start: int32 = int32(0),
                                                capacity: int32 = int32(0)) -> str:
     global _string_string_dict_last_operation_status
+    strings_arr: int32 = _xs_string_string_dict_get_strings_array(dct)
     slot: int32 = start
     while slot < capacity:
-        stored_key: str = _xs_string_string_dict_get_stored_key(dct, slot)
+        stored_key: str = _xs_string_string_dict_get_stored_key(dct, slot, strings_arr)
         if stored_key != "!<[empty":
             _string_string_dict_last_operation_status = c_string_string_dict_success
             return stored_key
@@ -472,8 +479,9 @@ def xs_string_string_dict_has_next(dct: int32 = int32(-1), is_first: bool = True
         if slot < 0:
             return False
         start = slot + 1
+    strings_arr: int32 = _xs_string_string_dict_get_strings_array(dct)
     while start < capacity:
-        if _xs_string_string_dict_get_stored_key(dct, start) != "!<[empty":
+        if _xs_string_string_dict_get_stored_key(dct, start, strings_arr) != "!<[empty":
             return True
         start += 1
     return False
@@ -485,10 +493,11 @@ def xs_string_string_dict_update(source: int32 = int32(-1), dct: int32 = int32(-
     """
     global _string_string_dict_last_operation_status
     capacity: int32 = _xs_string_string_dict_capacity(dct)
+    strings_arr: int32 = _xs_string_string_dict_get_strings_array(dct)
     for i in i32range(0, capacity):
-        key: str = _xs_string_string_dict_get_stored_key(dct, i)
+        key: str = _xs_string_string_dict_get_stored_key(dct, i, strings_arr)
         if key != "!<[empty":
-            xs_string_string_dict_put(source, key, _xs_string_string_dict_get_stored_value(dct, i))
+            xs_string_string_dict_put(source, key, _xs_string_string_dict_get_stored_value(dct, i, strings_arr))
             if _string_string_dict_last_operation_status != c_string_string_dict_success and _string_string_dict_last_operation_status != c_string_string_dict_no_key_error:
                 return _string_string_dict_last_operation_status
     _string_string_dict_last_operation_status = c_string_string_dict_success
@@ -542,9 +551,10 @@ def xs_string_string_dict_keys(dct: int32 = int32(-1), out_arr: int32 = int32(-1
         if r != 1:
             return c_string_string_dict_resize_failed_error
     capacity: int32 = _xs_string_string_dict_capacity(dct)
+    strings_arr: int32 = _xs_string_string_dict_get_strings_array(dct)
     idx: int32 = int32(0)
     for i in i32range(0, capacity):
-        stored_key: str = _xs_string_string_dict_get_stored_key(dct, i)
+        stored_key: str = _xs_string_string_dict_get_stored_key(dct, i, strings_arr)
         if stored_key != "!<[empty":
             xs_array_set_string(arr, idx, stored_key)
             idx += 1
@@ -566,11 +576,12 @@ def xs_string_string_dict_values(dct: int32 = int32(-1), out_arr: int32 = int32(
         if r != 1:
             return c_string_string_dict_resize_failed_error
     capacity: int32 = _xs_string_string_dict_capacity(dct)
+    strings_arr: int32 = _xs_string_string_dict_get_strings_array(dct)
     idx: int32 = int32(0)
     for i in i32range(0, capacity):
-        stored_key: str = _xs_string_string_dict_get_stored_key(dct, i)
+        stored_key: str = _xs_string_string_dict_get_stored_key(dct, i, strings_arr)
         if stored_key != "!<[empty":
-            xs_array_set_string(arr, idx, _xs_string_string_dict_get_stored_value(dct, i))
+            xs_array_set_string(arr, idx, _xs_string_string_dict_get_stored_value(dct, i, strings_arr))
             idx += 1
     return arr
 
@@ -584,10 +595,11 @@ def xs_string_string_dict_equals(a: int32 = int32(-1), b: int32 = int32(-1)) -> 
     if size_a != size_b:
         return False
     capacity: int32 = _xs_string_string_dict_capacity(a)
+    strings_arr: int32 = _xs_string_string_dict_get_strings_array(a)
     for i in i32range(0, capacity):
-        key: str = _xs_string_string_dict_get_stored_key(a, i)
+        key: str = _xs_string_string_dict_get_stored_key(a, i, strings_arr)
         if key != "!<[empty":
-            val: str = _xs_string_string_dict_get_stored_value(a, i)
+            val: str = _xs_string_string_dict_get_stored_value(a, i, strings_arr)
             if xs_string_string_dict_get(b, key) != val:
                 return False
             if xs_string_string_dict_last_error() != c_string_string_dict_success:

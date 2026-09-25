@@ -33,16 +33,18 @@ int _xsFloatStringDictGetValuesArray(int dct = -1) {
     return (xsArrayGetInt(dct, 1));
 }
 
-int _xsFloatStringDictValueSlot(int slot = 2) {
-    return (slot - 2);
+string _xsFloatStringDictGetStoredValue(int dct = -1, int slot = 2, int valuesArr = -2) {
+    if (valuesArr < -1) {
+        valuesArr = _xsFloatStringDictGetValuesArray(dct);
+    }
+    return (xsArrayGetString(valuesArr, slot - 2));
 }
 
-string _xsFloatStringDictGetStoredValue(int dct = -1, int slot = 2) {
-    return (xsArrayGetString(_xsFloatStringDictGetValuesArray(dct), _xsFloatStringDictValueSlot(slot)));
-}
-
-void _xsFloatStringDictSetStoredValue(int dct = -1, int slot = 2, string value = "") {
-    xsArraySetString(_xsFloatStringDictGetValuesArray(dct), _xsFloatStringDictValueSlot(slot), value);
+void _xsFloatStringDictSetStoredValue(int dct = -1, int slot = 2, string value = "", int valuesArr = -2) {
+    if (valuesArr < -1) {
+        valuesArr = _xsFloatStringDictGetValuesArray(dct);
+    }
+    xsArraySetString(valuesArr, slot - 2, value);
 }
 
 void _xsFloatStringDictClearSlot(int dct = -1, int slot = 2) {
@@ -107,6 +109,7 @@ int _xsFloatStringDictFindSlot(int dct = -1, float key = 0.0, int capacity = 0) 
 string _xsFloatStringDictUpsert(int dct = -1, float key = 0.0, string val = "", int capacity = 0) {
     int keyBits = _xsFloatStringDictKeyBits(key);
     int numSlots = _xsFloatStringDictValuesCapacityFromIntCapacity(capacity);
+    int valuesArr = _xsFloatStringDictGetValuesArray(dct);
     int home = _xsFloatStringDictHash(key, capacity);
     int slot = home;
     int steps = 0;
@@ -114,13 +117,13 @@ string _xsFloatStringDictUpsert(int dct = -1, float key = 0.0, string val = "", 
         int storedKeyBits = xsArrayGetInt(dct, slot);
         if (storedKeyBits == cFloatStringDictEmptyKeyBits) {
             xsArraySetInt(dct, slot, keyBits);
-            _xsFloatStringDictSetStoredValue(dct, slot, val);
+            _xsFloatStringDictSetStoredValue(dct, slot, val, valuesArr);
             _floatStringDictLastOperationStatus = cFloatStringDictNoKeyError;
             return ("-1");
         }
         if (storedKeyBits == keyBits) {
-            string oldVal = _xsFloatStringDictGetStoredValue(dct, slot);
-            _xsFloatStringDictSetStoredValue(dct, slot, val);
+            string oldVal = _xsFloatStringDictGetStoredValue(dct, slot, valuesArr);
+            _xsFloatStringDictSetStoredValue(dct, slot, val, valuesArr);
             _floatStringDictLastOperationStatus = cFloatStringDictSuccess;
             return (oldVal);
         }
@@ -135,52 +138,52 @@ string _xsFloatStringDictUpsert(int dct = -1, float key = 0.0, string val = "", 
 }
 
 int _xsFloatStringDictMoveToTempArrays(int dct = -1, int size = 0, int capacity = 0) {
-    int tempDataSize = size;
     int maxValuesCapacity = cFloatStringDictMaxCapacity - 2;
     if (_floatStringDictTempKeys < 0) {
-        _floatStringDictTempKeys = xsArrayCreateInt(tempDataSize, cFloatStringDictEmptyKeyBits);
+        _floatStringDictTempKeys = xsArrayCreateInt(size, cFloatStringDictEmptyKeyBits);
         if (_floatStringDictTempKeys < 0) {
             return (cFloatStringDictResizeFailedError);
         }
     } else {
         int tempKeysCapacity = xsArrayGetSize(_floatStringDictTempKeys);
-        if (tempKeysCapacity < tempDataSize) {
-            if (tempDataSize > maxValuesCapacity) {
+        if (tempKeysCapacity < size) {
+            if (size > maxValuesCapacity) {
                 return (cFloatStringDictMaxCapacityError);
             }
-            int rKeys = xsArrayResizeInt(_floatStringDictTempKeys, tempDataSize);
+            int rKeys = xsArrayResizeInt(_floatStringDictTempKeys, size);
             if (rKeys != 1) {
                 return (cFloatStringDictResizeFailedError);
             }
         }
     }
     if (_floatStringDictTempValues < 0) {
-        _floatStringDictTempValues = xsArrayCreateString(tempDataSize);
+        _floatStringDictTempValues = xsArrayCreateString(size);
         if (_floatStringDictTempValues < 0) {
             return (cFloatStringDictResizeFailedError);
         }
     } else {
         int tempValuesCapacity = xsArrayGetSize(_floatStringDictTempValues);
-        if (tempValuesCapacity < tempDataSize) {
-            if (tempDataSize > maxValuesCapacity) {
+        if (tempValuesCapacity < size) {
+            if (size > maxValuesCapacity) {
                 return (cFloatStringDictMaxCapacityError);
             }
-            int rValues = xsArrayResizeString(_floatStringDictTempValues, tempDataSize);
+            int rValues = xsArrayResizeString(_floatStringDictTempValues, size);
             if (rValues != 1) {
                 return (cFloatStringDictResizeFailedError);
             }
         }
     }
+    int valuesArr = _xsFloatStringDictGetValuesArray(dct);
     int t = 0;
     for (i = 2; < capacity) {
         int storedKeyBits = xsArrayGetInt(dct, i);
         if (storedKeyBits != cFloatStringDictEmptyKeyBits) {
             xsArraySetInt(_floatStringDictTempKeys, t, storedKeyBits);
-            xsArraySetString(_floatStringDictTempValues, t, _xsFloatStringDictGetStoredValue(dct, i));
+            xsArraySetString(_floatStringDictTempValues, t, _xsFloatStringDictGetStoredValue(dct, i, valuesArr));
             t++;
         }
     }
-    return (tempDataSize);
+    return (size);
 }
 
 void _xsFloatStringDictClearSlots(int dct = -1, int capacity = -1) {

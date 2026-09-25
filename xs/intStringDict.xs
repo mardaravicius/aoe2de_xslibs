@@ -20,16 +20,18 @@ int _xsIntStringDictGetValuesArray(int dct = -1) {
     return (xsArrayGetInt(dct, 1));
 }
 
-int _xsIntStringDictValueSlot(int slot = 2) {
-    return (slot - 2);
+string _xsIntStringDictGetStoredValue(int dct = -1, int slot = 2, int valuesArr = -2) {
+    if (valuesArr < -1) {
+        valuesArr = _xsIntStringDictGetValuesArray(dct);
+    }
+    return (xsArrayGetString(valuesArr, slot - 2));
 }
 
-string _xsIntStringDictGetStoredValue(int dct = -1, int slot = 2) {
-    return (xsArrayGetString(_xsIntStringDictGetValuesArray(dct), _xsIntStringDictValueSlot(slot)));
-}
-
-void _xsIntStringDictSetStoredValue(int dct = -1, int slot = 2, string value = "") {
-    xsArraySetString(_xsIntStringDictGetValuesArray(dct), _xsIntStringDictValueSlot(slot), value);
+void _xsIntStringDictSetStoredValue(int dct = -1, int slot = 2, string value = "", int valuesArr = -2) {
+    if (valuesArr < -1) {
+        valuesArr = _xsIntStringDictGetValuesArray(dct);
+    }
+    xsArraySetString(valuesArr, slot - 2, value);
 }
 
 void _xsIntStringDictClearSlot(int dct = -1, int slot = 2) {
@@ -94,6 +96,7 @@ int _xsIntStringDictFindSlot(int dct = -1, int key = -1, int capacity = 0) {
 
 string _xsIntStringDictUpsert(int dct = -1, int key = -1, string val = "", int capacity = 0) {
     int numSlots = _xsIntStringDictValuesCapacityFromIntCapacity(capacity);
+    int valuesArr = _xsIntStringDictGetValuesArray(dct);
     int home = _xsIntStringDictHash(key, capacity);
     int slot = home;
     int steps = 0;
@@ -101,13 +104,13 @@ string _xsIntStringDictUpsert(int dct = -1, int key = -1, string val = "", int c
         int storedKey = xsArrayGetInt(dct, slot);
         if (storedKey == cIntStringDictEmptyKey) {
             xsArraySetInt(dct, slot, key);
-            _xsIntStringDictSetStoredValue(dct, slot, val);
+            _xsIntStringDictSetStoredValue(dct, slot, val, valuesArr);
             _intStringDictLastOperationStatus = cIntStringDictNoKeyError;
             return ("-1");
         }
         if (storedKey == key) {
-            string oldVal = _xsIntStringDictGetStoredValue(dct, slot);
-            _xsIntStringDictSetStoredValue(dct, slot, val);
+            string oldVal = _xsIntStringDictGetStoredValue(dct, slot, valuesArr);
+            _xsIntStringDictSetStoredValue(dct, slot, val, valuesArr);
             _intStringDictLastOperationStatus = cIntStringDictSuccess;
             return (oldVal);
         }
@@ -122,52 +125,52 @@ string _xsIntStringDictUpsert(int dct = -1, int key = -1, string val = "", int c
 }
 
 int _xsIntStringDictMoveToTempArrays(int dct = -1, int size = 0, int capacity = 0) {
-    int tempDataSize = size;
     int maxValuesCapacity = cIntStringDictMaxCapacity - 2;
     if (_intStringDictTempKeys < 0) {
-        _intStringDictTempKeys = xsArrayCreateInt(tempDataSize, cIntStringDictEmptyKey);
+        _intStringDictTempKeys = xsArrayCreateInt(size, cIntStringDictEmptyKey);
         if (_intStringDictTempKeys < 0) {
             return (cIntStringDictResizeFailedError);
         }
     } else {
         int tempKeysCapacity = xsArrayGetSize(_intStringDictTempKeys);
-        if (tempKeysCapacity < tempDataSize) {
-            if (tempDataSize > maxValuesCapacity) {
+        if (tempKeysCapacity < size) {
+            if (size > maxValuesCapacity) {
                 return (cIntStringDictMaxCapacityError);
             }
-            int rKeys = xsArrayResizeInt(_intStringDictTempKeys, tempDataSize);
+            int rKeys = xsArrayResizeInt(_intStringDictTempKeys, size);
             if (rKeys != 1) {
                 return (cIntStringDictResizeFailedError);
             }
         }
     }
     if (_intStringDictTempValues < 0) {
-        _intStringDictTempValues = xsArrayCreateString(tempDataSize);
+        _intStringDictTempValues = xsArrayCreateString(size);
         if (_intStringDictTempValues < 0) {
             return (cIntStringDictResizeFailedError);
         }
     } else {
         int tempValuesCapacity = xsArrayGetSize(_intStringDictTempValues);
-        if (tempValuesCapacity < tempDataSize) {
-            if (tempDataSize > maxValuesCapacity) {
+        if (tempValuesCapacity < size) {
+            if (size > maxValuesCapacity) {
                 return (cIntStringDictMaxCapacityError);
             }
-            int rValues = xsArrayResizeString(_intStringDictTempValues, tempDataSize);
+            int rValues = xsArrayResizeString(_intStringDictTempValues, size);
             if (rValues != 1) {
                 return (cIntStringDictResizeFailedError);
             }
         }
     }
+    int valuesArr = _xsIntStringDictGetValuesArray(dct);
     int t = 0;
     for (i = 2; < capacity) {
         int storedKey = xsArrayGetInt(dct, i);
         if (storedKey != cIntStringDictEmptyKey) {
             xsArraySetInt(_intStringDictTempKeys, t, storedKey);
-            xsArraySetString(_intStringDictTempValues, t, _xsIntStringDictGetStoredValue(dct, i));
+            xsArraySetString(_intStringDictTempValues, t, _xsIntStringDictGetStoredValue(dct, i, valuesArr));
             t++;
         }
     }
-    return (tempDataSize);
+    return (size);
 }
 
 void _xsIntStringDictClearSlots(int dct = -1, int capacity = -1) {
@@ -322,7 +325,8 @@ string xsIntStringDictRemove(int dct = -1, int key = -1) {
         _intStringDictLastOperationStatus = cIntStringDictNoKeyError;
         return ("-1");
     }
-    string foundVal = _xsIntStringDictGetStoredValue(dct, slot);
+    int valuesArr = _xsIntStringDictGetValuesArray(dct);
+    string foundVal = _xsIntStringDictGetStoredValue(dct, slot, valuesArr);
     int g = slot;
     int q = g + 1;
     if (q >= capacity) {
@@ -339,7 +343,7 @@ string xsIntStringDictRemove(int dct = -1, int key = -1) {
         int distQ = ((qSlot - hSlot) + numSlots) % numSlots;
         if (distG < distQ) {
             xsArraySetInt(dct, g, qKey);
-            _xsIntStringDictSetStoredValue(dct, g, _xsIntStringDictGetStoredValue(dct, q));
+            _xsIntStringDictSetStoredValue(dct, g, _xsIntStringDictGetStoredValue(dct, q, valuesArr), valuesArr);
             g = q;
         }
         q++;

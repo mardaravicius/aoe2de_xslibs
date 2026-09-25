@@ -107,7 +107,7 @@ def xs_mt_random() -> int32:
     y: int32 = bit_xor(x, _xs_bit_shift_right_logical(x, _c_mt_u))
     y = bit_xor(y, bit_and(bit_lsh(y, _c_mt_s), _c_mt_b))
     y = bit_xor(y, bit_and(bit_lsh(y, _c_mt_t), _c_mt_c))
-    return bit_xor(y, _xs_bit_shift_right_logical(y, _c_mt_l))
+    return bit_xor(_xs_bit_shift_right_logical(y, _c_mt_l), y)
 
 
 def xs_mt_random_float() -> float32:

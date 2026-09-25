@@ -54,24 +54,28 @@ def _xs_string_vector_dict_capacity(dct: int32 = int32(-1)) -> int32:
     return xs_array_get_size(_xs_string_vector_dict_get_keys_array(dct))
 
 
-def _xs_string_vector_dict_key_index(slot: int32 = int32(0)) -> int32:
-    return slot
-
-
 def _xs_string_vector_dict_value_base(slot: int32 = int32(0)) -> int32:
     return slot * 3
 
 
-def _xs_string_vector_dict_get_stored_key(dct: int32 = int32(-1), slot: int32 = int32(0)) -> str:
-    return xs_array_get_string(_xs_string_vector_dict_get_keys_array(dct), _xs_string_vector_dict_key_index(slot))
+def _xs_string_vector_dict_get_stored_key(dct: int32 = int32(-1), slot: int32 = int32(0),
+                                           keys_arr: int32 = int32(-2)) -> str:
+    if keys_arr < -1:
+        keys_arr = _xs_string_vector_dict_get_keys_array(dct)
+    return xs_array_get_string(keys_arr, slot)
 
 
-def _xs_string_vector_dict_set_stored_key(dct: int32 = int32(-1), slot: int32 = int32(0), key: str = "") -> None:
-    xs_array_set_string(_xs_string_vector_dict_get_keys_array(dct), _xs_string_vector_dict_key_index(slot), key)
+def _xs_string_vector_dict_set_stored_key(dct: int32 = int32(-1), slot: int32 = int32(0), key: str = "",
+                                           keys_arr: int32 = int32(-2)) -> None:
+    if keys_arr < -1:
+        keys_arr = _xs_string_vector_dict_get_keys_array(dct)
+    xs_array_set_string(keys_arr, slot, key)
 
 
-def _xs_string_vector_dict_get_stored_value(dct: int32 = int32(-1), slot: int32 = int32(0)) -> XsVector:
-    values_arr: int32 = _xs_string_vector_dict_get_values_array(dct)
+def _xs_string_vector_dict_get_stored_value(dct: int32 = int32(-1), slot: int32 = int32(0),
+                                             values_arr: int32 = int32(-2)) -> XsVector:
+    if values_arr < -1:
+        values_arr = _xs_string_vector_dict_get_values_array(dct)
     base: int32 = _xs_string_vector_dict_value_base(slot)
     return xs_vector_set(
         xs_array_get_float(values_arr, base),
@@ -81,16 +85,19 @@ def _xs_string_vector_dict_get_stored_value(dct: int32 = int32(-1), slot: int32 
 
 
 def _xs_string_vector_dict_set_stored_value(dct: int32 = int32(-1), slot: int32 = int32(0),
-                                             value: XsVector = vector(0.0, 0.0, 0.0)) -> None:
-    values_arr: int32 = _xs_string_vector_dict_get_values_array(dct)
+                                             value: XsVector = vector(0.0, 0.0, 0.0),
+                                             values_arr: int32 = int32(-2)) -> None:
+    if values_arr < -1:
+        values_arr = _xs_string_vector_dict_get_values_array(dct)
     base: int32 = _xs_string_vector_dict_value_base(slot)
     xs_array_set_float(values_arr, base, xs_vector_get_x(value))
     xs_array_set_float(values_arr, base + 1, xs_vector_get_y(value))
     xs_array_set_float(values_arr, base + 2, xs_vector_get_z(value))
 
 
-def _xs_string_vector_dict_clear_slot(dct: int32 = int32(-1), slot: int32 = int32(0)) -> None:
-    _xs_string_vector_dict_set_stored_key(dct, slot, "!<[empty")
+def _xs_string_vector_dict_clear_slot(dct: int32 = int32(-1), slot: int32 = int32(0),
+                                        keys_arr: int32 = int32(-2)) -> None:
+    _xs_string_vector_dict_set_stored_key(dct, slot, "!<[empty", keys_arr)
 
 
 def xs_string_vector_dict_create() -> int32:
@@ -133,12 +140,12 @@ def _xs_string_vector_dict_hash(key: str = "", capacity: int32 = int32(0)) -> in
 def _xs_string_vector_dict_find_slot(dct: int32 = int32(-1), key: str = "",
                                       capacity: int32 = int32(0)) -> int32:
     """Returns slot index containing key, or -1 if not found."""
-    num_slots: int32 = capacity
+    keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
     home: int32 = _xs_string_vector_dict_hash(key, capacity)
     slot: int32 = home
     steps: int32 = int32(0)
-    while steps < num_slots:
-        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, slot)
+    while steps < capacity:
+        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, slot, keys_arr)
         if stored_key == "!<[empty":
             return int32(-1)
         if stored_key == key:
@@ -154,19 +161,20 @@ def _xs_string_vector_dict_upsert(dct: int32 = int32(-1), key: str = "",
                                    val: XsVector = vector(0.0, 0.0, 0.0),
                                    capacity: int32 = int32(0)) -> XsVector:
     global _string_vector_dict_last_operation_status
-    num_slots: int32 = capacity
+    keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
+    values_arr: int32 = _xs_string_vector_dict_get_values_array(dct)
     slot: int32 = _xs_string_vector_dict_hash(key, capacity)
     steps: int32 = int32(0)
-    while steps < num_slots:
-        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, slot)
+    while steps < capacity:
+        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, slot, keys_arr)
         if stored_key == "!<[empty":
-            _xs_string_vector_dict_set_stored_key(dct, slot, key)
-            _xs_string_vector_dict_set_stored_value(dct, slot, val)
+            _xs_string_vector_dict_set_stored_key(dct, slot, key, keys_arr)
+            _xs_string_vector_dict_set_stored_value(dct, slot, val, values_arr)
             _string_vector_dict_last_operation_status = c_string_vector_dict_no_key_error
             return c_string_vector_dict_generic_error_vector
         if stored_key == key:
-            old_val: XsVector = _xs_string_vector_dict_get_stored_value(dct, slot)
-            _xs_string_vector_dict_set_stored_value(dct, slot, val)
+            old_val: XsVector = _xs_string_vector_dict_get_stored_value(dct, slot, values_arr)
+            _xs_string_vector_dict_set_stored_value(dct, slot, val, values_arr)
             _string_vector_dict_last_operation_status = c_string_vector_dict_success
             return old_val
         slot += 1
@@ -180,19 +188,17 @@ def _xs_string_vector_dict_upsert(dct: int32 = int32(-1), key: str = "",
 def _xs_string_vector_dict_move_to_temp_arrays(dct: int32 = int32(-1), size: int32 = int32(0),
                                                 capacity: int32 = int32(0)) -> int32:
     global _string_vector_dict_temp_keys, _string_vector_dict_temp_values
-    temp_data_size: int32 = size
     temp_float_size: int32 = size * 3
-    max_slots: int32 = c_string_vector_dict_max_capacity
     if _string_vector_dict_temp_keys < 0:
-        _string_vector_dict_temp_keys = xs_array_create_string(temp_data_size, "!<[empty")
+        _string_vector_dict_temp_keys = xs_array_create_string(size, "!<[empty")
         if _string_vector_dict_temp_keys < 0:
             return c_string_vector_dict_resize_failed_error
     else:
         temp_keys_capacity: int32 = xs_array_get_size(_string_vector_dict_temp_keys)
-        if temp_keys_capacity < temp_data_size:
-            if temp_data_size > max_slots:
+        if temp_keys_capacity < size:
+            if size > c_string_vector_dict_max_capacity:
                 return c_string_vector_dict_max_capacity_error
-            r_keys: int32 = xs_array_resize_string(_string_vector_dict_temp_keys, temp_data_size)
+            r_keys: int32 = xs_array_resize_string(_string_vector_dict_temp_keys, size)
             if r_keys != 1:
                 return c_string_vector_dict_resize_failed_error
     if _string_vector_dict_temp_values < 0:
@@ -202,28 +208,31 @@ def _xs_string_vector_dict_move_to_temp_arrays(dct: int32 = int32(-1), size: int
     else:
         temp_values_capacity: int32 = xs_array_get_size(_string_vector_dict_temp_values)
         if temp_values_capacity < temp_float_size:
-            if temp_data_size > max_slots:
+            if size > c_string_vector_dict_max_capacity:
                 return c_string_vector_dict_max_capacity_error
             r_values: int32 = xs_array_resize_float(_string_vector_dict_temp_values, temp_float_size)
             if r_values != 1:
                 return c_string_vector_dict_resize_failed_error
+    keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
+    values_arr: int32 = _xs_string_vector_dict_get_values_array(dct)
     t: int32 = int32(0)
     for i in i32range(0, capacity):
-        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, i)
+        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, i, keys_arr)
         if stored_key != "!<[empty":
             xs_array_set_string(_string_vector_dict_temp_keys, t, stored_key)
-            value: XsVector = _xs_string_vector_dict_get_stored_value(dct, i)
-            base: int32 = t * 3
-            xs_array_set_float(_string_vector_dict_temp_values, base, xs_vector_get_x(value))
-            xs_array_set_float(_string_vector_dict_temp_values, base + 1, xs_vector_get_y(value))
-            xs_array_set_float(_string_vector_dict_temp_values, base + 2, xs_vector_get_z(value))
+            src_base: int32 = i * 3
+            dst_base: int32 = t * 3
+            xs_array_set_float(_string_vector_dict_temp_values, dst_base, xs_array_get_float(values_arr, src_base))
+            xs_array_set_float(_string_vector_dict_temp_values, dst_base + 1, xs_array_get_float(values_arr, src_base + 1))
+            xs_array_set_float(_string_vector_dict_temp_values, dst_base + 2, xs_array_get_float(values_arr, src_base + 2))
             t += 1
-    return temp_data_size
+    return size
 
 
 def _xs_string_vector_dict_clear_slots(dct: int32 = int32(-1), capacity: int32 = int32(-1)) -> None:
+    keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
     for j in i32range(0, capacity):
-        _xs_string_vector_dict_clear_slot(dct, j)
+        _xs_string_vector_dict_clear_slot(dct, j, keys_arr)
 
 
 def _xs_string_vector_dict_rehash_if_needed(dct: int32 = int32(-1), size: int32 = int32(0),
@@ -376,33 +385,34 @@ def xs_string_vector_dict_remove(dct: int32 = int32(-1), key: str = "") -> XsVec
     global _string_vector_dict_last_operation_status
     size: int32 = xs_array_get_int(dct, 0)
     capacity: int32 = _xs_string_vector_dict_capacity(dct)
-    num_slots: int32 = capacity
+    keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
+    values_arr: int32 = _xs_string_vector_dict_get_values_array(dct)
     slot: int32 = _xs_string_vector_dict_find_slot(dct, key, capacity)
     if slot < 0:
         _string_vector_dict_last_operation_status = c_string_vector_dict_no_key_error
         return c_string_vector_dict_generic_error_vector
-    found_val: XsVector = _xs_string_vector_dict_get_stored_value(dct, slot)
+    found_val: XsVector = _xs_string_vector_dict_get_stored_value(dct, slot, values_arr)
 
     g: int32 = slot
     q: int32 = g + 1
     if q >= capacity:
         q = int32(0)
     shift_steps: int32 = int32(0)
-    q_key: str = _xs_string_vector_dict_get_stored_key(dct, q)
-    while q_key != "!<[empty" and shift_steps < num_slots:
+    q_key: str = _xs_string_vector_dict_get_stored_key(dct, q, keys_arr)
+    while q_key != "!<[empty" and shift_steps < capacity:
         q_home: int32 = _xs_string_vector_dict_hash(q_key, capacity)
-        dist_g: int32 = (g - q_home + num_slots) % num_slots
-        dist_q: int32 = (q - q_home + num_slots) % num_slots
+        dist_g: int32 = (g - q_home + capacity) % capacity
+        dist_q: int32 = (q - q_home + capacity) % capacity
         if dist_g < dist_q:
-            _xs_string_vector_dict_set_stored_key(dct, g, q_key)
-            _xs_string_vector_dict_set_stored_value(dct, g, _xs_string_vector_dict_get_stored_value(dct, q))
+            _xs_string_vector_dict_set_stored_key(dct, g, q_key, keys_arr)
+            _xs_string_vector_dict_set_stored_value(dct, g, _xs_string_vector_dict_get_stored_value(dct, q, values_arr), values_arr)
             g = q
         q += 1
         if q >= capacity:
             q = int32(0)
         shift_steps += 1
-        q_key = _xs_string_vector_dict_get_stored_key(dct, q)
-    _xs_string_vector_dict_clear_slot(dct, g)
+        q_key = _xs_string_vector_dict_get_stored_key(dct, q, keys_arr)
+    _xs_string_vector_dict_clear_slot(dct, g, keys_arr)
     xs_array_set_int(dct, 0, size - 1)
     _string_vector_dict_last_operation_status = c_string_vector_dict_success
     return found_val
@@ -463,15 +473,16 @@ def xs_string_vector_dict_copy(dct: int32 = int32(-1)) -> int32:
     xs_array_set_int(new_dct, 0, xs_array_get_int(dct, 0))
     xs_array_set_int(new_dct, 1, new_keys_arr)
     xs_array_set_int(new_dct, 2, new_values_arr)
+    keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
+    values_arr: int32 = _xs_string_vector_dict_get_values_array(dct)
     for i in i32range(0, capacity):
-        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, i)
+        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, i, keys_arr)
         if stored_key != "!<[empty":
-            xs_array_set_string(new_keys_arr, _xs_string_vector_dict_key_index(i), stored_key)
-            value: XsVector = _xs_string_vector_dict_get_stored_value(dct, i)
-            base: int32 = _xs_string_vector_dict_value_base(i)
-            xs_array_set_float(new_values_arr, base, xs_vector_get_x(value))
-            xs_array_set_float(new_values_arr, base + 1, xs_vector_get_y(value))
-            xs_array_set_float(new_values_arr, base + 2, xs_vector_get_z(value))
+            xs_array_set_string(new_keys_arr, i, stored_key)
+            base: int32 = i * 3
+            xs_array_set_float(new_values_arr, base, xs_array_get_float(values_arr, base))
+            xs_array_set_float(new_values_arr, base + 1, xs_array_get_float(values_arr, base + 1))
+            xs_array_set_float(new_values_arr, base + 2, xs_array_get_float(values_arr, base + 2))
     return new_dct
 
 
@@ -480,16 +491,18 @@ def xs_string_vector_dict_to_string(dct: int32 = int32(-1)) -> str:
     Returns a string representation of the dict in the format `{"k1": (x1, y1, z1), ...}`.
     """
     capacity: int32 = _xs_string_vector_dict_capacity(dct)
+    keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
+    values_arr: int32 = _xs_string_vector_dict_get_values_array(dct)
     s: str = "{"
     first: bool = True
     for i in i32range(0, capacity):
-        key: str = _xs_string_vector_dict_get_stored_key(dct, i)
+        key: str = _xs_string_vector_dict_get_stored_key(dct, i, keys_arr)
         if key != "!<[empty":
             if first:
                 first = False
             else:
                 s += ", "
-            s += f'"{key}": {_xs_string_vector_dict_get_stored_value(dct, i)}'
+            s += f'"{key}": {_xs_string_vector_dict_get_stored_value(dct, i, values_arr)}'
     s += "}"
     return s
 
@@ -501,9 +514,10 @@ def xs_string_vector_dict_last_error() -> int32:
 def _xs_string_vector_dict_find_next_occupied(dct: int32 = int32(-1), start: int32 = int32(0),
                                                capacity: int32 = int32(0)) -> str:
     global _string_vector_dict_last_operation_status
+    keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
     slot: int32 = start
     while slot < capacity:
-        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, slot)
+        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, slot, keys_arr)
         if stored_key != "!<[empty":
             _string_vector_dict_last_operation_status = c_string_vector_dict_success
             return stored_key
@@ -539,8 +553,9 @@ def xs_string_vector_dict_has_next(dct: int32 = int32(-1), is_first: bool = True
         if slot < 0:
             return False
         start = slot + 1
+    keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
     while start < capacity:
-        if _xs_string_vector_dict_get_stored_key(dct, start) != "!<[empty":
+        if _xs_string_vector_dict_get_stored_key(dct, start, keys_arr) != "!<[empty":
             return True
         start += 1
     return False
@@ -552,10 +567,12 @@ def xs_string_vector_dict_update(source: int32 = int32(-1), dct: int32 = int32(-
     """
     global _string_vector_dict_last_operation_status
     capacity: int32 = _xs_string_vector_dict_capacity(dct)
+    keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
+    values_arr: int32 = _xs_string_vector_dict_get_values_array(dct)
     for i in i32range(0, capacity):
-        key: str = _xs_string_vector_dict_get_stored_key(dct, i)
+        key: str = _xs_string_vector_dict_get_stored_key(dct, i, keys_arr)
         if key != "!<[empty":
-            xs_string_vector_dict_put(source, key, _xs_string_vector_dict_get_stored_value(dct, i))
+            xs_string_vector_dict_put(source, key, _xs_string_vector_dict_get_stored_value(dct, i, values_arr))
             if _string_vector_dict_last_operation_status != c_string_vector_dict_success and _string_vector_dict_last_operation_status != c_string_vector_dict_no_key_error:
                 return _string_vector_dict_last_operation_status
     _string_vector_dict_last_operation_status = c_string_vector_dict_success
@@ -609,9 +626,10 @@ def xs_string_vector_dict_keys(dct: int32 = int32(-1), out_arr: int32 = int32(-1
         if r != 1:
             return c_string_vector_dict_resize_failed_error
     capacity: int32 = _xs_string_vector_dict_capacity(dct)
+    keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
     idx: int32 = int32(0)
     for i in i32range(0, capacity):
-        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, i)
+        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, i, keys_arr)
         if stored_key != "!<[empty":
             xs_array_set_string(arr, idx, stored_key)
             idx += 1
@@ -633,11 +651,13 @@ def xs_string_vector_dict_values(dct: int32 = int32(-1), out_arr: int32 = int32(
         if current_size != size:
             return c_string_vector_dict_resize_failed_error
     capacity: int32 = _xs_string_vector_dict_capacity(dct)
+    keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
+    values_arr: int32 = _xs_string_vector_dict_get_values_array(dct)
     idx: int32 = int32(0)
     for i in i32range(0, capacity):
-        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, i)
+        stored_key: str = _xs_string_vector_dict_get_stored_key(dct, i, keys_arr)
         if stored_key != "!<[empty":
-            r: int32 = xs_array_set_vector(arr, idx, _xs_string_vector_dict_get_stored_value(dct, i))
+            r: int32 = xs_array_set_vector(arr, idx, _xs_string_vector_dict_get_stored_value(dct, i, values_arr))
             if r != 1:
                 return c_string_vector_dict_resize_failed_error
             idx += 1
@@ -653,10 +673,12 @@ def xs_string_vector_dict_equals(a: int32 = int32(-1), b: int32 = int32(-1)) -> 
     if size_a != size_b:
         return False
     capacity: int32 = _xs_string_vector_dict_capacity(a)
+    keys_arr: int32 = _xs_string_vector_dict_get_keys_array(a)
+    values_arr: int32 = _xs_string_vector_dict_get_values_array(a)
     for i in i32range(0, capacity):
-        key: str = _xs_string_vector_dict_get_stored_key(a, i)
+        key: str = _xs_string_vector_dict_get_stored_key(a, i, keys_arr)
         if key != "!<[empty":
-            val: XsVector = _xs_string_vector_dict_get_stored_value(a, i)
+            val: XsVector = _xs_string_vector_dict_get_stored_value(a, i, values_arr)
             if xs_string_vector_dict_get(b, key) != val:
                 return False
             if xs_string_vector_dict_last_error() != c_string_vector_dict_success:

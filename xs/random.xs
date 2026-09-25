@@ -89,7 +89,7 @@ int xsMtRandom() {
     int y = bitXor(x, _xsBitShiftRightLogical(x, _cMtU));
     y = bitXor(y, bitAnd(bitLsh(y, _cMtS), _cMtB));
     y = bitXor(y, bitAnd(bitLsh(y, _cMtT), _cMtC));
-    return (bitXor(y, _xsBitShiftRightLogical(y, _cMtL)));
+    return (bitXor(_xsBitShiftRightLogical(y, _cMtL), y));
 }
 
 float xsMtRandomFloat() {

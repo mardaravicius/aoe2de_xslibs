@@ -32,7 +32,9 @@ void _xsVectorIntDictSetStoredKey(int dct = -1, int slot = 1, vector key = vecto
 }
 
 void _xsVectorIntDictClearSlot(int dct = -1, int slot = 1) {
-    _xsVectorIntDictSetStoredKey(dct, slot, cVectorIntDictEmptyKey);
+    xsArraySetFloat(dct, slot, cVectorIntDictEmptyKeyFloat);
+    xsArraySetFloat(dct, slot + 1, cVectorIntDictEmptyKeyFloat);
+    xsArraySetFloat(dct, slot + 2, cVectorIntDictEmptyKeyFloat);
 }
 
 void _xsVectorIntDictSetStoredValue(int dct = -1, int slot = 1, int val = 0) {
@@ -135,7 +137,7 @@ int _xsVectorIntDictUpsert(int dct = -1, vector key = vector(0.0, 0.0, 0.0), int
 int _xsVectorIntDictMoveToTempArray(int dct = -1, int size = 0, int capacity = 0) {
     int tempDataSize = size * 4;
     if (_vectorIntDictTempArray < 0) {
-        _vectorIntDictTempArray = xsArrayCreateFloat(tempDataSize, xsVectorGetX(cVectorIntDictEmptyKey));
+        _vectorIntDictTempArray = xsArrayCreateFloat(tempDataSize, cVectorIntDictEmptyKeyFloat);
         if (_vectorIntDictTempArray < 0) {
             return (cVectorIntDictResizeFailedError);
         }
@@ -153,8 +155,8 @@ int _xsVectorIntDictMoveToTempArray(int dct = -1, int size = 0, int capacity = 0
     }
     int tempIdx = 2;
     while (tempIdx < tempDataSize) {
-        xsArraySetFloat(_vectorIntDictTempArray, tempIdx, xsVectorGetY(cVectorIntDictEmptyKey));
-        xsArraySetFloat(_vectorIntDictTempArray, tempIdx + 1, xsVectorGetZ(cVectorIntDictEmptyKey));
+        xsArraySetFloat(_vectorIntDictTempArray, tempIdx, cVectorIntDictEmptyKeyFloat);
+        xsArraySetFloat(_vectorIntDictTempArray, tempIdx + 1, cVectorIntDictEmptyKeyFloat);
         tempIdx = tempIdx + 4;
     }
     int t = 0;
@@ -387,14 +389,14 @@ int xsVectorIntDictClear(int dct = -1) {
 */
 int xsVectorIntDictCopy(int dct = -1) {
     int capacity = xsArrayGetSize(dct);
-    int newDct = xsArrayCreateFloat(capacity, xsVectorGetX(cVectorIntDictEmptyKey));
+    int newDct = xsArrayCreateFloat(capacity, cVectorIntDictEmptyKeyFloat);
     if (newDct < 0) {
         return (cVectorIntDictResizeFailedError);
     }
     int tempIdx = 2;
     while (tempIdx < capacity) {
-        xsArraySetFloat(newDct, tempIdx, xsVectorGetY(cVectorIntDictEmptyKey));
-        xsArraySetFloat(newDct, tempIdx + 1, xsVectorGetZ(cVectorIntDictEmptyKey));
+        xsArraySetFloat(newDct, tempIdx, cVectorIntDictEmptyKeyFloat);
+        xsArraySetFloat(newDct, tempIdx + 1, cVectorIntDictEmptyKeyFloat);
         tempIdx = tempIdx + 4;
     }
     int slotIdx = 1;
