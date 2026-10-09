@@ -5,5 +5,6 @@ venv/
 *.egg-info/
 **/__pycache__/
 tests/c/mt
+tests/c/xoshiro128ss
 .DS_Store
 build/

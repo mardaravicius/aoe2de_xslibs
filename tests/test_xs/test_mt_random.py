@@ -4,19 +4,23 @@ import subprocess
 import unittest
 from pathlib import Path
 
+import numpy as np
 from numpy import int32, float32
 
-from xs.random import xs_xo_seed, xs_xo_random, xs_xo_random_uniform_range, xs_xo_random_bool, xs_xo_random_float
+from xs.mt_random import xs_mt_random, xs_mt_random_bool, xs_mt_random_float, \
+    xs_mt_random_uniform_range, xs_mt_seed
+
+np.seterr(over="ignore")
 
 
-class XoRandomTest(unittest.TestCase):
+class MtRandomTest(unittest.TestCase):
     def test_random_uniform_in_range(self):
-        xs_xo_seed(int32(random.randint(-2147483648, 2147483647)))
+        xs_mt_seed(int32(random.randint(-2147483648, 2147483647)))
 
         for _ in range(1000):
             s = int32(random.randint(-2147483648, 2147483647))
             e = int32(random.randint(s, 2147483647))
-            r = xs_xo_random_uniform_range(s, e)
+            r = xs_mt_random_uniform_range(s, e)
             if e <= s:
                 self.assertEqual(-1, r, f"[{s}, {e}]")
             else:
@@ -24,11 +28,11 @@ class XoRandomTest(unittest.TestCase):
                 self.assertLess(r, e, f"[{s}, {e}]")
 
     def test_random_uniform_in_range_edges(self):
-        xs_xo_seed(int32(random.randint(-2147483648, 2147483647)))
+        xs_mt_seed(int32(random.randint(-2147483648, 2147483647)))
         edges = [-2147483648, -2147483647, 2147483647, 2147483646, 0, 1, -1, 2, -2]
         for s in edges:
             for e in edges:
-                r = xs_xo_random_uniform_range(int32(s), int32(e))
+                r = xs_mt_random_uniform_range(int32(s), int32(e))
                 if e <= s:
                     self.assertEqual(-1, r)
                 else:
@@ -37,7 +41,7 @@ class XoRandomTest(unittest.TestCase):
 
     def test_random_uniform_is_uniform(self):
         seed = int32(random.randint(-2147483648, 2147483647))
-        xs_xo_seed(seed)
+        xs_mt_seed(seed)
 
         d = random.randint(1, 200)
         s = random.randint(-2147483648, 2147483647 - d)
@@ -50,7 +54,7 @@ class XoRandomTest(unittest.TestCase):
         for i in range(s, e):
             results[i] = 0
         for _ in range(loops):
-            res = xs_xo_random_uniform_range(int32(s), int32(e))
+            res = xs_mt_random_uniform_range(int32(s), int32(e))
             results[res] += 1
         results = sorted(list(results.items()), key=lambda t: t[1])
         for number, occurrences in results:
@@ -67,12 +71,12 @@ class XoRandomTest(unittest.TestCase):
             c = str(c_dir).find(":")
             c_dir = c_dir[:c - 1] + c_dir[c - 1:c].lower() + c_dir[c:]
             c_dir = "/mnt/" + c_dir.replace("\\", "/").replace(":", "")
-            cpp_path = str(c_dir + "/xoshiro128ss.c")
-            exec_path = str(c_dir + "/xoshiro128ss")
+            cpp_path = str(c_dir + "/mt.cpp")
+            exec_path = str(c_dir + "/mt")
             result = subprocess.run(["wsl", "--exec", "g++", cpp_path, "-o", exec_path, "-O3"])
         else:
-            cpp_path = str(c_dir / "xoshiro128ss.c")
-            exec_path = str(c_dir / "xoshiro128ss")
+            cpp_path = str(c_dir / "mt.cpp")
+            exec_path = str(c_dir / "mt")
             result = subprocess.run(["g++", cpp_path, "-o", exec_path, "-O3"])
         if result.returncode != 0:
             raise Exception(f"g++ failed with return code {result.returncode}")
@@ -89,21 +93,21 @@ class XoRandomTest(unittest.TestCase):
                 raise Exception(f"mt failed with return code {result.returncode}")
             expected_results = result.stdout.decode("utf-8").split("\n")
             expected_results = [int32(x.strip()) for x in expected_results if len(x.strip()) > 0]
-            xs_xo_seed(seed)
+            xs_mt_seed(seed)
             actual_results = []
             for _ in range(random_iterations):
-                actual_results.append(xs_xo_random())
+                actual_results.append(xs_mt_random())
             self.assertEqual(actual_results, expected_results, f"{seed=}, {random_iterations=}")
 
     def test_random_float(self):
         seed = int32(random.randint(-2147483648, 2147483647))
-        xs_xo_seed(seed)
+        xs_mt_seed(seed)
 
         loops = 10000
         add = True
         r = float32(0.0)
         for _ in range(loops):
-            f = xs_xo_random_float()
+            f = xs_mt_random_float()
             self.assertGreaterEqual(f, float32(0.0))
             self.assertLess(f, float32(1.0))
             if add:
@@ -117,13 +121,13 @@ class XoRandomTest(unittest.TestCase):
 
     def test_random_bool(self):
         seed = int32(random.randint(-2147483648, 2147483647))
-        xs_xo_seed(seed)
+        xs_mt_seed(seed)
 
         loops = 10000
         add = True
         r = 0
         for _ in range(loops):
-            b = xs_xo_random_bool()
+            b = xs_mt_random_bool()
             if add:
                 r += 1 if b else 0
                 add = False
