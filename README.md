@@ -1,7 +1,7 @@
 # aoe2de_xslibs
 
 A reusable XS library pack for Age of Empires II: Definitive Edition.
-It adds growable lists, `int`/`float`/`vector`/`string` dictionary variants, and a Mersenne Twister random number generator.
+It adds growable lists, `int`/`float`/`vector`/`string` dictionary variants, and a xoshiro128** random number generator.
 
 ## Why these libraries?
 
@@ -9,7 +9,7 @@ XS gives you arrays, vectors, and primitive types, but larger scripts quickly ru
 
 - dynamic array with an api inspired by python list
 - hash tables with an api inspired by python dictionary
-- a pseudo-random number generator with good random distribution based on the mersenne twister algorithm
+- a fast pseudo-random number generator (xoshiro128**)
 
 This repo packages those missing pieces as drop-in `.xs` files.
 If you only want to use the libraries in a scenario, the generated files in [`xs/`](xs/) are the ones you need.
@@ -32,7 +32,7 @@ void main() {
     );
     int unit = xsIntIntDictGet(civUnits, xsGetPlayerCivilization(1), 38);
 
-    int roll = xsMtRandomUniformRange(1, 100);
+    int roll = xsXoRandomUniformRange(1, 100);
 
     xsChatData("List: " + xsIntListToString(scores));
     xsChatData("Dict: " + xsIntIntDictToString(civUnits));
@@ -71,7 +71,7 @@ You do not need the Python tooling for that.
 | `vectorIntDict.xs` | Hash map from `vector` keys to `int` values |
 | `vectorStringDict.xs` | Hash map from `vector` keys to `string` values |
 | `vectorVectorDict.xs` | Hash map from `vector` keys to `vector` values |
-| `random.xs` | MT19937 random number functions |
+| `random.xs` | xoshiro128** random number functions |
 
 ## 2. Add them to your script
 
@@ -1452,17 +1452,18 @@ void remapTargets() {
 
 ## 21. Random Numbers
 
-`random.xs` also includes a Mersenne Twister (`MT19937`) pseudo-random number generator.
-Seed it once with `xsMtSeed`, then draw values with `xsMtRandom`, `xsMtRandomFloat`, `xsMtRandomBool` or `xsMtRandomUniformRange`.
+`random.xs` provides a xoshiro128** pseudo-random number generator. Seed with `xsXoSeed`, then draw with `xsXoRandom`, `xsXoRandomFloat`, `xsXoRandomBool`, or `xsXoRandomUniformRange`.
 
 ### API
 
 ```cpp
-void  xsMtSeed(int seed)
-int   xsMtRandom()                                 // uniform int
-float xsMtRandomFloat()                            // uniform float in [0.0, 1.0)
-bool  xsMtRandomBool()                             // uniform bool
-int   xsMtRandomUniformRange(int start, int end)   // uniform int in [start, end)
+include "random.xs";
+
+void  xsXoSeed(int seed)
+int   xsXoRandom()                                 // uniform int
+float xsXoRandomFloat()                            // uniform float in [0.0, 1.0)
+bool  xsXoRandomBool()                             // uniform bool
+int   xsXoRandomUniformRange(int start, int end)   // uniform int in [start, end)
 ```
 
 ### Example
@@ -1471,7 +1472,7 @@ int   xsMtRandomUniformRange(int start, int end)   // uniform int in [start, end
 void randomTeams() {
     int numPlayers = 4;
     for (i = 0; < numPlayers) {
-        int team = xsMtRandomUniformRange(0, 2);
+        int team = xsXoRandomUniformRange(0, 2);
         xsChatData("Player " + (i + 1) + " -> team " + team);
     }
 }
@@ -1479,11 +1480,12 @@ void randomTeams() {
 
 ## 22. Larger example
 
-The example below shows `Int List`, `IntIntDict`, and the MT RNG working together in one script.
+The example below shows `Int List`, `IntIntDict`, and the RNG working together in one script.
 
 ```cpp
 include "intList.xs";
 include "intIntDict.xs";
+include "random.xs";
 
 void main() {
     int players = xsIntList(1, 2, 3, 4);
@@ -1492,7 +1494,7 @@ void main() {
     int numPlayers = xsIntListSize(players);
     for (i = 0; < numPlayers) {
         int player = xsIntListGet(players, i);
-        int score = 100 + xsMtRandomUniformRange(0, 76);
+        int score = 100 + xsXoRandomUniformRange(0, 76);
 
         xsIntIntDictPut(scoreByPlayer, player, score);
     }

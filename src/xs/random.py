@@ -1,125 +1,100 @@
 from numpy import int32, float32
 
-from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_get_int, xs_get_random_number, \
-    bit_and, bit_or, bit_xor, bit_cast_to_float, bit_lsh, bit_rsh
+from xs_converter.functions import xs_get_random_number, bit_and, bit_or, bit_xor, bit_cast_to_float, bit_lsh, bit_rsh
 from xs_converter.symbols import XsConst
 
-_c_mt_n: XsConst[int32] = int32(624)
-_c_mt_m: XsConst[int32] = int32(397)
-_c_mt_nm: int32 = int32(-1)
-_c_mt_w: XsConst[int32] = int32(32)
-_c_mt_r: XsConst[int32] = int32(31)
-_c_mt_w2: XsConst[int32] = int32(30)
-_c_mt_matrix_a: int32 = int32(-1)
-_c_mt_upper_mask: int32 = int32(-1)
-_c_mt_lower_mask: int32 = int32(-1)
-_c_mt_a: int32 = int32(-1)
-_c_mt_u: XsConst[int32] = int32(11)
-_c_mt_s: XsConst[int32] = int32(7)
-_c_mt_t: XsConst[int32] = int32(15)
-_c_mt_l: XsConst[int32] = int32(18)
-_c_mt_b: int32 = int32(-1)
-_c_mt_c: XsConst[int32] = int32(-272236544)
-_c_mt_f: int32 = int32(-1)
-_c_mt_int_max: int32 = int32(-1)
-_c_mt_float_1_as_int: int32 = int32(-1)
+_c_xo_splitmix32_a: int32 = int32(-1)
+_c_xo_splitmix32_b: XsConst[int32] = int32(569420461)
+_c_xo_splitmix32_c: int32 = int32(-1)
+_c_xo_int_max: int32 = int32(-1)
+_c_xo_float_1_as_int: int32 = int32(-1)
 
-_mt_seed_not_set: bool = True
-_mt_state_array: int32 = int32(-1)
-_mt_state_index: int32 = int32(0)
+_xo_splitmix32_s: int32 = int32(0)
+_xo_s0: int32 = int32(0)
+_xo_s1: int32 = int32(0)
+_xo_s2: int32 = int32(0)
+_xo_s3: int32 = int32(0)
+_xo_seed_not_set: bool = True
 
 
-def _xs_bit_shift_right_logical(x: int32 = int32(0), n: int32 = int32(0)) -> int32:
+def _xo_bit_shift_right_logical(x: int32 = int32(-1), n: int32 = int32(-1)) -> int32:
     if x < 0:
-        x += bit_lsh(-1, 31)
+        x += bit_lsh(int32(-1), int32(31))
         x = bit_rsh(x, n)
-        return x + bit_lsh(1, int32(31) - n)
+        return x + bit_lsh(int32(1), int32(31) - n)
     return bit_rsh(x, n)
 
 
-def xs_bit_shift_right_logical(x: int32 = int32(0), n: int32 = int32(0)) -> int32:
-    if n < 0 or n >= 32:
-        return int32(0)
-    return _xs_bit_shift_right_logical(x, n)
+def _xo_rotl(x: int32 = int32(-1), k: int32 = int32(-1)) -> int32:
+    return bit_or(bit_lsh(x, k), _xo_bit_shift_right_logical(x, int32(32) - k))
 
 
-def xs_mt_seed(seed: int32 = int32(0)) -> None:
-    global _mt_state_array, _c_mt_matrix_a, _c_mt_upper_mask, _c_mt_lower_mask, _c_mt_a, _c_mt_b, _c_mt_f, \
-        _mt_state_index, _mt_seed_not_set, _c_mt_nm, _c_mt_int_max, _c_mt_float_1_as_int
-    if _mt_state_array < 0:
-        _c_mt_matrix_a = int32(-1727483681)
-        _c_mt_upper_mask = bit_lsh(int32(-1), _c_mt_r)
-        _c_mt_lower_mask = _xs_bit_shift_right_logical(int32(-1), _c_mt_w - _c_mt_r)
-        _c_mt_a = int32(-1727483681)
-        _c_mt_b = int32(-1658038656)
-        _c_mt_f = int32(1812433253)
-        _c_mt_nm = _c_mt_n - _c_mt_m
-        _mt_state_array = xs_array_create_int(_c_mt_n, 0, "_mtStateArray")
-        _c_mt_int_max = int32(2147483647)
-        _c_mt_float_1_as_int = int32(1065353216)
-    xs_array_set_int(_mt_state_array, 0, seed)
-    i: int32 = int32(1)
-    while i < _c_mt_n:
-        seed = _c_mt_f * bit_xor(seed, _xs_bit_shift_right_logical(seed, _c_mt_w2)) + i
-        xs_array_set_int(_mt_state_array, i, seed)
-        i += 1
-    _mt_state_index = int32(0)
-    _mt_seed_not_set = False
+def _xo_splitmix32() -> int32:
+    global _xo_splitmix32_s
+    _xo_splitmix32_s += _c_xo_splitmix32_a
+    z: int32 = _xo_splitmix32_s
+    z = bit_xor(z, _xo_bit_shift_right_logical(z, int32(16)))
+    z *= _c_xo_splitmix32_b
+    z = bit_xor(z, _xo_bit_shift_right_logical(z, int32(15)))
+    z *= _c_xo_splitmix32_c
+    z = bit_xor(z, _xo_bit_shift_right_logical(z, int32(15)))
+    return z
 
 
-def xs_mt_random() -> int32:
-    global _mt_state_index
+def xs_xo_seed(seed: int32 = int32(0)) -> None:
+    global _xo_s0, _xo_s1, _xo_s2, _xo_s3, _xo_seed_not_set, _c_xo_splitmix32_a, _c_xo_splitmix32_b, \
+        _c_xo_splitmix32_c, _c_xo_int_max, _c_xo_float_1_as_int, _xo_splitmix32_s
+    if _c_xo_splitmix32_a < 0:
+        _c_xo_splitmix32_a = int32(-1640531527)
+        _c_xo_splitmix32_c = int32(1935289751)
+        _c_xo_int_max = int32(2147483647)
+        _c_xo_float_1_as_int = int32(1065353216)
+    _xo_splitmix32_s = seed
+    _xo_s0 = _xo_splitmix32()
+    _xo_s1 = _xo_splitmix32()
+    _xo_s2 = _xo_splitmix32()
+    _xo_s3 = _xo_splitmix32()
 
-    if _mt_seed_not_set:
-        xs_mt_seed(
+    if _xo_s0 == 0 and _xo_s1 == 0 and _xo_s2 == 0 and _xo_s3 == 0:
+        _xo_s0 = int32(1)
+
+    _xo_seed_not_set = False
+
+
+def xs_xo_random() -> int32:
+    global _xo_s0, _xo_s1, _xo_s2, _xo_s3, _xo_seed_not_set
+    if _xo_seed_not_set:
+        xs_xo_seed(
             bit_rsh(xs_get_random_number(), int32(4)) +
             bit_lsh(bit_rsh(xs_get_random_number(), int32(4)), int32(11)) +
             bit_lsh(bit_rsh(xs_get_random_number(), int32(5)), int32(22))
         )
+    result: int32 = _xo_rotl(_xo_s1 * int32(5), int32(7)) * int32(9)
 
-    k: int32 = _mt_state_index
+    t: int32 = bit_lsh(_xo_s1, int32(9))
 
-    j: int32 = k - (_c_mt_n - 1)
-    if j < 0:
-        j += _c_mt_n
+    _xo_s2 = bit_xor(_xo_s2, _xo_s0)
+    _xo_s3 = bit_xor(_xo_s3, _xo_s1)
+    _xo_s1 = bit_xor(_xo_s1, _xo_s2)
+    _xo_s0 = bit_xor(_xo_s0, _xo_s3)
 
-    x: int32 = bit_or(
-        bit_and(xs_array_get_int(_mt_state_array, k), _c_mt_upper_mask),
-        bit_and(xs_array_get_int(_mt_state_array, j), _c_mt_lower_mask),
-    )
+    _xo_s2 = bit_xor(_xo_s2, t)
 
-    xa: int32 = _xs_bit_shift_right_logical(x, int32(1))
-    if bit_and(x, int32(1)) != 0:
-        xa = bit_xor(xa, _c_mt_a)
+    _xo_s3 = _xo_rotl(_xo_s3, int32(11))
 
-    j = k - _c_mt_nm
-    if j < 0:
-        j += _c_mt_n
-
-    x = bit_xor(xs_array_get_int(_mt_state_array, j), xa)
-    xs_array_set_int(_mt_state_array, k, x)
-    k += 1
-
-    if k >= _c_mt_n:
-        k = int32(0)
-    _mt_state_index = k
-
-    y: int32 = bit_xor(x, _xs_bit_shift_right_logical(x, _c_mt_u))
-    y = bit_xor(y, bit_and(bit_lsh(y, _c_mt_s), _c_mt_b))
-    y = bit_xor(y, bit_and(bit_lsh(y, _c_mt_t), _c_mt_c))
-    return bit_xor(_xs_bit_shift_right_logical(y, _c_mt_l), y)
+    return result
 
 
-def xs_mt_random_float() -> float32:
-    bits: int32 = bit_or(bit_and(xs_mt_random(), _c_mt_int_max) // int32(256), _c_mt_float_1_as_int)
+def xs_xo_random_float() -> float32:
+    bits: int32 = bit_or(bit_and(xs_xo_random(), _c_xo_int_max) // int32(256), _c_xo_float_1_as_int)
     return bit_cast_to_float(bits) - float32(1.0)
 
 
-def xs_mt_random_bool() -> bool:
-    return xs_mt_random() > -1
+def xs_xo_random_bool() -> bool:
+    return xs_xo_random() > -1
 
 
-def xs_mt_random_uniform_range(start: int32 = int32(0), end: int32 = int32(999999999)) -> int32:
+def xs_xo_random_uniform_range(start: int32 = int32(0), end: int32 = int32(999999999)) -> int32:
     if end <= start:
         return int32(-1)
 
@@ -129,18 +104,18 @@ def xs_mt_random_uniform_range(start: int32 = int32(0), end: int32 = int32(99999
 
     dst_m: int32 = dst - 1
     if bit_and(dst, dst_m) == 0:
-        return bit_and(xs_mt_random(), dst_m) + start
+        return bit_and(xs_xo_random(), dst_m) + start
 
     if dst > 0:
         while True:
-            r: int32 = _xs_bit_shift_right_logical(xs_mt_random(), int32(1))
+            r: int32 = _xo_bit_shift_right_logical(xs_xo_random(), int32(1))
             c: int32 = r % dst
 
             if r + dst_m - c >= 0:
                 return c + start
 
     while True:
-        rr: int32 = xs_mt_random()
+        rr: int32 = xs_xo_random()
         if rr >= start and rr < end:
             return rr
     return int32(-1)

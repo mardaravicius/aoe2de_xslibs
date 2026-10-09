@@ -2,6 +2,7 @@ import subprocess
 from pathlib import Path
 from types import ModuleType
 
+import xs.mt_random as mt_random
 import xs.random as random
 import xs.bool_list as bool_list
 import xs.float_list as float_list
@@ -41,6 +42,7 @@ def main() -> None:
         (vector_int_dict, "vectorIntDict"),
         (vector_string_dict, "vectorStringDict"),
         (vector_vector_dict, "vectorVectorDict"),
+        (mt_random, "mtRandom"),
         (random, "random"),
     ]
     for module, name in xs_modules:
