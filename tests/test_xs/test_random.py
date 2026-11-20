@@ -6,7 +6,7 @@ from pathlib import Path
 
 from numpy import int32, float32
 
-from xs.random import xs_xo_seed, xs_xo_random, xs_xo_random_uniform_range, xs_xo_random_bool, xs_xo_random_float
+from xs.random import xs_xo_random_str, xs_xo_seed, xs_xo_random, xs_xo_random_uniform_range, xs_xo_random_bool, xs_xo_random_float
 
 
 class XoRandomTest(unittest.TestCase):
@@ -132,3 +132,37 @@ class XoRandomTest(unittest.TestCase):
                 add = True
         r = abs(r)
         self.assertLessEqual(r, 125)
+
+    def test_random_str_default(self):
+        xs_xo_seed(int32(random.randint(-2147483648, 2147483647)))
+        allowed = set("abcdefghijklmnopqrstuvwxyz0123456789")
+        for _ in range(100):
+            s = xs_xo_random_str()
+            self.assertEqual(8, len(s))
+            self.assertTrue(set(s) <= allowed, s)
+
+    def test_random_str_custom(self):
+        xs_xo_seed(int32(random.randint(-2147483648, 2147483647)))
+        s = xs_xo_random_str(int32(20), "abc")
+        self.assertEqual(20, len(s))
+        self.assertTrue(set(s) <= set("abc"), s)
+        self.assertEqual("xxxxx", xs_xo_random_str(int32(5), "x"))
+
+    def test_random_str_empty(self):
+        self.assertEqual("", xs_xo_random_str(int32(0)))
+        self.assertEqual("", xs_xo_random_str(int32(-3)))
+        self.assertEqual("", xs_xo_random_str(int32(5), ""))
+
+    def test_random_str_same_seed_same_result(self):
+        xs_xo_seed(int32(12345))
+        a = xs_xo_random_str(int32(16))
+        xs_xo_seed(int32(12345))
+        self.assertEqual(a, xs_xo_random_str(int32(16)))
+
+    def test_random_str_is_uniform(self):
+        xs_xo_seed(int32(random.randint(-2147483648, 2147483647)))
+        chars = "abcdefghij"
+        s = xs_xo_random_str(int32(10000), chars)
+        for c in chars:
+            self.assertGreaterEqual(s.count(c), 600, c)
+            self.assertLessEqual(s.count(c), 1400, c)

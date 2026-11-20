@@ -1811,7 +1811,7 @@ void remapTargets() {
 
 ## 26. Random Numbers
 
-`random.xs` provides a xoshiro128** pseudo-random number generator. Seed with `xsXoSeed`, then draw with `xsXoRandom`, `xsXoRandomFloat`, `xsXoRandomBool`, or `xsXoRandomUniformRange`.
+`random.xs` provides a xoshiro128** pseudo-random number generator. Seed with `xsXoSeed`, then draw with `xsXoRandom`, `xsXoRandomFloat`, `xsXoRandomBool`, `xsXoRandomUniformRange`, or `xsXoRandomStr`.
 
 ### API
 
@@ -1823,6 +1823,8 @@ int   xsXoRandom()                                 // uniform int
 float xsXoRandomFloat()                            // uniform float in [0.0, 1.0)
 bool  xsXoRandomBool()                             // uniform bool
 int   xsXoRandomUniformRange(int start, int end)   // uniform int in [start, end)
+string xsXoRandomStr(int size = 8, string chars = "abcdefghijklmnopqrstuvwxyz0123456789")
+                                                   // size uniformly picked chars; "" if chars is empty
 ```
 
 ### Example

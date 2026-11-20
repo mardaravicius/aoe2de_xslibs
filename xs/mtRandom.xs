@@ -123,3 +123,15 @@ int xsMtRandomUniformRange(int start = 0, int end = 999999999) {
     }
     return (-1);
 }
+
+string xsMtRandomStr(int size = 8, string chars = "abcdefghijklmnopqrstuvwxyz0123456789") {
+    int n = strLen(chars);
+    if (n == 0) {
+        return ("");
+    }
+    string result = "";
+    for (i = 0; < size) {
+        result = result + strCharAt(chars, xsMtRandomUniformRange(0, n));
+    }
+    return (result);
+}

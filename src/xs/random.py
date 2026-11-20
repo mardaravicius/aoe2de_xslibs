@@ -1,7 +1,7 @@
 from numpy import int32, float32
 
-from xs_converter.functions import xs_get_random_number, bit_cast_to_float
-from xs_converter.symbols import XsConst
+from xs_converter.functions import xs_get_random_number, bit_cast_to_float, str_char_at, str_len
+from xs_converter.symbols import XsConst, i32range
 
 _c_xo_splitmix32_a: int32 = int32(-1)
 _c_xo_splitmix32_b: XsConst[int32] = int32(569420461)
@@ -119,3 +119,13 @@ def xs_xo_random_uniform_range(start: int32 = int32(0), end: int32 = int32(99999
         if rr >= start and rr < end:
             return rr
     return int32(-1)
+
+
+def xs_xo_random_str(size: int32 = int32(8), chars: str = "abcdefghijklmnopqrstuvwxyz0123456789") -> str:
+    n: int32 = str_len(chars)
+    if n == 0:
+        return ""
+    result: str = ""
+    for i in i32range(size):
+        result += str_char_at(chars, xs_xo_random_uniform_range(int32(0), n))
+    return result
