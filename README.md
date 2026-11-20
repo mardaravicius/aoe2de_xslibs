@@ -57,6 +57,11 @@ You do not need the Python tooling for that.
 
 | File | Provides |
 |---|---|
+| `intArray.xs` | Helper functions for plain XS `int` arrays |
+| `floatArray.xs` | Helper functions for plain XS `float` arrays |
+| `boolArray.xs` | Helper functions for plain XS `bool` arrays |
+| `stringArray.xs` | Helper functions for plain XS `string` arrays |
+| `vectorArray.xs` | Helper functions for plain XS `vector` arrays |
 | `intList.xs` | Dynamic list of `int` values |
 | `floatList.xs` | Dynamic list of `float` values |
 | `boolList.xs` | Dynamic list of `bool` values |
@@ -106,6 +111,7 @@ red but still work.
 ## 3. A few rules to remember
 
 - The list creation helpers and all dictionary constructors return an `int` handle.
+- The array creation helpers return a plain XS array id that works with the built-in `xsArray...` functions.
 - The dictionary `Keys` and `Values` helpers return raw XS arrays, not list handles.
 - Pass an existing array to dictionary `Keys` or `Values` to reuse it; the helper resizes and returns that same array.
 - `NextKey` returns a sentinel value when iteration ends. If that sentinel could also be a real key, check `LastError()` to distinguish "no next key" from a legitimate return value.
@@ -123,7 +129,8 @@ red but still work.
 - `xsVectorVectorDictKeys`/`Values` return `vector[]` / `vector[]`.
 - `FromString` constructors parse a comma separated string and skip items that cannot be parsed:
   `xsIntListFromString("1,2")`, `xsFloatListFromString("1.0,1.1")`, `xsBoolListFromString("true,false")`,
-  `xsStringListFromString("'a','b'")`, `xsVectorListFromString("v(1.0,1.1,-3.3),v(1.0,2.0,3.0)")`, and for dictionaries
+  `xsStringListFromString("'a','b'")`, `xsVectorListFromString("v(1.0,1.1,-3.3),v(1.0,2.0,3.0)")`, the matching array
+  constructors such as `xsIntArrayFromString("1,2")` or `xsVectorArrayFromString("v(1.0,1.1,-3.3)")`, and for dictionaries
   `key:value` pairs such as `xsIntStringDictFromString("1:'a',2:'b'")` or `xsStringStringDictFromString("'abc':''")`.
   Values are parsed with `strToInt` and `strToFloat`, so floats need a decimal point (`1.0`, not `1`)
   and ints keep only their leading digits (`1.5` becomes `1`). Items are trimmed. Strings must be wrapped in `'` and cannot contain `'`, but may contain `,`, `:` and brackets.
@@ -141,7 +148,312 @@ red but still work.
 - `xsStringVectorDict` cannot store the reserved sentinel string `!<[empty` as a key.
 - `xsVectorIntDict`, `xsVectorStringDict`, and `xsVectorVectorDict` cannot store their reserved `...EmptyKey` vector sentinel as a key.
 
-## 4. Int List
+## 4. Int Array
+
+`intArray.xs` provides helper functions for plain XS `int` arrays, the ones created with `xsArrayCreateInt`.
+The functions take and return regular array ids, so they work alongside `xsArrayGetInt`, `xsArraySetInt`,
+`xsArrayGetSize` and `xsArrayResizeInt`. These built-ins are not duplicated.
+The helpers never change an array's size; use `intList.xs` when you need append, insert or remove.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cIntArraySuccess` | `0` | Operation succeeded |
+| `cIntArrayGenericError` | `-1` | General failure |
+| `cIntArrayIndexOutOfRangeError` | `-2` | Min or max of an empty array |
+| `cIntArrayResizeFailedError` | `-3` | Array allocation failed |
+| `cIntArrayMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cIntArrayMaxCapacity` | `999999999` | Hard upper limit |
+| `cIntArrayEmptyParam` | `-999999999` | Internal constructor sentinel |
+
+### API
+
+```cpp
+// Creation
+int xsIntArray(int v0, int v1, ..., int v11)      // up to 12 initial values
+int xsIntArrayFromString(string items)
+int xsIntArrayFromRange(int start, int stop, int step)
+int xsIntArrayFromRepeatedVal(int value, int times)
+int xsIntArrayFromRepeatedArray(int arr, int times)
+
+// Modification
+int    xsIntArrayDelete(int arr)
+void   xsIntArrayReverse(int arr)
+void   xsIntArraySort(int arr, bool reverse)
+
+// Search
+bool   xsIntArrayContains(int arr, int value)
+int    xsIntArrayIndex(int arr, int value, int start, int stop)
+int    xsIntArrayCount(int arr, int value)
+
+// Aggregation
+int    xsIntArraySum(int arr)
+int    xsIntArrayMin(int arr)
+int    xsIntArrayMax(int arr)
+
+// Bulk operations
+int    xsIntArrayCopy(int arr, int start, int end)
+int    xsIntArrayCompare(int arr1, int arr2)
+
+// Diagnostics
+string xsIntArrayToString(int arr)
+int    xsIntArrayLastError()                      // status of the last Min or Max call
+```
+
+### Example
+
+```cpp
+void rankUnits() {
+    int units = xsIntArray(cMilitiaLine, cArcherLine, cKnightLine);
+    int costs = xsIntArray(60, 45, 135);
+
+    xsIntArraySort(costs, true);
+    xsChatData("Most expensive: " + xsArrayGetInt(costs, 0));
+    xsChatData("Has archers: " + xsIntArrayContains(units, cArcherLine));
+}
+
+## 5. Float Array
+
+`floatArray.xs` provides helper functions for plain XS `float` arrays, the ones created with `xsArrayCreateFloat`.
+The functions take and return regular array ids, so they work alongside `xsArrayGetFloat`, `xsArraySetFloat`,
+`xsArrayGetSize` and `xsArrayResizeFloat`. These built-ins are not duplicated.
+The helpers never change an array's size; use `floatList.xs` when you need append, insert or remove.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cFloatArraySuccess` | `0` | Operation succeeded |
+| `cFloatArrayGenericError` | `-1` | General failure |
+| `cFloatArrayGenericErrorFloat` | `-1.0` | Float return value on error |
+| `cFloatArrayIndexOutOfRangeError` | `-2` | Min or max of an empty array |
+| `cFloatArrayResizeFailedError` | `-3` | Array allocation failed |
+| `cFloatArrayMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cFloatArrayMaxCapacity` | `999999999` | Hard upper limit |
+| `cFloatArrayEmptyParam` | `-9999999.0` | Internal constructor sentinel |
+| `cFloatArrayEmptyIntParam` | `-999999999` | Internal index sentinel |
+
+### API
+
+```cpp
+// Creation
+int   xsFloatArray(float v0, float v1, ..., float v11)  // up to 12 initial values
+int   xsFloatArrayFromString(string items)
+int   xsFloatArrayFromRepeatedVal(float value, int times)
+int   xsFloatArrayFromRepeatedArray(int arr, int times)
+
+// Modification
+int   xsFloatArrayDelete(int arr)
+void  xsFloatArrayReverse(int arr)
+void  xsFloatArraySort(int arr, bool reverse)
+
+// Search
+bool  xsFloatArrayContains(int arr, float value)
+int   xsFloatArrayIndex(int arr, float value, int start, int stop)
+int   xsFloatArrayCount(int arr, float value)
+
+// Aggregation
+float xsFloatArraySum(int arr)
+float xsFloatArrayMin(int arr)
+float xsFloatArrayMax(int arr)
+
+// Bulk operations
+int   xsFloatArrayCopy(int arr, int start, int end)
+int   xsFloatArrayCompare(int arr1, int arr2)
+
+// Diagnostics
+string xsFloatArrayToString(int arr)
+int    xsFloatArrayLastError()                         // status of the last Min or Max call
+```
+
+### Example
+
+```cpp
+void averageSpeed() {
+    int speeds = xsFloatArray(0.96, 1.35, 1.1);
+
+    float avg = xsFloatArraySum(speeds) / xsArrayGetSize(speeds);
+    xsChatData("Average: " + avg + ", fastest: " + xsFloatArrayMax(speeds));
+}
+```
+
+## 6. Bool Array
+
+`boolArray.xs` provides helper functions for plain XS `bool` arrays, the ones created with `xsArrayCreateBool`.
+The functions take and return regular array ids, so they work alongside `xsArrayGetBool`, `xsArraySetBool`,
+`xsArrayGetSize` and `xsArrayResizeBool`. These built-ins are not duplicated.
+The helpers never change an array's size; use `boolList.xs` when you need append, insert or remove.
+
+Like `boolList.xs`, there is no constructor with initial values; use `xsBoolArrayFromString` or `xsBoolArrayFromRepeatedVal`.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cBoolArraySuccess` | `0` | Operation succeeded |
+| `cBoolArrayGenericError` | `-1` | General failure |
+| `cBoolArrayResizeFailedError` | `-3` | Array allocation failed |
+| `cBoolArrayMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cBoolArrayMaxCapacity` | `999999999` | Hard upper limit |
+| `cBoolArrayEmptyIntParam` | `-999999999` | Internal index sentinel |
+
+### API
+
+```cpp
+// Creation
+int    xsBoolArrayFromString(string items)
+int    xsBoolArrayFromRepeatedVal(bool value, int times)
+int    xsBoolArrayFromRepeatedArray(int arr, int times)
+
+// Modification
+int    xsBoolArrayDelete(int arr)
+void   xsBoolArrayReverse(int arr)
+void   xsBoolArraySort(int arr, bool reverse)          // false before true
+
+// Search
+bool   xsBoolArrayContains(int arr, bool value)
+int    xsBoolArrayIndex(int arr, bool value, int start, int stop)
+int    xsBoolArrayCount(int arr, bool value)
+
+// Bulk operations
+int    xsBoolArrayCopy(int arr, int start, int end)
+int    xsBoolArrayCompare(int arr1, int arr2)
+
+// Diagnostics
+string xsBoolArrayToString(int arr)
+```
+
+### Example
+
+```cpp
+void checkPlayers() {
+    int alive = xsBoolArrayFromRepeatedVal(true, 8);
+    xsArraySetBool(alive, 3, false);
+
+    xsChatData("Alive: " + xsBoolArrayCount(alive, true));
+}
+```
+
+## 7. String Array
+
+`stringArray.xs` provides helper functions for plain XS `string` arrays, the ones created with `xsArrayCreateString`.
+The functions take and return regular array ids, so they work alongside `xsArrayGetString`, `xsArraySetString`,
+`xsArrayGetSize` and `xsArrayResizeString`. These built-ins are not duplicated.
+The helpers never change an array's size; use `stringList.xs` when you need append, insert or remove.
+
+`xsStringArray` cannot take the reserved sentinel string `!<[empty` as a value.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cStringArraySuccess` | `0` | Operation succeeded |
+| `cStringArrayGenericError` | `-1` | General failure |
+| `cStringArrayIndexOutOfRangeError` | `-2` | Min or max of an empty array |
+| `cStringArrayResizeFailedError` | `-3` | Array allocation failed |
+| `cStringArrayMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cStringArrayMaxCapacity` | `999999999` | Hard upper limit |
+| `cStringArrayEmptyIntParam` | `-999999999` | Internal index sentinel |
+
+### API
+
+```cpp
+// Creation
+int    xsStringArray(string v0, string v1, ..., string v11)  // up to 12 initial values
+int    xsStringArrayFromString(string items)
+int    xsStringArrayFromRepeatedVal(string value, int times)
+int    xsStringArrayFromRepeatedArray(int arr, int times)
+
+// Modification
+int    xsStringArrayDelete(int arr)
+void   xsStringArrayReverse(int arr)
+void   xsStringArraySort(int arr, bool reverse)
+
+// Search
+bool   xsStringArrayContains(int arr, string value)
+int    xsStringArrayIndex(int arr, string value, int start, int stop)
+int    xsStringArrayCount(int arr, string value)
+
+// Aggregation
+string xsStringArrayMin(int arr)                     // returns "-1" on error
+string xsStringArrayMax(int arr)                     // returns "-1" on error
+
+// Bulk operations
+int    xsStringArrayCopy(int arr, int start, int end)
+int    xsStringArrayCompare(int arr1, int arr2)
+
+// Diagnostics
+string xsStringArrayToString(int arr)
+int    xsStringArrayLastError()                      // status of the last Min or Max call
+```
+
+### Example
+
+```cpp
+void listNames() {
+    int names = xsStringArray("Tamerlane", "Joan", "Saladin");
+
+    xsStringArraySort(names, false);
+    xsChatData(xsStringArrayToString(names));
+}
+```
+
+## 8. Vector Array
+
+`vectorArray.xs` provides helper functions for plain XS `vector` arrays, the ones created with `xsArrayCreateVector`.
+The functions take and return regular array ids, so they work alongside `xsArrayGetVector`, `xsArraySetVector`,
+`xsArrayGetSize`. These built-ins are not duplicated.
+The helpers never change an array's size; use `vectorList.xs` when you need append, insert or remove.
+
+There is no `Delete` function because `xsArrayResizeVector` is bugged in the game.
+Like `vectorList.xs`, there is no sort, compare, sum, min or max.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `cVectorArrayGenericError` | `-1` | General failure |
+| `cVectorArrayMaxCapacityError` | `-4` | Exceeded maximum capacity |
+| `cVectorArrayMaxCapacity` | `999999999` | Hard upper limit |
+| `cVectorArrayEmptyParam` | `vector(-9999999.0, -9999999.0, -9999999.0)` | Internal constructor sentinel |
+| `cVectorArrayEmptyIntParam` | `-999999999` | Internal index sentinel |
+
+### API
+
+```cpp
+// Creation
+int    xsVectorArray(vector v0, vector v1, ..., vector v11)  // up to 12 initial values
+int    xsVectorArrayFromString(string items)
+int    xsVectorArrayFromRepeatedVal(vector value, int times)
+int    xsVectorArrayFromRepeatedArray(int arr, int times)
+
+// Modification
+void   xsVectorArrayReverse(int arr)
+
+// Search
+bool   xsVectorArrayContains(int arr, vector value)
+int    xsVectorArrayIndex(int arr, vector value, int start, int stop)
+int    xsVectorArrayCount(int arr, vector value)
+
+// Bulk operations
+int    xsVectorArrayCopy(int arr, int start, int end)
+
+// Diagnostics
+string xsVectorArrayToString(int arr)
+```
+
+### Example
+
+```cpp
+void spawnPoints() {
+    int points = xsVectorArray(vector(10.0, 10.0, 0.0), vector(50.0, 10.0, 0.0), vector(10.0, 50.0, 0.0));
+
+    xsChatData("Has center: " + xsVectorArrayContains(points, vector(30.0, 30.0, 0.0)));
+}
+```
+
+## 9. Int List
 
 `intList.xs` provides a dynamic array of 32-bit integers.
 Use it when you want list-style operations such as append, insert, copy, sort, reverse, search, and aggregation.
@@ -220,7 +532,7 @@ void updateScores() {
 }
 ```
 
-## 5. Float List
+## 10. Float List
 
 `floatList.xs` provides a dynamic array of 32-bit floats.
 It largely mirrors Int List, but there is no `xsFloatListFromRange`.
@@ -306,7 +618,7 @@ void trackRates() {
 }
 ```
 
-## 6. Bool List
+## 11. Bool List
 
 `boolList.xs` provides a dynamic array of booleans.
 It largely mirrors String List, but it intentionally has no `xsBoolList` convenience constructor, and bool-returning error cases use `false` plus `xsBoolListLastError()` because `false` is also a valid stored value.
@@ -382,7 +694,7 @@ void syncFlags() {
 }
 ```
 
-## 7. String List
+## 12. String List
 
 `stringList.xs` provides a dynamic array of strings.
 It mostly mirrors Int List, but there is no `Sum`, `xsStringListUseArrayAsSource` wraps an existing string array without copying it, and string-returning error cases use `"-1"` plus `xsStringListLastError()` because `"-1"` is also a valid stored value.
@@ -458,7 +770,7 @@ void announceNames() {
 }
 ```
 
-## 8. Vector List
+## 13. Vector List
 
 `vectorList.xs` provides a dynamic array of `vector` values.
 Unlike the scalar list types, it only exposes operations that make sense for vectors, so there is no sort, compare, sum, min, or max API.
@@ -536,7 +848,7 @@ void spawnUnitsAlongPath() {
 }
 ```
 
-## 9. Int to Int Dictionary
+## 14. Int to Int Dictionary
 
 `intIntDict.xs` provides a hash map from `int` keys to `int` values.
 The exported implementation uses open addressing with linear probing and resizes automatically when the load factor grows past `cIntIntDictMaxLoadFactor`.
@@ -624,7 +936,7 @@ void distributeResources() {
 }
 ```
 
-## 10. Int to String Dictionary
+## 15. Int to String Dictionary
 
 `intStringDict.xs` provides a hash map from `int` keys to `string` values.
 It uses the same open-addressed layout as `intIntDict.xs`, but stores values in a parallel string array.
@@ -703,7 +1015,7 @@ void namePlayers() {
 }
 ```
 
-## 11. Int to Vector Dictionary
+## 16. Int to Vector Dictionary
 
 `intVectorDict.xs` provides a hash map from `int` keys to `vector` values.
 It uses the same open-addressed layout as `intIntDict.xs`, but stores vectors as raw float components.
@@ -782,7 +1094,7 @@ void placeCamps() {
 }
 ```
 
-## 12. Float to Int Dictionary
+## 17. Float to Int Dictionary
 
 `floatIntDict.xs` provides a hash map from `float` keys to `int` values.
 The exported implementation uses open addressing with linear probing and resizes automatically when the load factor grows past `cFloatIntDictMaxLoadFactor`. Signed zero keys are canonicalized to `0.0`, and all NaN keys are treated as the same key.
@@ -862,7 +1174,7 @@ void scoreZones() {
 }
 ```
 
-## 13. Float to String Dictionary
+## 18. Float to String Dictionary
 
 `floatStringDict.xs` provides a hash map from `float` keys to `string` values.
 It uses the same open-addressed layout as `floatIntDict.xs`, but stores values in a parallel string array. Signed zero keys are canonicalized to `0.0`, and all NaN keys are treated as the same key.
@@ -941,7 +1253,7 @@ void labelZones() {
 }
 ```
 
-## 14. Float to Vector Dictionary
+## 19. Float to Vector Dictionary
 
 `floatVectorDict.xs` provides a hash map from `float` keys to `vector` values.
 It uses the same open-addressed layout as `floatIntDict.xs`, but stores vectors as raw float components. Signed zero keys are canonicalized to `0.0`, and all NaN keys are treated as the same key.
@@ -1020,7 +1332,7 @@ void placeCamps() {
 }
 ```
 
-## 15. String to Int Dictionary
+## 20. String to Int Dictionary
 
 `stringIntDict.xs` provides a hash map from `string` keys to `int` values.
 The exported implementation uses open addressing with linear probing and resizes automatically when the load factor grows past `cStringIntDictMaxLoadFactor`. Iteration order is arbitrary.
@@ -1102,7 +1414,7 @@ void trackScoresByName() {
 }
 ```
 
-## 16. String to String Dictionary
+## 21. String to String Dictionary
 
 `stringStringDict.xs` provides a hash map from `string` keys to `string` values.
 The exported implementation uses open addressing with linear probing and resizes automatically when the load factor grows past `cStringStringDictMaxLoadFactor`. Iteration order is arbitrary.
@@ -1181,7 +1493,7 @@ void mapAliases() {
 }
 ```
 
-## 17. String to Vector Dictionary
+## 22. String to Vector Dictionary
 
 `stringVectorDict.xs` provides a hash map from `string` keys to `vector` values.
 The exported implementation uses open addressing with linear probing and resizes automatically when the load factor grows past `cStringVectorDictMaxLoadFactor`. Iteration order is arbitrary.
@@ -1261,7 +1573,7 @@ void placeNamedTargets() {
 }
 ```
 
-## 18. Vector to Int Dictionary
+## 23. Vector to Int Dictionary
 
 `vectorIntDict.xs` provides a hash map from `vector` keys to `int` values.
 It uses direct vector equality for key lookup and reserves `cVectorIntDictEmptyKey` as the empty-slot sentinel. Vector keys are not canonicalized; avoid NaN and signed-zero components.
@@ -1339,7 +1651,7 @@ void markDangerZones() {
 }
 ```
 
-## 19. Vector to String Dictionary
+## 24. Vector to String Dictionary
 
 `vectorStringDict.xs` provides a hash map from `vector` keys to `string` values.
 It mirrors the other vector-keyed dictionary variants, but stores values in a parallel string array. Vector keys are not canonicalized; avoid NaN and signed-zero components.
@@ -1418,7 +1730,7 @@ void labelZones() {
 }
 ```
 
-## 20. Vector to Vector Dictionary
+## 25. Vector to Vector Dictionary
 
 `vectorVectorDict.xs` provides a hash map from `vector` keys to `vector` values.
 It mirrors the other dictionary variants, but both keys and values are vectors. Vector keys are not canonicalized; avoid NaN and signed-zero components.
@@ -1497,7 +1809,7 @@ void remapTargets() {
 }
 ```
 
-## 21. Random Numbers
+## 26. Random Numbers
 
 `random.xs` provides a xoshiro128** pseudo-random number generator. Seed with `xsXoSeed`, then draw with `xsXoRandom`, `xsXoRandomFloat`, `xsXoRandomBool`, or `xsXoRandomUniformRange`.
 
@@ -1525,7 +1837,7 @@ void randomTeams() {
 }
 ```
 
-## 22. Larger example
+## 27. Larger example
 
 The example below shows `Int List`, `IntIntDict`, and the RNG working together in one script.
 

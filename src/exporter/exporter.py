@@ -11,6 +11,11 @@ import xs.float_string_dict as float_string_dict
 import xs.float_vector_dict as float_vector_dict
 import xs.int_int_dict as int_int_dict
 import xs.int_list as int_list
+import xs.int_array as int_array
+import xs.float_array as float_array
+import xs.bool_array as bool_array
+import xs.string_array as string_array
+import xs.vector_array as vector_array
 import xs.string_int_dict as string_int_dict
 import xs.string_vector_dict as string_vector_dict
 import xs.string_string_dict as string_string_dict
@@ -30,6 +35,11 @@ def main() -> None:
         (bool_list, "boolList"),
         (string_list, "stringList"),
         (vector_list, "vectorList"),
+        (int_array, "intArray"),
+        (float_array, "floatArray"),
+        (bool_array, "boolArray"),
+        (string_array, "stringArray"),
+        (vector_array, "vectorArray"),
         (int_int_dict, "intIntDict"),
         (float_int_dict, "floatIntDict"),
         (float_string_dict, "floatStringDict"),
