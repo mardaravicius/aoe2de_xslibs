@@ -150,24 +150,29 @@ void xsBoolArraySort(int arr = -1, bool reverse = false) {
 }
 
 /*
-    Returns a string representation of the array in the format `[true, false, ...]`.
+    Returns a string representation of the array, by default in the format `[true, false, ...]`.
     @param arr - array id
+    @param start - string prepended to the output
+    @param sep - separator between elements
+    @param end - string appended to the output
+    @param str_true - string used for true values
+    @param str_false - string used for false values
     @return string representation of the array
 */
-string xsBoolArrayToString(int arr = -1) {
+string xsBoolArrayToString(int arr = -1, string start = "[", string sep = ", ", string end = "]", string strTrue = "true", string strFalse = "false") {
     int size = xsArrayGetSize(arr);
-    string s = "[";
+    string s = start;
     for (i = 0; < size) {
         if (xsArrayGetBool(arr, i)) {
-            s = s + "true";
+            s = s + strTrue;
         } else {
-            s = s + "false";
+            s = s + strFalse;
         }
         if (i < (size - 1)) {
-            s = s + ", ";
+            s = s + sep;
         }
     }
-    s = s + "]";
+    s = s + end;
     return (s);
 }
 

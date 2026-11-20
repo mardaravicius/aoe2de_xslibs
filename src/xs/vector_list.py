@@ -445,19 +445,22 @@ def xs_vector_list_contains(lst: int32 = int32(-1), value: XsVector = vector(-1.
     return xs_vector_list_index(lst, value) > -1
 
 
-def xs_vector_list_to_string(lst: int32 = int32(-1)) -> str:
+def xs_vector_list_to_string(lst: int32 = int32(-1), start: str = "[", sep: str = ", ", end: str = "]") -> str:
     """
-    Returns a string representation of the list in the format `[v0, v1, ...]`.
+    Returns a string representation of the list, by default in the format `[v0, v1, ...]`.
     :param lst: list id
+    :param start: string prepended to the output
+    :param sep: separator between elements
+    :param end: string appended to the output
     :return: string representation of the list
     """
     size: int32 = xs_vector_list_size(lst)
-    s: str = "["
+    s: str = start
     for i in i32range(1, size + 1):
         s += str(_xs_vector_list_arr_get(lst, i))
         if i < size:
-            s += ", "
-    s += "]"
+            s += sep
+    s += end
     return s
 
 

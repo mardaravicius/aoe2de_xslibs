@@ -513,14 +513,21 @@ def xs_string_vector_dict_copy(dct: int32 = int32(-1)) -> int32:
     return new_dct
 
 
-def xs_string_vector_dict_to_string(dct: int32 = int32(-1)) -> str:
+def xs_string_vector_dict_to_string(dct: int32 = int32(-1), start: str = "{", sep: str = ", ", end: str = "}", kv_sep: str = ": ", quote: str = "\"") -> str:
     """
-    Returns a string representation of the dict in the format `{"k1": (x1, y1, z1), ...}`.
+    Returns a string representation of the dict, by default in the format `{"k1": (x1, y1, z1), ...}`.
+    :param dct: dict id
+    :param start: string prepended to the output
+    :param sep: separator between elements
+    :param end: string appended to the output
+    :param kv_sep: separator between key and value
+    :param quote: string wrapped around string keys and values
+    :return: string representation of the dict
     """
     capacity: int32 = _xs_string_vector_dict_capacity(dct)
     keys_arr: int32 = _xs_string_vector_dict_get_keys_array(dct)
     values_arr: int32 = _xs_string_vector_dict_get_values_array(dct)
-    s: str = "{"
+    s: str = start
     first: bool = True
     for i in i32range(0, capacity):
         key: str = _xs_string_vector_dict_get_stored_key(dct, i, keys_arr)
@@ -528,9 +535,9 @@ def xs_string_vector_dict_to_string(dct: int32 = int32(-1)) -> str:
             if first:
                 first = False
             else:
-                s += ", "
-            s += f'"{key}": {_xs_string_vector_dict_get_stored_value(dct, i, values_arr)}'
-    s += "}"
+                s += sep
+            s += f"{quote}{key}{quote}{kv_sep}{_xs_string_vector_dict_get_stored_value(dct, i, values_arr)}"
+    s += end
     return s
 
 

@@ -433,12 +433,17 @@ int xsFloatVectorDictCopy(int dct = -1) {
 }
 
 /*
-    Returns a string representation of the dict.
+    Returns a string representation of the dict, by default in the format `{k1 - (x1, y1, z1), ...}`.
+    @param dct - dict id
+    @param start - string prepended to the output
+    @param sep - separator between elements
+    @param end - string appended to the output
+    @param kv_sep - separator between key and value
     @return string representation of the dict
 */
-string xsFloatVectorDictToString(int dct = -1) {
+string xsFloatVectorDictToString(int dct = -1, string start = "{", string sep = ", ", string end = "}", string kvSep = ": ") {
     int capacity = xsArrayGetSize(dct);
-    string s = "{";
+    string s = start;
     bool first = true;
     int i = 1;
     while (i < capacity) {
@@ -447,13 +452,13 @@ string xsFloatVectorDictToString(int dct = -1) {
             if (first) {
                 first = false;
             } else {
-                s = s + ", ";
+                s = s + sep;
             }
-            s = s + (key + ": " + _xsFloatVectorDictGetStoredValue(dct, i));
+            s = s + (key + kvSep + _xsFloatVectorDictGetStoredValue(dct, i));
         }
         i = i + 4;
     }
-    s = s + "}";
+    s = s + end;
     return (s);
 }
 

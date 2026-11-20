@@ -240,25 +240,24 @@ void xsStringArraySort(int arr = -1, bool reverse = false) {
 }
 
 /*
-    Returns a string representation of the array in the format `["v0", "v1", ...]`.
+    Returns a string representation of the array, by default in the format `["v0", "v1", ...]`.
     @param arr - array id
+    @param start - string prepended to the output
+    @param sep - separator between elements
+    @param end - string appended to the output
+    @param quote - string wrapped around string elements
     @return string representation of the array
 */
-string xsStringArrayToString(int arr = -1) {
+string xsStringArrayToString(int arr = -1, string start = "[", string sep = ", ", string end = "]", string quote = "\"") {
     int size = xsArrayGetSize(arr);
-    if (size <= 0) {
-        return ("[]");
-    }
-    string s = "[\"";
+    string s = start;
     for (i = 0; < size) {
-        s = s + xsArrayGetString(arr, i);
+        s = s + ((quote + xsArrayGetString(arr, i)) + quote);
         if (i < (size - 1)) {
-            s = s + "\", \"";
-        } else {
-            s = s + "\"";
+            s = s + sep;
         }
     }
-    s = s + "]";
+    s = s + end;
     return (s);
 }
 

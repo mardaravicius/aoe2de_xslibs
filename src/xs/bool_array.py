@@ -137,22 +137,28 @@ def xs_bool_array_sort(arr: int32 = int32(-1), reverse: bool = False) -> None:
         _xs_bool_array_sift_down(arr, int32(0), end - 1, reverse)
 
 
-def xs_bool_array_to_string(arr: int32 = int32(-1)) -> str:
+def xs_bool_array_to_string(arr: int32 = int32(-1), start: str = "[", sep: str = ", ", end: str = "]", str_true: str = "true",
+                            str_false: str = "false") -> str:
     """
-    Returns a string representation of the array in the format `[true, false, ...]`.
+    Returns a string representation of the array, by default in the format `[true, false, ...]`.
     :param arr: array id
+    :param start: string prepended to the output
+    :param sep: separator between elements
+    :param end: string appended to the output
+    :param str_true: string used for true values
+    :param str_false: string used for false values
     :return: string representation of the array
     """
     size: int32 = xs_array_get_size(arr)
-    s: str = "["
+    s: str = start
     for i in i32range(0, size):
         if xs_array_get_bool(arr, i):
-            s += "true"
+            s += str_true
         else:
-            s += "false"
+            s += str_false
         if i < size - 1:
-            s += ", "
-    s += "]"
+            s += sep
+    s += end
     return s
 
 

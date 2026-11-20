@@ -187,20 +187,23 @@ bool xsVectorArrayContains(int arr = -1, vector value = vector(-1.0, -1.0, -1.0)
 }
 
 /*
-    Returns a string representation of the array in the format `[v0, v1, ...]`.
+    Returns a string representation of the array, by default in the format `[v0, v1, ...]`.
     @param arr - array id
+    @param start - string prepended to the output
+    @param sep - separator between elements
+    @param end - string appended to the output
     @return string representation of the array
 */
-string xsVectorArrayToString(int arr = -1) {
+string xsVectorArrayToString(int arr = -1, string start = "[", string sep = ", ", string end = "]") {
     int size = xsArrayGetSize(arr);
-    string s = "[";
+    string s = start;
     for (i = 0; < size) {
         s = s + ("" + xsArrayGetVector(arr, i));
         if (i < (size - 1)) {
-            s = s + ", ";
+            s = s + sep;
         }
     }
-    s = s + "]";
+    s = s + end;
     return (s);
 }
 

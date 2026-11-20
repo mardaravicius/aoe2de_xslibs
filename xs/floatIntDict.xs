@@ -406,12 +406,17 @@ int xsFloatIntDictCopy(int dct = -1) {
 }
 
 /*
-    Returns a string representation of the dict.
+    Returns a string representation of the dict, by default in the format `{k1 - v1, k2 - v2, ...}`.
+    @param dct - dict id
+    @param start - string prepended to the output
+    @param sep - separator between elements
+    @param end - string appended to the output
+    @param kv_sep - separator between key and value
     @return string representation of the dict
 */
-string xsFloatIntDictToString(int dct = -1) {
+string xsFloatIntDictToString(int dct = -1, string start = "{", string sep = ", ", string end = "}", string kvSep = ": ") {
     int capacity = xsArrayGetSize(dct);
-    string s = "{";
+    string s = start;
     bool first = true;
     int i = 1;
     while (i < capacity) {
@@ -420,13 +425,13 @@ string xsFloatIntDictToString(int dct = -1) {
             if (first) {
                 first = false;
             } else {
-                s = s + ", ";
+                s = s + sep;
             }
-            s = s + (bitCastToFloat(keyBits) + ": " + xsArrayGetInt(dct, i + 1));
+            s = s + (bitCastToFloat(keyBits) + kvSep + xsArrayGetInt(dct, i + 1));
         }
         i = i + 2;
     }
-    s = s + "}";
+    s = s + end;
     return (s);
 }
 

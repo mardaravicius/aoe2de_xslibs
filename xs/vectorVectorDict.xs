@@ -437,11 +437,17 @@ int xsVectorVectorDictCopy(int dct = -1) {
 }
 
 /*
-    Returns a string representation of the dict in the format `{(x1, y1, z1) - (a1, b1, c1), ...}`.
+    Returns a string representation of the dict, by default in the format `{(x1, y1, z1) - (a1, b1, c1), ...}`.
+    @param dct - dict id
+    @param start - string prepended to the output
+    @param sep - separator between elements
+    @param end - string appended to the output
+    @param kv_sep - separator between key and value
+    @return string representation of the dict
 */
-string xsVectorVectorDictToString(int dct = -1) {
+string xsVectorVectorDictToString(int dct = -1, string start = "{", string sep = ", ", string end = "}", string kvSep = ": ") {
     int capacity = xsArrayGetSize(dct);
-    string s = "{";
+    string s = start;
     bool first = true;
     int i = 1;
     while (i < capacity) {
@@ -450,13 +456,13 @@ string xsVectorVectorDictToString(int dct = -1) {
             if (first) {
                 first = false;
             } else {
-                s = s + ", ";
+                s = s + sep;
             }
-            s = s + (("" + key) + ": " + _xsVectorVectorDictGetStoredValue(dct, i));
+            s = s + (("" + key) + kvSep + _xsVectorVectorDictGetStoredValue(dct, i));
         }
         i = i + 6;
     }
-    s = s + "}";
+    s = s + end;
     return (s);
 }
 

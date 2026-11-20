@@ -397,13 +397,17 @@ int xsIntIntDictCopy(int dct = -1) {
 }
 
 /*
-    Returns a string representation of the dict in the format `{k1 - v1, k2 - v2, ...}`.
+    Returns a string representation of the dict, by default in the format `{k1 - v1, k2 - v2, ...}`.
     @param dct - dict id
+    @param start - string prepended to the output
+    @param sep - separator between elements
+    @param end - string appended to the output
+    @param kv_sep - separator between key and value
     @return string representation of the dict
 */
-string xsIntIntDictToString(int dct = -1) {
+string xsIntIntDictToString(int dct = -1, string start = "{", string sep = ", ", string end = "}", string kvSep = ": ") {
     int capacity = xsArrayGetSize(dct);
-    string s = "{";
+    string s = start;
     int key = 0;
     int val = 0;
     bool first = true;
@@ -415,13 +419,13 @@ string xsIntIntDictToString(int dct = -1) {
             if (first) {
                 first = false;
             } else {
-                s = s + ", ";
+                s = s + sep;
             }
-            s = s + (key + ": " + val);
+            s = s + (key + kvSep + val);
         }
         i = i + 2;
     }
-    s = s + "}";
+    s = s + end;
     return (s);
 }
 

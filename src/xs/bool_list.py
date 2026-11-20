@@ -381,25 +381,29 @@ def xs_bool_list_sort(lst: int32 = int32(-1), reverse: bool = False) -> None:
         _xs_bool_list_sift_down(bool_lst, int32(0), end - 1, reverse)
 
 
-def xs_bool_list_to_string(lst: int32 = int32(-1)) -> str:
+def xs_bool_list_to_string(lst: int32 = int32(-1), start: str = "[", sep: str = ", ", end: str = "]", str_true: str = "true",
+                           str_false: str = "false") -> str:
     """
-    Returns a string representation of the list in the format `[true, false, ...]`.
+    Returns a string representation of the list, by default in the format `[true, false, ...]`.
     :param lst: list id
+    :param start: string prepended to the output
+    :param sep: separator between elements
+    :param end: string appended to the output
+    :param str_true: string used for true values
+    :param str_false: string used for false values
     :return: string representation of the list
     """
     size: int32 = xs_array_get_int(lst, 0)
     bool_lst: int32 = xs_array_get_int(lst, 1)
-    if size == 0:
-        return "[]"
-    s: str = "["
+    s: str = start
     for i in i32range(0, size):
         if xs_array_get_bool(bool_lst, i):
-            s += "true"
+            s += str_true
         else:
-            s += "false"
+            s += str_false
         if i < size - 1:
-            s += ", "
-    s += "]"
+            s += sep
+    s += end
     return s
 
 

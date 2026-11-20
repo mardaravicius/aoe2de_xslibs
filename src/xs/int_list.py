@@ -485,19 +485,22 @@ def xs_int_list_sort(lst: int32 = int32(-1), reverse: bool = False) -> None:
         _xs_int_list_sift_down(lst, int32(1), end - 1, reverse)
 
 
-def xs_int_list_to_string(lst: int32 = int32(-1)) -> str:
+def xs_int_list_to_string(lst: int32 = int32(-1), start: str = "[", sep: str = ", ", end: str = "]") -> str:
     """
-    Returns a string representation of the list in the format `[v0, v1, ...]`.
+    Returns a string representation of the list, by default in the format `[v0, v1, ...]`.
     :param lst: list id
+    :param start: string prepended to the output
+    :param sep: separator between elements
+    :param end: string appended to the output
     :return: string representation of the list
     """
     size: int32 = xs_array_get_int(lst, 0)
-    s: str = "["
+    s: str = start
     for i in i32range(1, size + 1):
         s += str(xs_array_get_int(lst, i))
         if i < size:
-            s += ", "
-    s += "]"
+            s += sep
+    s += end
     return s
 
 

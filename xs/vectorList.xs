@@ -446,20 +446,23 @@ bool xsVectorListContains(int lst = -1, vector value = vector(-1.0, -1.0, -1.0))
 }
 
 /*
-    Returns a string representation of the list in the format `[v0, v1, ...]`.
+    Returns a string representation of the list, by default in the format `[v0, v1, ...]`.
     @param lst - list id
+    @param start - string prepended to the output
+    @param sep - separator between elements
+    @param end - string appended to the output
     @return string representation of the list
 */
-string xsVectorListToString(int lst = -1) {
+string xsVectorListToString(int lst = -1, string start = "[", string sep = ", ", string end = "]") {
     int size = xsVectorListSize(lst);
-    string s = "[";
+    string s = start;
     for (i = 1; <= size) {
         s = s + ("" + _xsVectorListArrGet(lst, i));
         if (i < size) {
-            s = s + ", ";
+            s = s + sep;
         }
     }
-    s = s + "]";
+    s = s + end;
     return (s);
 }
 

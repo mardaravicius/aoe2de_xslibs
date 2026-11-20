@@ -226,23 +226,23 @@ def xs_string_array_sort(arr: int32 = int32(-1), reverse: bool = False) -> None:
         _xs_string_array_sift_down(arr, int32(0), end - 1, reverse)
 
 
-def xs_string_array_to_string(arr: int32 = int32(-1)) -> str:
+def xs_string_array_to_string(arr: int32 = int32(-1), start: str = "[", sep: str = ", ", end: str = "]", quote: str = "\"") -> str:
     """
-    Returns a string representation of the array in the format `["v0", "v1", ...]`.
+    Returns a string representation of the array, by default in the format `["v0", "v1", ...]`.
     :param arr: array id
+    :param start: string prepended to the output
+    :param sep: separator between elements
+    :param end: string appended to the output
+    :param quote: string wrapped around string elements
     :return: string representation of the array
     """
     size: int32 = xs_array_get_size(arr)
-    if size <= 0:
-        return "[]"
-    s: str = '["'
+    s: str = start
     for i in i32range(0, size):
-        s += xs_array_get_string(arr, i)
+        s += quote + xs_array_get_string(arr, i) + quote
         if i < size - 1:
-            s += "\", \""
-        else:
-            s += "\""
-    s += "]"
+            s += sep
+    s += end
     return s
 
 

@@ -537,20 +537,23 @@ void xsIntListSort(int lst = -1, bool reverse = false) {
 }
 
 /*
-    Returns a string representation of the list in the format `[v0, v1, ...]`.
+    Returns a string representation of the list, by default in the format `[v0, v1, ...]`.
     @param lst - list id
+    @param start - string prepended to the output
+    @param sep - separator between elements
+    @param end - string appended to the output
     @return string representation of the list
 */
-string xsIntListToString(int lst = -1) {
+string xsIntListToString(int lst = -1, string start = "[", string sep = ", ", string end = "]") {
     int size = xsArrayGetInt(lst, 0);
-    string s = "[";
+    string s = start;
     for (i = 1; <= size) {
         s = s + ("" + xsArrayGetInt(lst, i));
         if (i < size) {
-            s = s + ", ";
+            s = s + sep;
         }
     }
-    s = s + "]";
+    s = s + end;
     return (s);
 }
 

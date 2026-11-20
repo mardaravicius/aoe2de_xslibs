@@ -197,7 +197,7 @@ int    xsIntArrayCopy(int arr, int start, int end)
 int    xsIntArrayCompare(int arr1, int arr2)
 
 // Diagnostics
-string xsIntArrayToString(int arr)
+string xsIntArrayToString(int arr, string start, string sep, string end)
 int    xsIntArrayLastError()                      // status of the last Min or Max call
 ```
 
@@ -263,7 +263,7 @@ int   xsFloatArrayCopy(int arr, int start, int end)
 int   xsFloatArrayCompare(int arr1, int arr2)
 
 // Diagnostics
-string xsFloatArrayToString(int arr)
+string xsFloatArrayToString(int arr, string start, string sep, string end)
 int    xsFloatArrayLastError()                         // status of the last Min or Max call
 ```
 
@@ -321,7 +321,7 @@ int    xsBoolArrayCopy(int arr, int start, int end)
 int    xsBoolArrayCompare(int arr1, int arr2)
 
 // Diagnostics
-string xsBoolArrayToString(int arr)
+string xsBoolArrayToString(int arr, string start, string sep, string end, string strTrue, string strFalse)
 ```
 
 ### Example
@@ -384,7 +384,7 @@ int    xsStringArrayCopy(int arr, int start, int end)
 int    xsStringArrayCompare(int arr1, int arr2)
 
 // Diagnostics
-string xsStringArrayToString(int arr)
+string xsStringArrayToString(int arr, string start, string sep, string end, string quote)
 int    xsStringArrayLastError()                      // status of the last Min or Max call
 ```
 
@@ -440,7 +440,7 @@ int    xsVectorArrayCount(int arr, vector value)
 int    xsVectorArrayCopy(int arr, int start, int end)
 
 // Diagnostics
-string xsVectorArrayToString(int arr)
+string xsVectorArrayToString(int arr, string start, string sep, string end)
 ```
 
 ### Example
@@ -515,7 +515,7 @@ int    xsIntListExtendWithArray(int source, int arr)
 int    xsIntListCompare(int lst1, int lst2)
 
 // Diagnostics
-string xsIntListToString(int lst)
+string xsIntListToString(int lst, string start, string sep, string end)
 int    xsIntListLastError()
 ```
 
@@ -595,7 +595,7 @@ int   xsFloatListExtendWithArray(int source, int arr)
 int   xsFloatListCompare(int lst1, int lst2)
 
 // Diagnostics
-string xsFloatListToString(int lst)
+string xsFloatListToString(int lst, string start, string sep, string end)
 int    xsFloatListLastError()
 ```
 
@@ -673,7 +673,7 @@ int  xsBoolListExtendWithArray(int source, int arr)
 int  xsBoolListCompare(int lst1, int lst2)
 
 // Diagnostics
-string xsBoolListToString(int lst)
+string xsBoolListToString(int lst, string start, string sep, string end, string strTrue, string strFalse)
 int    xsBoolListLastError()
 ```
 
@@ -752,7 +752,7 @@ int    xsStringListExtendWithArray(int source, int arr)
 int    xsStringListCompare(int lst1, int lst2)
 
 // Diagnostics
-string xsStringListToString(int lst)
+string xsStringListToString(int lst, string start, string sep, string end, string quote)
 int    xsStringListLastError()
 ```
 
@@ -826,7 +826,7 @@ int    xsVectorListExtend(int source, int lst)
 int    xsVectorListExtendWithArray(int source, int arr)
 
 // Diagnostics
-string xsVectorListToString(int lst)
+string xsVectorListToString(int lst, string start, string sep, string end)
 int    xsVectorListLastError()
 ```
 
@@ -898,7 +898,7 @@ bool xsIntIntDictHasNext(int dct, bool isFirst, int prevKey)
 int  xsIntIntDictNextKey(int dct, bool isFirst, int prevKey)
 
 // Diagnostics
-string xsIntIntDictToString(int dct)
+string xsIntIntDictToString(int dct, string start, string sep, string end, string kvSep)
 int    xsIntIntDictLastError()
 ```
 
@@ -986,7 +986,7 @@ bool   xsIntStringDictHasNext(int dct, bool isFirst, int prevKey)
 int    xsIntStringDictNextKey(int dct, bool isFirst, int prevKey)
 
 // Diagnostics
-string xsIntStringDictToString(int dct)
+string xsIntStringDictToString(int dct, string start, string sep, string end, string kvSep, string quote)
 int    xsIntStringDictLastError()
 ```
 
@@ -1066,7 +1066,7 @@ bool   xsIntVectorDictHasNext(int dct, bool isFirst, int prevKey)
 int    xsIntVectorDictNextKey(int dct, bool isFirst, int prevKey)
 
 // Diagnostics
-string xsIntVectorDictToString(int dct)
+string xsIntVectorDictToString(int dct, string start, string sep, string end, string kvSep)
 int    xsIntVectorDictLastError()
 ```
 
@@ -1145,7 +1145,7 @@ bool  xsFloatIntDictHasNext(int dct, bool isFirst, float prevKey)
 float xsFloatIntDictNextKey(int dct, bool isFirst, float prevKey)
 
 // Diagnostics
-string xsFloatIntDictToString(int dct)
+string xsFloatIntDictToString(int dct, string start, string sep, string end, string kvSep)
 int    xsFloatIntDictLastError()
 ```
 
@@ -1225,7 +1225,7 @@ bool   xsFloatStringDictHasNext(int dct, bool isFirst, float prevKey)
 float  xsFloatStringDictNextKey(int dct, bool isFirst, float prevKey)
 
 // Diagnostics
-string xsFloatStringDictToString(int dct)
+string xsFloatStringDictToString(int dct, string start, string sep, string end, string kvSep, string quote)
 int    xsFloatStringDictLastError()
 ```
 
@@ -1304,7 +1304,7 @@ bool   xsFloatVectorDictHasNext(int dct, bool isFirst, float prevKey)
 float  xsFloatVectorDictNextKey(int dct, bool isFirst, float prevKey)
 
 // Diagnostics
-string xsFloatVectorDictToString(int dct)
+string xsFloatVectorDictToString(int dct, string start, string sep, string end, string kvSep)
 int    xsFloatVectorDictLastError()
 ```
 
@@ -1383,7 +1383,7 @@ bool   xsStringIntDictHasNext(int dct, bool isFirst, string prevKey)
 string xsStringIntDictNextKey(int dct, bool isFirst, string prevKey)
 
 // Diagnostics
-string xsStringIntDictToString(int dct)
+string xsStringIntDictToString(int dct, string start, string sep, string end, string kvSep, string quote)
 int    xsStringIntDictLastError()
 ```
 
@@ -1465,7 +1465,7 @@ bool   xsStringStringDictHasNext(int dct, bool isFirst, string prevKey)
 string xsStringStringDictNextKey(int dct, bool isFirst, string prevKey)
 
 // Diagnostics
-string xsStringStringDictToString(int dct)
+string xsStringStringDictToString(int dct, string start, string sep, string end, string kvSep, string quote)
 int    xsStringStringDictLastError()
 ```
 
@@ -1545,7 +1545,7 @@ bool   xsStringVectorDictHasNext(int dct, bool isFirst, string prevKey)
 string xsStringVectorDictNextKey(int dct, bool isFirst, string prevKey)
 
 // Diagnostics
-string xsStringVectorDictToString(int dct)
+string xsStringVectorDictToString(int dct, string start, string sep, string end, string kvSep, string quote)
 int    xsStringVectorDictLastError()
 ```
 
@@ -1624,7 +1624,7 @@ bool   xsVectorIntDictHasNext(int dct, bool isFirst, vector prevKey)
 vector xsVectorIntDictNextKey(int dct, bool isFirst, vector prevKey)
 
 // Diagnostics
-string xsVectorIntDictToString(int dct)
+string xsVectorIntDictToString(int dct, string start, string sep, string end, string kvSep)
 int    xsVectorIntDictLastError()
 ```
 
@@ -1702,7 +1702,7 @@ bool   xsVectorStringDictHasNext(int dct, bool isFirst, vector prevKey)
 vector xsVectorStringDictNextKey(int dct, bool isFirst, vector prevKey)
 
 // Diagnostics
-string xsVectorStringDictToString(int dct)
+string xsVectorStringDictToString(int dct, string start, string sep, string end, string kvSep, string quote)
 int    xsVectorStringDictLastError()
 ```
 
@@ -1781,7 +1781,7 @@ bool   xsVectorVectorDictHasNext(int dct, bool isFirst, vector prevKey)
 vector xsVectorVectorDictNextKey(int dct, bool isFirst, vector prevKey)
 
 // Diagnostics
-string xsVectorVectorDictToString(int dct)
+string xsVectorVectorDictToString(int dct, string start, string sep, string end, string kvSep)
 int    xsVectorVectorDictLastError()
 ```
 

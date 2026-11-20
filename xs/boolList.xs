@@ -422,28 +422,30 @@ void xsBoolListSort(int lst = -1, bool reverse = false) {
 }
 
 /*
-    Returns a string representation of the list in the format `[true, false, ...]`.
+    Returns a string representation of the list, by default in the format `[true, false, ...]`.
     @param lst - list id
+    @param start - string prepended to the output
+    @param sep - separator between elements
+    @param end - string appended to the output
+    @param str_true - string used for true values
+    @param str_false - string used for false values
     @return string representation of the list
 */
-string xsBoolListToString(int lst = -1) {
+string xsBoolListToString(int lst = -1, string start = "[", string sep = ", ", string end = "]", string strTrue = "true", string strFalse = "false") {
     int size = xsArrayGetInt(lst, 0);
     int boolLst = xsArrayGetInt(lst, 1);
-    if (size == 0) {
-        return ("[]");
-    }
-    string s = "[";
+    string s = start;
     for (i = 0; < size) {
         if (xsArrayGetBool(boolLst, i)) {
-            s = s + "true";
+            s = s + strTrue;
         } else {
-            s = s + "false";
+            s = s + strFalse;
         }
         if (i < (size - 1)) {
-            s = s + ", ";
+            s = s + sep;
         }
     }
-    s = s + "]";
+    s = s + end;
     return (s);
 }
 

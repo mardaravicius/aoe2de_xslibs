@@ -502,26 +502,25 @@ void xsStringListSort(int lst = -1, bool reverse = false) {
 }
 
 /*
-    Returns a string representation of the list in the format `["v0", "v1", ...]`.
+    Returns a string representation of the list, by default in the format `["v0", "v1", ...]`.
     @param lst - list id
+    @param start - string prepended to the output
+    @param sep - separator between elements
+    @param end - string appended to the output
+    @param quote - string wrapped around string elements
     @return string representation of the list
 */
-string xsStringListToString(int lst = -1) {
+string xsStringListToString(int lst = -1, string start = "[", string sep = ", ", string end = "]", string quote = "\"") {
     int size = xsArrayGetInt(lst, 0);
     int strLst = xsArrayGetInt(lst, 1);
-    if (size == 0) {
-        return ("[]");
-    }
-    string s = "[\"";
+    string s = start;
     for (i = 0; < size) {
-        s = s + xsArrayGetString(strLst, i);
+        s = s + ((quote + xsArrayGetString(strLst, i)) + quote);
         if (i < (size - 1)) {
-            s = s + "\", \"";
-        } else {
-            s = s + "\"";
+            s = s + sep;
         }
     }
-    s = s + "]";
+    s = s + end;
     return (s);
 }
 
