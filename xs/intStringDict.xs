@@ -626,3 +626,82 @@ bool xsIntStringDictEquals(int a = -1, int b = -1) {
     }
     return (true);
 }
+
+int _xsIntStringDictFindSeparator(string text = "", string separator = ",", int start = 0) {
+    int n = strLen(text);
+    bool inQuotes = false;
+    for (i = start; < n) {
+        string ch = strCharAt(text, i);
+        if (ch == "'") {
+            inQuotes = inQuotes == false;
+        } else if ((ch == separator) && (inQuotes == false)) {
+            return (i);
+        }
+    }
+    return (-1);
+}
+
+int _xsIntStringDictSplitItems(string items = "") {
+    int numParts = 1;
+    int sep = _xsIntStringDictFindSeparator(items, ",", 0);
+    while (sep >= 0) {
+        numParts++;
+        sep = _xsIntStringDictFindSeparator(items, ",", sep + 1);
+    }
+    int parts = xsArrayCreateString(numParts);
+    int start = 0;
+    for (i = 0; < numParts) {
+        int end = _xsIntStringDictFindSeparator(items, ",", start);
+        if (end < 0) {
+            xsArraySetString(parts, i, strRemove(items, 0, start));
+        } else {
+            xsArraySetString(parts, i, strSubstring(items, start, end));
+        }
+        start = end + 1;
+    }
+    return (parts);
+}
+
+bool _xsIntStringDictIsQuoted(string text = "") {
+    int n = strLen(text);
+    if (n < 2) {
+        return (false);
+    }
+    if ((strCharAt(text, 0) != "'") || (strCharAt(text, n - 1) != "'")) {
+        return (false);
+    }
+    return (strIndexOf(strSubstring(text, 1, n - 1), "'") == -1);
+}
+
+/*
+    Creates a dict from a comma separated string of pairs, where key and value are separated by a colon. Strings must be wrapped in `'` and cannot contain `'`.
+    Keys and values are trimmed, and pairs that cannot be parsed are skipped.
+    @param items - comma separated key and value pairs
+    @return created dict id, or `cIntStringDictGenericError` on error
+*/
+int xsIntStringDictFromString(string items = "") {
+    int dct = xsIntStringDictCreate();
+    if (dct < 0) {
+        return (cIntStringDictGenericError);
+    }
+    if (strTrim(items) == "") {
+        return (dct);
+    }
+    int parts = _xsIntStringDictSplitItems(items);
+    int numParts = xsArrayGetSize(parts);
+    for (i = 0; < numParts) {
+        string item = xsArrayGetString(parts, i);
+        int sep = _xsIntStringDictFindSeparator(item, ":", 0);
+        if (sep >= 0) {
+            string keyStr = strTrim(strSubstring(item, 0, sep));
+            string valStr = strTrim(strRemove(item, 0, sep + 1));
+            int key = strToInt(keyStr, 10, cIntStringDictEmptyKey);
+            string val = strSubstring(valStr, 1, strLen(valStr) - 1);
+            if ((key != cIntStringDictEmptyKey) && _xsIntStringDictIsQuoted(valStr)) {
+                xsIntStringDictPut(dct, key, val);
+            }
+        }
+    }
+    xsArrayResizeString(parts, 0);
+    return (dct);
+}

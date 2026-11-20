@@ -775,3 +775,77 @@ string xsStringListMax(int lst = -1) {
 int xsStringListLastError() {
     return (_stringListLastOperationStatus);
 }
+
+int _xsStringListFindSeparator(string text = "", string separator = ",", int start = 0) {
+    int n = strLen(text);
+    bool inQuotes = false;
+    for (i = start; < n) {
+        string ch = strCharAt(text, i);
+        if (ch == "'") {
+            inQuotes = inQuotes == false;
+        } else if ((ch == separator) && (inQuotes == false)) {
+            return (i);
+        }
+    }
+    return (-1);
+}
+
+int _xsStringListSplitItems(string items = "") {
+    int numParts = 1;
+    int sep = _xsStringListFindSeparator(items, ",", 0);
+    while (sep >= 0) {
+        numParts++;
+        sep = _xsStringListFindSeparator(items, ",", sep + 1);
+    }
+    int parts = xsArrayCreateString(numParts);
+    int start = 0;
+    for (i = 0; < numParts) {
+        int end = _xsStringListFindSeparator(items, ",", start);
+        if (end < 0) {
+            xsArraySetString(parts, i, strRemove(items, 0, start));
+        } else {
+            xsArraySetString(parts, i, strSubstring(items, start, end));
+        }
+        start = end + 1;
+    }
+    return (parts);
+}
+
+bool _xsStringListIsQuoted(string text = "") {
+    int n = strLen(text);
+    if (n < 2) {
+        return (false);
+    }
+    if ((strCharAt(text, 0) != "'") || (strCharAt(text, n - 1) != "'")) {
+        return (false);
+    }
+    return (strIndexOf(strSubstring(text, 1, n - 1), "'") == -1);
+}
+
+/*
+    Creates a list from a comma separated string, e.g. `"'a','b c'"`. Strings must be wrapped in `'` and cannot contain `'`.
+    Items are trimmed, and items that cannot be parsed are skipped.
+    @param items - comma separated values
+    @return created list id, or `cStringListGenericError` on error
+*/
+int xsStringListFromString(string items = "") {
+    if (strTrim(items) == "") {
+        return (xsStringListCreate());
+    }
+    int parts = _xsStringListSplitItems(items);
+    int numParts = xsArrayGetSize(parts);
+    int lst = xsStringListCreate(numParts);
+    if (lst < 0) {
+        xsArrayResizeString(parts, 0);
+        return (cStringListGenericError);
+    }
+    for (i = 0; < numParts) {
+        string item = strTrim(xsArrayGetString(parts, i));
+        string value = strSubstring(item, 1, strLen(item) - 1);
+        if (_xsStringListIsQuoted(item)) {
+            xsStringListAppend(lst, value);
+        }
+    }
+    xsArrayResizeString(parts, 0);
+    return (lst);
+}

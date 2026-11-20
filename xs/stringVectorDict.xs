@@ -8,6 +8,8 @@ extern const int cStringVectorDictMaxCapacity = 333333330;
 extern const float cStringVectorDictMaxLoadFactor = 0.75;
 extern const int cStringVectorDictInitialCapacity = 16;
 extern const int cStringVectorDictHashConstant = 16777619;
+const float _cStringVectorDictEmptyFloat = -9999999.0;
+const vector _cStringVectorDictEmptyVector = vector(_cStringVectorDictEmptyFloat, _cStringVectorDictEmptyFloat, _cStringVectorDictEmptyFloat);
 int _stringVectorDictLastOperationStatus = cStringVectorDictSuccess;
 int _stringVectorDictTempKeys = -1;
 int _stringVectorDictTempValues = -1;
@@ -697,4 +699,113 @@ bool xsStringVectorDictEquals(int a = -1, int b = -1) {
         }
     }
     return (true);
+}
+
+int _xsStringVectorDictFindSeparator(string text = "", string separator = ",", int start = 0) {
+    int n = strLen(text);
+    bool inQuotes = false;
+    bool inParens = false;
+    for (i = start; < n) {
+        string ch = strCharAt(text, i);
+        if (ch == "'") {
+            inQuotes = inQuotes == false;
+        } else if (inQuotes == false) {
+            if (ch == "(") {
+                inParens = true;
+            } else if (ch == ")") {
+                inParens = false;
+            } else if ((ch == separator) && (inParens == false)) {
+                return (i);
+            }
+        }
+    }
+    return (-1);
+}
+
+int _xsStringVectorDictSplitItems(string items = "") {
+    int numParts = 1;
+    int sep = _xsStringVectorDictFindSeparator(items, ",", 0);
+    while (sep >= 0) {
+        numParts++;
+        sep = _xsStringVectorDictFindSeparator(items, ",", sep + 1);
+    }
+    int parts = xsArrayCreateString(numParts);
+    int start = 0;
+    for (i = 0; < numParts) {
+        int end = _xsStringVectorDictFindSeparator(items, ",", start);
+        if (end < 0) {
+            xsArraySetString(parts, i, strRemove(items, 0, start));
+        } else {
+            xsArraySetString(parts, i, strSubstring(items, start, end));
+        }
+        start = end + 1;
+    }
+    return (parts);
+}
+
+bool _xsStringVectorDictIsQuoted(string text = "") {
+    int n = strLen(text);
+    if (n < 2) {
+        return (false);
+    }
+    if ((strCharAt(text, 0) != "'") || (strCharAt(text, n - 1) != "'")) {
+        return (false);
+    }
+    return (strIndexOf(strSubstring(text, 1, n - 1), "'") == -1);
+}
+
+vector _xsStringVectorDictParseVector(string text = "") {
+    int n = strLen(text);
+    if (n < 3) {
+        return (_cStringVectorDictEmptyVector);
+    }
+    if ((strSubstring(text, 0, 2) != "v(") || (strCharAt(text, n - 1) != ")")) {
+        return (_cStringVectorDictEmptyVector);
+    }
+    int coords = strSplit(strSubstring(text, 2, n - 1), ",");
+    if (xsArrayGetSize(coords) != 3) {
+        xsArrayResizeString(coords, 0);
+        return (_cStringVectorDictEmptyVector);
+    }
+    float x = strToFloat(strTrim(xsArrayGetString(coords, 0)), _cStringVectorDictEmptyFloat);
+    float y = strToFloat(strTrim(xsArrayGetString(coords, 1)), _cStringVectorDictEmptyFloat);
+    float z = strToFloat(strTrim(xsArrayGetString(coords, 2)), _cStringVectorDictEmptyFloat);
+    xsArrayResizeString(coords, 0);
+    if ((x == _cStringVectorDictEmptyFloat) || (y == _cStringVectorDictEmptyFloat) || (z == _cStringVectorDictEmptyFloat)) {
+        return (_cStringVectorDictEmptyVector);
+    }
+    return (xsVectorSet(x, y, z));
+}
+
+/*
+    Creates a dict from a comma separated string of pairs, where key and value are separated by a colon. Strings must be wrapped in `'` and cannot contain `'`.
+    Keys and values are trimmed, and pairs that cannot be parsed are skipped.
+    @param items - comma separated key and value pairs
+    @return created dict id, or `cStringVectorDictGenericError` on error
+*/
+int xsStringVectorDictFromString(string items = "") {
+    int dct = xsStringVectorDictCreate();
+    if (dct < 0) {
+        return (cStringVectorDictGenericError);
+    }
+    if (strTrim(items) == "") {
+        return (dct);
+    }
+    int parts = _xsStringVectorDictSplitItems(items);
+    int numParts = xsArrayGetSize(parts);
+    for (i = 0; < numParts) {
+        string item = xsArrayGetString(parts, i);
+        int sep = _xsStringVectorDictFindSeparator(item, ":", 0);
+        if (sep >= 0) {
+            string keyStr = strTrim(strSubstring(item, 0, sep));
+            string valStr = strTrim(strRemove(item, 0, sep + 1));
+            string key = strSubstring(keyStr, 1, strLen(keyStr) - 1);
+            vector val = _xsStringVectorDictParseVector(valStr);
+            if (_xsStringVectorDictIsQuoted(keyStr) && (val != _cStringVectorDictEmptyVector)) {
+                xsStringVectorDictPut(dct, key, val);
+            }
+        }
+    }
+    xsArrayResizeString(parts, 0);
+    return (dct);
 }

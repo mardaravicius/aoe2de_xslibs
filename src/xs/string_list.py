@@ -2,7 +2,8 @@ from numpy import int32
 
 from xs_converter.functions import xs_array_get_size, xs_array_get_int, xs_array_create_string, \
     xs_array_create_int, xs_array_set_string, xs_array_set_int, xs_array_get_string, xs_array_resize_int, \
-    xs_array_resize_string
+    xs_array_resize_string, \
+    str_char_at, str_index_of, str_len, str_remove, str_substring, str_trim
 from xs_converter.symbols import XsExternConst, i32range
 
 c_string_list_success: XsExternConst[int32] = int32(0)
@@ -702,3 +703,66 @@ def xs_string_list_last_error() -> int32:
     :return: `c_string_list_success` if the last such operation succeeded, or a negative error code
     """
     return _string_list_last_operation_status
+
+
+def _xs_string_list_find_separator(text: str = "", separator: str = ",", start: int32 = int32(0)) -> int32:
+    n: int32 = str_len(text)
+    in_quotes: bool = False
+    for i in i32range(start, n):
+        ch: str = str_char_at(text, i)
+        if ch == "'":
+            in_quotes = not in_quotes
+        elif ch == separator and not in_quotes:
+            return i
+    return int32(-1)
+
+
+def _xs_string_list_split_items(items: str = "") -> int32:
+    num_parts: int32 = int32(1)
+    sep: int32 = _xs_string_list_find_separator(items, ",", 0)
+    while sep >= 0:
+        num_parts += 1
+        sep = _xs_string_list_find_separator(items, ",", sep + 1)
+    parts: int32 = xs_array_create_string(num_parts)
+    start: int32 = int32(0)
+    for i in i32range(0, num_parts):
+        end: int32 = _xs_string_list_find_separator(items, ",", start)
+        if end < 0:
+            xs_array_set_string(parts, i, str_remove(items, 0, start))
+        else:
+            xs_array_set_string(parts, i, str_substring(items, start, end))
+        start = end + 1
+    return parts
+
+
+def _xs_string_list_is_quoted(text: str = "") -> bool:
+    n: int32 = str_len(text)
+    if n < 2:
+        return False
+    if str_char_at(text, 0) != "'" or str_char_at(text, n - 1) != "'":
+        return False
+    return str_index_of(str_substring(text, 1, n - 1), "'") == -1
+
+
+def xs_string_list_from_string(items: str = "") -> int32:
+    """
+    Creates a list from a comma separated string, e.g. `"'a','b c'"`. Strings must be wrapped in `'` and cannot contain `'`.
+    Items are trimmed, and items that cannot be parsed are skipped.
+    :param items: comma separated values
+    :return: created list id, or `c_string_list_generic_error` on error
+    """
+    if str_trim(items) == "":
+        return xs_string_list_create()
+    parts: int32 = _xs_string_list_split_items(items)
+    num_parts: int32 = xs_array_get_size(parts)
+    lst: int32 = xs_string_list_create(num_parts)
+    if lst < 0:
+        xs_array_resize_string(parts, 0)
+        return c_string_list_generic_error
+    for i in i32range(0, num_parts):
+        item: str = str_trim(xs_array_get_string(parts, i))
+        value: str = str_substring(item, 1, str_len(item) - 1)
+        if _xs_string_list_is_quoted(item):
+            xs_string_list_append(lst, value)
+    xs_array_resize_string(parts, 0)
+    return lst

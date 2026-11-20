@@ -3,16 +3,25 @@ from numpy import int32, float32
 from xs_converter.functions import (
     bit_cast_to_float,
     bit_cast_to_int,
+    str_index_of,
+    str_remove,
+    str_split,
+    str_substring,
+    str_to_float,
+    str_to_int,
+    str_trim,
     xs_array_create_float,
     xs_array_create_int,
     xs_array_get_int,
     xs_array_get_size,
+    xs_array_get_string,
     xs_array_resize_float,
     xs_array_resize_int,
+    xs_array_resize_string,
     xs_array_set_float,
     xs_array_set_int,
 )
-from xs_converter.symbols import XsExternConst, i32range
+from xs_converter.symbols import XsExternConst, i32range, XsConst
 
 c_float_int_dict_success: XsExternConst[int32] = int32(0)
 c_float_int_dict_generic_error: XsExternConst[int32] = int32(-1)
@@ -27,6 +36,7 @@ c_float_int_dict_empty_key_bits: XsExternConst[int32] = int32(-887581057)
 c_float_int_dict_canonical_nan_bits: XsExternConst[int32] = int32(-8388607)
 c_float_int_dict_initial_capacity: XsExternConst[int32] = int32(33)
 c_float_int_dict_hash_constant: XsExternConst[int32] = int32(16777619)
+_c_float_int_dict_empty_int: XsConst[int32] = int32(-999999999)
 _float_int_dict_last_operation_status: int32 = c_float_int_dict_success
 _float_int_dict_temp_array: int32 = int32(-1)
 
@@ -584,3 +594,31 @@ def xs_float_int_dict_equals(a: int32 = int32(-1), b: int32 = int32(-1)) -> bool
             if xs_float_int_dict_last_error() != c_float_int_dict_success:
                 return False
     return True
+
+
+def xs_float_int_dict_from_string(items: str = "") -> int32:
+    """
+    Creates a dict from a comma separated string of pairs, where key and value are separated by a colon.
+    Keys and values are trimmed, and pairs that cannot be parsed are skipped.
+    :param items: comma separated key and value pairs
+    :return: created dict id, or `c_float_int_dict_generic_error` on error
+    """
+    dct: int32 = xs_float_int_dict_create()
+    if dct < 0:
+        return c_float_int_dict_generic_error
+    if str_trim(items) == "":
+        return dct
+    parts: int32 = str_split(items, ",")
+    num_parts: int32 = xs_array_get_size(parts)
+    for i in i32range(0, num_parts):
+        item: str = xs_array_get_string(parts, i)
+        sep: int32 = str_index_of(item, ":")
+        if sep >= 0:
+            key_str: str = str_trim(str_substring(item, 0, sep))
+            val_str: str = str_trim(str_remove(item, 0, sep + 1))
+            key: float32 = str_to_float(key_str, c_float_int_dict_empty_key)
+            val: int32 = str_to_int(val_str, 10, _c_float_int_dict_empty_int)
+            if key != c_float_int_dict_empty_key and val != _c_float_int_dict_empty_int:
+                xs_float_int_dict_put(dct, key, val)
+    xs_array_resize_string(parts, 0)
+    return dct

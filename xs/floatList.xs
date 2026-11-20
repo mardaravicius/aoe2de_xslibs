@@ -741,3 +741,31 @@ float xsFloatListMax(int lst = -1) {
 int xsFloatListLastError() {
     return (_floatListLastOperationStatus);
 }
+
+/*
+    Creates a list from a comma separated string, e.g. `"1.0,1.5,-2.25"`.
+    Items are trimmed, and items that cannot be parsed are skipped.
+    @param items - comma separated values
+    @return created list id, or `cFloatListGenericError` on error
+*/
+int xsFloatListFromString(string items = "") {
+    if (strTrim(items) == "") {
+        return (xsFloatListCreate());
+    }
+    int parts = strSplit(items, ",");
+    int numParts = xsArrayGetSize(parts);
+    int lst = xsFloatListCreate(numParts);
+    if (lst < 0) {
+        xsArrayResizeString(parts, 0);
+        return (cFloatListGenericError);
+    }
+    for (i = 0; < numParts) {
+        string item = strTrim(xsArrayGetString(parts, i));
+        float value = strToFloat(item, cFloatListEmptyParam);
+        if (value != cFloatListEmptyParam) {
+            xsFloatListAppend(lst, value);
+        }
+    }
+    xsArrayResizeString(parts, 0);
+    return (lst);
+}

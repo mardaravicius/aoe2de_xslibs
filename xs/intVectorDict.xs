@@ -9,6 +9,8 @@ extern const float cIntVectorDictMaxLoadFactor = 0.75;
 extern const int cIntVectorDictEmptyKey = -999999999;
 extern const int cIntVectorDictInitialCapacity = 65;
 extern const int cIntVectorDictHashConstant = 16777619;
+const float _cIntVectorDictEmptyFloat = -9999999.0;
+const vector _cIntVectorDictEmptyVector = vector(_cIntVectorDictEmptyFloat, _cIntVectorDictEmptyFloat, _cIntVectorDictEmptyFloat);
 int _intVectorDictLastOperationStatus = cIntVectorDictSuccess;
 int _intVectorDictTempArray = -1;
 
@@ -609,4 +611,102 @@ bool xsIntVectorDictEquals(int a = -1, int b = -1) {
         i = i + 4;
     }
     return (true);
+}
+
+int _xsIntVectorDictFindSeparator(string text = "", string separator = ",", int start = 0) {
+    int n = strLen(text);
+    bool inQuotes = false;
+    bool inParens = false;
+    for (i = start; < n) {
+        string ch = strCharAt(text, i);
+        if (ch == "'") {
+            inQuotes = inQuotes == false;
+        } else if (inQuotes == false) {
+            if (ch == "(") {
+                inParens = true;
+            } else if (ch == ")") {
+                inParens = false;
+            } else if ((ch == separator) && (inParens == false)) {
+                return (i);
+            }
+        }
+    }
+    return (-1);
+}
+
+int _xsIntVectorDictSplitItems(string items = "") {
+    int numParts = 1;
+    int sep = _xsIntVectorDictFindSeparator(items, ",", 0);
+    while (sep >= 0) {
+        numParts++;
+        sep = _xsIntVectorDictFindSeparator(items, ",", sep + 1);
+    }
+    int parts = xsArrayCreateString(numParts);
+    int start = 0;
+    for (i = 0; < numParts) {
+        int end = _xsIntVectorDictFindSeparator(items, ",", start);
+        if (end < 0) {
+            xsArraySetString(parts, i, strRemove(items, 0, start));
+        } else {
+            xsArraySetString(parts, i, strSubstring(items, start, end));
+        }
+        start = end + 1;
+    }
+    return (parts);
+}
+
+vector _xsIntVectorDictParseVector(string text = "") {
+    int n = strLen(text);
+    if (n < 3) {
+        return (_cIntVectorDictEmptyVector);
+    }
+    if ((strSubstring(text, 0, 2) != "v(") || (strCharAt(text, n - 1) != ")")) {
+        return (_cIntVectorDictEmptyVector);
+    }
+    int coords = strSplit(strSubstring(text, 2, n - 1), ",");
+    if (xsArrayGetSize(coords) != 3) {
+        xsArrayResizeString(coords, 0);
+        return (_cIntVectorDictEmptyVector);
+    }
+    float x = strToFloat(strTrim(xsArrayGetString(coords, 0)), _cIntVectorDictEmptyFloat);
+    float y = strToFloat(strTrim(xsArrayGetString(coords, 1)), _cIntVectorDictEmptyFloat);
+    float z = strToFloat(strTrim(xsArrayGetString(coords, 2)), _cIntVectorDictEmptyFloat);
+    xsArrayResizeString(coords, 0);
+    if ((x == _cIntVectorDictEmptyFloat) || (y == _cIntVectorDictEmptyFloat) || (z == _cIntVectorDictEmptyFloat)) {
+        return (_cIntVectorDictEmptyVector);
+    }
+    return (xsVectorSet(x, y, z));
+}
+
+/*
+    Creates a dict from a comma separated string of pairs, where key and value are separated by a colon.
+    Keys and values are trimmed, and pairs that cannot be parsed are skipped.
+    @param items - comma separated key and value pairs
+    @return created dict id, or `cIntVectorDictGenericError` on error
+*/
+int xsIntVectorDictFromString(string items = "") {
+    int dct = xsIntVectorDictCreate();
+    if (dct < 0) {
+        return (cIntVectorDictGenericError);
+    }
+    if (strTrim(items) == "") {
+        return (dct);
+    }
+    int parts = _xsIntVectorDictSplitItems(items);
+    int numParts = xsArrayGetSize(parts);
+    for (i = 0; < numParts) {
+        string item = xsArrayGetString(parts, i);
+        int sep = _xsIntVectorDictFindSeparator(item, ":", 0);
+        if (sep >= 0) {
+            string keyStr = strTrim(strSubstring(item, 0, sep));
+            string valStr = strTrim(strRemove(item, 0, sep + 1));
+            int key = strToInt(keyStr, 10, cIntVectorDictEmptyKey);
+            vector val = _xsIntVectorDictParseVector(valStr);
+            if ((key != cIntVectorDictEmptyKey) && (val != _cIntVectorDictEmptyVector)) {
+                xsIntVectorDictPut(dct, key, val);
+            }
+        }
+    }
+    xsArrayResizeString(parts, 0);
+    return (dct);
 }

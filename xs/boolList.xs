@@ -643,3 +643,31 @@ int xsBoolListCount(int lst = -1, bool value = false) {
 int xsBoolListLastError() {
     return (_boolListLastOperationStatus);
 }
+
+/*
+    Creates a list from a comma separated string, e.g. `"true,false"`.
+    Items are trimmed, and items that cannot be parsed are skipped.
+    @param items - comma separated values
+    @return created list id, or `cBoolListGenericError` on error
+*/
+int xsBoolListFromString(string items = "") {
+    if (strTrim(items) == "") {
+        return (xsBoolListCreate());
+    }
+    int parts = strSplit(items, ",");
+    int numParts = xsArrayGetSize(parts);
+    int lst = xsBoolListCreate(numParts);
+    if (lst < 0) {
+        xsArrayResizeString(parts, 0);
+        return (cBoolListGenericError);
+    }
+    for (i = 0; < numParts) {
+        string item = strTrim(xsArrayGetString(parts, i));
+        bool value = item == "true";
+        if (value || (item == "false")) {
+            xsBoolListAppend(lst, value);
+        }
+    }
+    xsArrayResizeString(parts, 0);
+    return (lst);
+}

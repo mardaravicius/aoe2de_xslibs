@@ -3,8 +3,10 @@ from numpy import int32, float32
 from xs_converter.functions import xs_array_create_vector, xs_array_set_vector, xs_array_resize_vector, \
     xs_array_get_vector, xs_array_get_size, bit_cast_to_float, bit_cast_to_int, vector, xs_vector_get_x, \
     xs_vector_set, xs_array_set_float, xs_vector_get_y, xs_vector_get_z, xs_array_get_float, xs_array_resize_float, \
-    xs_array_create_float
-from xs_converter.symbols import XsExternConst, i32range, XsVector
+    xs_array_create_float, \
+    str_char_at, str_len, str_remove, str_split, str_substring, str_to_float, str_trim, xs_array_create_string, \
+    xs_array_get_string, xs_array_resize_string, xs_array_set_string
+from xs_converter.symbols import XsExternConst, i32range, XsVector, XsConst
 
 c_vector_list_success: XsExternConst[int32] = int32(0)
 c_vector_list_generic_error: XsExternConst[int32] = int32(-1)
@@ -15,6 +17,7 @@ c_vector_list_max_capacity_error: XsExternConst[int32] = int32(-4)
 c_vector_list_max_capacity: XsExternConst[int32] = int32(333333333) # int32(999999999)
 c_vector_list_empty_param: XsExternConst[XsVector] = vector(-9999999.0, -9999999.0, -9999999.0)
 c_vector_list_empty_int_param: XsExternConst[int32] = int32(-999999999)
+_c_vector_list_empty_float: XsConst[float32] = float32(-9999999.0)
 _vector_list_last_operation_status: int32 = c_vector_list_success
 
 
@@ -590,3 +593,82 @@ def xs_vector_list_last_error() -> int32:
     :return: `c_vector_list_success` if the last such operation succeeded, or a negative error code
     """
     return _vector_list_last_operation_status
+
+
+def _xs_vector_list_find_separator(text: str = "", separator: str = ",", start: int32 = int32(0)) -> int32:
+    n: int32 = str_len(text)
+    in_quotes: bool = False
+    in_parens: bool = False
+    for i in i32range(start, n):
+        ch: str = str_char_at(text, i)
+        if ch == "'":
+            in_quotes = not in_quotes
+        elif not in_quotes:
+            if ch == "(":
+                in_parens = True
+            elif ch == ")":
+                in_parens = False
+            elif ch == separator and not in_parens:
+                return i
+    return int32(-1)
+
+
+def _xs_vector_list_split_items(items: str = "") -> int32:
+    num_parts: int32 = int32(1)
+    sep: int32 = _xs_vector_list_find_separator(items, ",", 0)
+    while sep >= 0:
+        num_parts += 1
+        sep = _xs_vector_list_find_separator(items, ",", sep + 1)
+    parts: int32 = xs_array_create_string(num_parts)
+    start: int32 = int32(0)
+    for i in i32range(0, num_parts):
+        end: int32 = _xs_vector_list_find_separator(items, ",", start)
+        if end < 0:
+            xs_array_set_string(parts, i, str_remove(items, 0, start))
+        else:
+            xs_array_set_string(parts, i, str_substring(items, start, end))
+        start = end + 1
+    return parts
+
+
+def _xs_vector_list_parse_vector(text: str = "") -> XsVector:
+    n: int32 = str_len(text)
+    if n < 3:
+        return c_vector_list_empty_param
+    if str_substring(text, 0, 2) != "v(" or str_char_at(text, n - 1) != ")":
+        return c_vector_list_empty_param
+    coords: int32 = str_split(str_substring(text, 2, n - 1), ",")
+    if xs_array_get_size(coords) != 3:
+        xs_array_resize_string(coords, 0)
+        return c_vector_list_empty_param
+    x: float32 = str_to_float(str_trim(xs_array_get_string(coords, 0)), _c_vector_list_empty_float)
+    y: float32 = str_to_float(str_trim(xs_array_get_string(coords, 1)), _c_vector_list_empty_float)
+    z: float32 = str_to_float(str_trim(xs_array_get_string(coords, 2)), _c_vector_list_empty_float)
+    xs_array_resize_string(coords, 0)
+    if x == _c_vector_list_empty_float or y == _c_vector_list_empty_float or z == _c_vector_list_empty_float:
+        return c_vector_list_empty_param
+    return xs_vector_set(x, y, z)
+
+
+def xs_vector_list_from_string(items: str = "") -> int32:
+    """
+    Creates a list from a comma separated string, e.g. `"v(1.0,2.0,3.0),v(1.5,0.0,-2.0)"`.
+    Items are trimmed, and items that cannot be parsed are skipped.
+    :param items: comma separated values
+    :return: created list id, or `c_vector_list_generic_error` on error
+    """
+    if str_trim(items) == "":
+        return xs_vector_list_create()
+    parts: int32 = _xs_vector_list_split_items(items)
+    num_parts: int32 = xs_array_get_size(parts)
+    lst: int32 = xs_vector_list_create(num_parts)
+    if lst < 0:
+        xs_array_resize_string(parts, 0)
+        return c_vector_list_generic_error
+    for i in i32range(0, num_parts):
+        item: str = str_trim(xs_array_get_string(parts, i))
+        value: XsVector = _xs_vector_list_parse_vector(item)
+        if value != c_vector_list_empty_param:
+            xs_vector_list_append(lst, value)
+    xs_array_resize_string(parts, 0)
+    return lst

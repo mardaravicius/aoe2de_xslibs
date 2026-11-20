@@ -638,3 +638,36 @@ bool xsIntIntDictEquals(int a = -1, int b = -1) {
     }
     return (true);
 }
+
+/*
+    Creates a dict from a comma separated string of pairs, where key and value are separated by a colon.
+    Keys and values are trimmed, and pairs that cannot be parsed are skipped.
+    @param items - comma separated key and value pairs
+    @return created dict id, or `cIntIntDictGenericError` on error
+*/
+int xsIntIntDictFromString(string items = "") {
+    int dct = xsIntIntDictCreate();
+    if (dct < 0) {
+        return (cIntIntDictGenericError);
+    }
+    if (strTrim(items) == "") {
+        return (dct);
+    }
+    int parts = strSplit(items, ",");
+    int numParts = xsArrayGetSize(parts);
+    for (i = 0; < numParts) {
+        string item = xsArrayGetString(parts, i);
+        int sep = strIndexOf(item, ":");
+        if (sep >= 0) {
+            string keyStr = strTrim(strSubstring(item, 0, sep));
+            string valStr = strTrim(strRemove(item, 0, sep + 1));
+            int key = strToInt(keyStr, 10, cIntIntDictEmptyKey);
+            int val = strToInt(valStr, 10, cIntIntDictEmptyKey);
+            if ((key != cIntIntDictEmptyKey) && (val != cIntIntDictEmptyKey)) {
+                xsIntIntDictPut(dct, key, val);
+            }
+        }
+    }
+    xsArrayResizeString(parts, 0);
+    return (dct);
+}

@@ -118,6 +118,16 @@ red but still work.
 - `xsVectorIntDictKeys`/`Values` return `vector[]` / `int[]`.
 - `xsVectorStringDictKeys`/`Values` return `vector[]` / `string[]`.
 - `xsVectorVectorDictKeys`/`Values` return `vector[]` / `vector[]`.
+- `FromString` constructors parse a comma separated string and skip items that cannot be parsed:
+  `xsIntListFromString("1,2")`, `xsFloatListFromString("1.0,1.1")`, `xsBoolListFromString("true,false")`,
+  `xsStringListFromString("'a','b'")`, `xsVectorListFromString("v(1.0,1.1,-3.3),v(1.0,2.0,3.0)")`, and for dictionaries
+  `key:value` pairs such as `xsIntStringDictFromString("1:'a',2:'b'")` or `xsStringStringDictFromString("'abc':''")`.
+  Values are parsed with `strToInt` and `strToFloat`, so floats need a decimal point (`1.0`, not `1`)
+  and ints keep only their leading digits (`1.5` becomes `1`). Items are trimmed. Strings must be wrapped in `'` and cannot contain `'`, but may contain `,`, `:` and brackets.
+  An unclosed `'` makes the rest of the input part of that item. Numbers equal to the module's constructor
+  sentinel (for example `cIntListEmptyParam`) are treated as invalid.
+  Each call leaks a small amount of memory: XS arrays cannot be deleted, so the temporary arrays used for
+  splitting are only resized to zero. Avoid calling `FromString` constructors in frequently running rules.
 - There is no global initialization function for these libraries. You can use them immediately.
 - `xsIntIntDict`, `xsIntStringDict`, and `xsIntVectorDict` cannot store their reserved `...EmptyKey` int sentinel as a key.
 - `xsFloatIntDict`, `xsFloatStringDict`, and `xsFloatVectorDict` cannot store their reserved `...EmptyKey` float sentinel as a key.
@@ -151,6 +161,7 @@ Use it when you want list-style operations such as append, insert, copy, sort, r
 // Creation
 int xsIntList(int v0, int v1, ..., int v11)       // up to 12 initial values
 int xsIntListCreate(int capacity)
+int xsIntListFromString(string items)
 int xsIntListFromRange(int start, int stop, int step)
 int xsIntListFromRepeatedVal(int value, int times)
 int xsIntListFromRepeatedList(int lst, int times)
@@ -230,6 +241,7 @@ It largely mirrors Int List, but there is no `xsFloatListFromRange`.
 // Creation
 int   xsFloatList(float v0, float v1, ..., float v11)
 int   xsFloatListCreate(int capacity)
+int   xsFloatListFromString(string items)
 int   xsFloatListFromRepeatedVal(float value, int times)
 int   xsFloatListFromRepeatedList(int lst, int times)
 int   xsFloatListFromArray(int arr)
@@ -311,6 +323,7 @@ It largely mirrors String List, but it intentionally has no `xsBoolList` conveni
 ```cpp
 // Creation
 int  xsBoolListCreate(int capacity)
+int  xsBoolListFromString(string items)
 int  xsBoolListFromRepeatedVal(bool value, int times)
 int  xsBoolListFromRepeatedList(int lst, int times)
 int  xsBoolListFromArray(int arr)
@@ -386,6 +399,7 @@ It mostly mirrors Int List, but there is no `Sum`, `xsStringListUseArrayAsSource
 // Creation
 int    xsStringList(string v0, string v1, ..., string v11)
 int    xsStringListCreate(int capacity)
+int    xsStringListFromString(string items)
 int    xsStringListFromRepeatedVal(string value, int times)
 int    xsStringListFromRepeatedList(int lst, int times)
 int    xsStringListFromArray(int arr)
@@ -462,6 +476,7 @@ Unlike the scalar list types, it only exposes operations that make sense for vec
 // Creation
 int    xsVectorList(vector v0, vector v1, ..., vector v11)
 int    xsVectorListCreate(int capacity)
+int    xsVectorListFromString(string items)
 int    xsVectorListFromRepeatedVal(vector value, int times)
 int    xsVectorListFromRepeatedList(int lst, int times)
 int    xsVectorListFromArray(int arr)
@@ -536,6 +551,7 @@ The exported implementation uses open addressing with linear probing and resizes
 ```cpp
 // Creation
 int  xsIntIntDictCreate()
+int  xsIntIntDictFromString(string items)
 int  xsIntIntDict(int k1, int v1, ..., int k6, int v6)   // up to 6 pairs
 
 // Access
@@ -622,6 +638,7 @@ It uses the same open-addressed layout as `intIntDict.xs`, but stores values in 
 ```cpp
 // Creation
 int    xsIntStringDictCreate()
+int    xsIntStringDictFromString(string items)
 int    xsIntStringDict(int k1, string v1, ..., int k6, string v6)
 
 // Access
@@ -700,6 +717,7 @@ It uses the same open-addressed layout as `intIntDict.xs`, but stores vectors as
 ```cpp
 // Creation
 int    xsIntVectorDictCreate()
+int    xsIntVectorDictFromString(string items)
 int    xsIntVectorDict(int k1, vector v1, ..., int k6, vector v6)
 
 // Access
@@ -777,6 +795,7 @@ The exported implementation uses open addressing with linear probing and resizes
 ```cpp
 // Creation
 int   xsFloatIntDictCreate()
+int   xsFloatIntDictFromString(string items)
 int   xsFloatIntDict(float k1, int v1, ..., float k6, int v6)
 
 // Access
@@ -855,6 +874,7 @@ It uses the same open-addressed layout as `floatIntDict.xs`, but stores values i
 ```cpp
 // Creation
 int    xsFloatStringDictCreate()
+int    xsFloatStringDictFromString(string items)
 int    xsFloatStringDict(float k1, string v1, ..., float k6, string v6)
 
 // Access
@@ -932,6 +952,7 @@ It uses the same open-addressed layout as `floatIntDict.xs`, but stores vectors 
 ```cpp
 // Creation
 int    xsFloatVectorDictCreate()
+int    xsFloatVectorDictFromString(string items)
 int    xsFloatVectorDict(float k1, vector v1, ..., float k6, vector v6)
 
 // Access
@@ -1009,6 +1030,7 @@ The reserved key string `!<[empty` is used internally and cannot be stored.
 ```cpp
 // Creation
 int    xsStringIntDictCreate()
+int    xsStringIntDictFromString(string items)
 int    xsStringIntDict(string k1, int v1, ..., string k6, int v6)
 
 // Access
@@ -1089,6 +1111,7 @@ The reserved key string `!<[empty` is used internally and cannot be stored.
 ```cpp
 // Creation
 int    xsStringStringDictCreate()
+int    xsStringStringDictFromString(string items)
 int    xsStringStringDict(string k1, string v1, ..., string k6, string v6)
 
 // Access
@@ -1167,6 +1190,7 @@ The reserved key string `!<[empty` is used internally and cannot be stored.
 ```cpp
 // Creation
 int    xsStringVectorDictCreate()
+int    xsStringVectorDictFromString(string items)
 int    xsStringVectorDict(string k1, vector v1, ..., string k6, vector v6)
 
 // Access
@@ -1244,6 +1268,7 @@ It uses direct vector equality for key lookup and reserves `cVectorIntDictEmptyK
 ```cpp
 // Creation
 int    xsVectorIntDictCreate()
+int    xsVectorIntDictFromString(string items)
 int    xsVectorIntDict(vector k1, int v1, ..., vector k6, int v6)
 
 // Access
@@ -1320,6 +1345,7 @@ It mirrors the other vector-keyed dictionary variants, but stores values in a pa
 ```cpp
 // Creation
 int    xsVectorStringDictCreate()
+int    xsVectorStringDictFromString(string items)
 int    xsVectorStringDict(vector k1, string v1, ..., vector k6, string v6)
 
 // Access
@@ -1397,6 +1423,7 @@ It mirrors the other dictionary variants, but both keys and values are vectors. 
 ```cpp
 // Creation
 int    xsVectorVectorDictCreate()
+int    xsVectorVectorDictFromString(string items)
 int    xsVectorVectorDict(vector k1, vector v1, ..., vector k6, vector v6)
 
 // Access

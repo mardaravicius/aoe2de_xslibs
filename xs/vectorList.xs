@@ -7,6 +7,7 @@ extern const int cVectorListMaxCapacityError = -4;
 extern const int cVectorListMaxCapacity = 333333333;
 extern const vector cVectorListEmptyParam = vector(-9999999.0, -9999999.0, -9999999.0);
 extern const int cVectorListEmptyIntParam = -999999999;
+const float _cVectorListEmptyFloat = -9999999.0;
 int _vectorListLastOperationStatus = cVectorListSuccess;
 
 int _xsVectorListArrCreate(int size = 0, vector value = vector(0.0, 0.0, 0.0)) {
@@ -613,4 +614,97 @@ int xsVectorListCount(int lst = -1, vector value = vector(-1.0, -1.0, -1.0)) {
 */
 int xsVectorListLastError() {
     return (_vectorListLastOperationStatus);
+}
+
+int _xsVectorListFindSeparator(string text = "", string separator = ",", int start = 0) {
+    int n = strLen(text);
+    bool inQuotes = false;
+    bool inParens = false;
+    for (i = start; < n) {
+        string ch = strCharAt(text, i);
+        if (ch == "'") {
+            inQuotes = inQuotes == false;
+        } else if (inQuotes == false) {
+            if (ch == "(") {
+                inParens = true;
+            } else if (ch == ")") {
+                inParens = false;
+            } else if ((ch == separator) && (inParens == false)) {
+                return (i);
+            }
+        }
+    }
+    return (-1);
+}
+
+int _xsVectorListSplitItems(string items = "") {
+    int numParts = 1;
+    int sep = _xsVectorListFindSeparator(items, ",", 0);
+    while (sep >= 0) {
+        numParts++;
+        sep = _xsVectorListFindSeparator(items, ",", sep + 1);
+    }
+    int parts = xsArrayCreateString(numParts);
+    int start = 0;
+    for (i = 0; < numParts) {
+        int end = _xsVectorListFindSeparator(items, ",", start);
+        if (end < 0) {
+            xsArraySetString(parts, i, strRemove(items, 0, start));
+        } else {
+            xsArraySetString(parts, i, strSubstring(items, start, end));
+        }
+        start = end + 1;
+    }
+    return (parts);
+}
+
+vector _xsVectorListParseVector(string text = "") {
+    int n = strLen(text);
+    if (n < 3) {
+        return (cVectorListEmptyParam);
+    }
+    if ((strSubstring(text, 0, 2) != "v(") || (strCharAt(text, n - 1) != ")")) {
+        return (cVectorListEmptyParam);
+    }
+    int coords = strSplit(strSubstring(text, 2, n - 1), ",");
+    if (xsArrayGetSize(coords) != 3) {
+        xsArrayResizeString(coords, 0);
+        return (cVectorListEmptyParam);
+    }
+    float x = strToFloat(strTrim(xsArrayGetString(coords, 0)), _cVectorListEmptyFloat);
+    float y = strToFloat(strTrim(xsArrayGetString(coords, 1)), _cVectorListEmptyFloat);
+    float z = strToFloat(strTrim(xsArrayGetString(coords, 2)), _cVectorListEmptyFloat);
+    xsArrayResizeString(coords, 0);
+    if ((x == _cVectorListEmptyFloat) || (y == _cVectorListEmptyFloat) || (z == _cVectorListEmptyFloat)) {
+        return (cVectorListEmptyParam);
+    }
+    return (xsVectorSet(x, y, z));
+}
+
+/*
+    Creates a list from a comma separated string, e.g. `"v(1.0,2.0,3.0),v(1.5,0.0,-2.0)"`.
+    Items are trimmed, and items that cannot be parsed are skipped.
+    @param items - comma separated values
+    @return created list id, or `cVectorListGenericError` on error
+*/
+int xsVectorListFromString(string items = "") {
+    if (strTrim(items) == "") {
+        return (xsVectorListCreate());
+    }
+    int parts = _xsVectorListSplitItems(items);
+    int numParts = xsArrayGetSize(parts);
+    int lst = xsVectorListCreate(numParts);
+    if (lst < 0) {
+        xsArrayResizeString(parts, 0);
+        return (cVectorListGenericError);
+    }
+    for (i = 0; < numParts) {
+        string item = strTrim(xsArrayGetString(parts, i));
+        vector value = _xsVectorListParseVector(item);
+        if (value != cVectorListEmptyParam) {
+            xsVectorListAppend(lst, value);
+        }
+    }
+    xsArrayResizeString(parts, 0);
+    return (lst);
 }

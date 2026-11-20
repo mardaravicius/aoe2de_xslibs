@@ -1,7 +1,8 @@
 from numpy import int32, float32
 
 from xs_converter.functions import xs_array_create_float, xs_array_set_float, xs_array_resize_float, xs_array_get_float, \
-    xs_array_get_size, bit_cast_to_float, bit_cast_to_int
+    xs_array_get_size, bit_cast_to_float, bit_cast_to_int, \
+    str_split, str_to_float, str_trim, xs_array_get_string, xs_array_resize_string
 from xs_converter.symbols import XsExternConst, i32range
 
 c_float_list_success: XsExternConst[int32] = int32(0)
@@ -666,3 +667,27 @@ def xs_float_list_last_error() -> int32:
     :return: `c_float_list_success` if the last such operation succeeded, or a negative error code
     """
     return _float_list_last_operation_status
+
+
+def xs_float_list_from_string(items: str = "") -> int32:
+    """
+    Creates a list from a comma separated string, e.g. `"1.0,1.5,-2.25"`.
+    Items are trimmed, and items that cannot be parsed are skipped.
+    :param items: comma separated values
+    :return: created list id, or `c_float_list_generic_error` on error
+    """
+    if str_trim(items) == "":
+        return xs_float_list_create()
+    parts: int32 = str_split(items, ",")
+    num_parts: int32 = xs_array_get_size(parts)
+    lst: int32 = xs_float_list_create(num_parts)
+    if lst < 0:
+        xs_array_resize_string(parts, 0)
+        return c_float_list_generic_error
+    for i in i32range(0, num_parts):
+        item: str = str_trim(xs_array_get_string(parts, i))
+        value: float32 = str_to_float(item, c_float_list_empty_param)
+        if value != c_float_list_empty_param:
+            xs_float_list_append(lst, value)
+    xs_array_resize_string(parts, 0)
+    return lst

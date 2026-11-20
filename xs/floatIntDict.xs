@@ -11,6 +11,7 @@ extern const int cFloatIntDictEmptyKeyBits = -887581057;
 extern const int cFloatIntDictCanonicalNanBits = -8388607;
 extern const int cFloatIntDictInitialCapacity = 33;
 extern const int cFloatIntDictHashConstant = 16777619;
+const int _cFloatIntDictEmptyInt = -999999999;
 int _floatIntDictLastOperationStatus = cFloatIntDictSuccess;
 int _floatIntDictTempArray = -1;
 
@@ -632,4 +633,37 @@ bool xsFloatIntDictEquals(int a = -1, int b = -1) {
         i = i + 2;
     }
     return (true);
+}
+
+/*
+    Creates a dict from a comma separated string of pairs, where key and value are separated by a colon.
+    Keys and values are trimmed, and pairs that cannot be parsed are skipped.
+    @param items - comma separated key and value pairs
+    @return created dict id, or `cFloatIntDictGenericError` on error
+*/
+int xsFloatIntDictFromString(string items = "") {
+    int dct = xsFloatIntDictCreate();
+    if (dct < 0) {
+        return (cFloatIntDictGenericError);
+    }
+    if (strTrim(items) == "") {
+        return (dct);
+    }
+    int parts = strSplit(items, ",");
+    int numParts = xsArrayGetSize(parts);
+    for (i = 0; < numParts) {
+        string item = xsArrayGetString(parts, i);
+        int sep = strIndexOf(item, ":");
+        if (sep >= 0) {
+            string keyStr = strTrim(strSubstring(item, 0, sep));
+            string valStr = strTrim(strRemove(item, 0, sep + 1));
+            float key = strToFloat(keyStr, cFloatIntDictEmptyKey);
+            int val = strToInt(valStr, 10, _cFloatIntDictEmptyInt);
+            if ((key != cFloatIntDictEmptyKey) && (val != _cFloatIntDictEmptyInt)) {
+                xsFloatIntDictPut(dct, key, val);
+            }
+        }
+    }
+    xsArrayResizeString(parts, 0);
+    return (dct);
 }

@@ -1,7 +1,8 @@
 from numpy import int32, float32
 
 from xs_converter.functions import xs_array_create_int, xs_array_set_int, xs_array_resize_int, xs_array_get_int, \
-    xs_array_get_size, xs_array_create_string, xs_array_set_string, xs_array_resize_string, xs_array_get_string
+    xs_array_get_size, xs_array_create_string, xs_array_set_string, xs_array_resize_string, xs_array_get_string, \
+    str_char_at, str_index_of, str_len, str_remove, str_substring, str_to_int, str_trim
 from xs_converter.symbols import XsExternConst, i32range
 
 c_int_string_dict_success: XsExternConst[int32] = int32(0)
@@ -580,3 +581,70 @@ def xs_int_string_dict_equals(a: int32 = int32(-1), b: int32 = int32(-1)) -> boo
             if xs_int_string_dict_last_error() != c_int_string_dict_success:
                 return False
     return True
+
+
+def _xs_int_string_dict_find_separator(text: str = "", separator: str = ",", start: int32 = int32(0)) -> int32:
+    n: int32 = str_len(text)
+    in_quotes: bool = False
+    for i in i32range(start, n):
+        ch: str = str_char_at(text, i)
+        if ch == "'":
+            in_quotes = not in_quotes
+        elif ch == separator and not in_quotes:
+            return i
+    return int32(-1)
+
+
+def _xs_int_string_dict_split_items(items: str = "") -> int32:
+    num_parts: int32 = int32(1)
+    sep: int32 = _xs_int_string_dict_find_separator(items, ",", 0)
+    while sep >= 0:
+        num_parts += 1
+        sep = _xs_int_string_dict_find_separator(items, ",", sep + 1)
+    parts: int32 = xs_array_create_string(num_parts)
+    start: int32 = int32(0)
+    for i in i32range(0, num_parts):
+        end: int32 = _xs_int_string_dict_find_separator(items, ",", start)
+        if end < 0:
+            xs_array_set_string(parts, i, str_remove(items, 0, start))
+        else:
+            xs_array_set_string(parts, i, str_substring(items, start, end))
+        start = end + 1
+    return parts
+
+
+def _xs_int_string_dict_is_quoted(text: str = "") -> bool:
+    n: int32 = str_len(text)
+    if n < 2:
+        return False
+    if str_char_at(text, 0) != "'" or str_char_at(text, n - 1) != "'":
+        return False
+    return str_index_of(str_substring(text, 1, n - 1), "'") == -1
+
+
+def xs_int_string_dict_from_string(items: str = "") -> int32:
+    """
+    Creates a dict from a comma separated string of pairs, where key and value are separated by a colon. Strings must be wrapped in `'` and cannot contain `'`.
+    Keys and values are trimmed, and pairs that cannot be parsed are skipped.
+    :param items: comma separated key and value pairs
+    :return: created dict id, or `c_int_string_dict_generic_error` on error
+    """
+    dct: int32 = xs_int_string_dict_create()
+    if dct < 0:
+        return c_int_string_dict_generic_error
+    if str_trim(items) == "":
+        return dct
+    parts: int32 = _xs_int_string_dict_split_items(items)
+    num_parts: int32 = xs_array_get_size(parts)
+    for i in i32range(0, num_parts):
+        item: str = xs_array_get_string(parts, i)
+        sep: int32 = _xs_int_string_dict_find_separator(item, ":", 0)
+        if sep >= 0:
+            key_str: str = str_trim(str_substring(item, 0, sep))
+            val_str: str = str_trim(str_remove(item, 0, sep + 1))
+            key: int32 = str_to_int(key_str, 10, c_int_string_dict_empty_key)
+            val: str = str_substring(val_str, 1, str_len(val_str) - 1)
+            if key != c_int_string_dict_empty_key and _xs_int_string_dict_is_quoted(val_str):
+                xs_int_string_dict_put(dct, key, val)
+    xs_array_resize_string(parts, 0)
+    return dct

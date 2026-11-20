@@ -3,7 +3,13 @@ from numpy import float32, int32
 from xs_converter.functions import (
     ord,
     str_char_at,
+    str_index_of,
     str_len,
+    str_remove,
+    str_split,
+    str_substring,
+    str_to_float,
+    str_trim,
     vector,
     xs_array_create_float,
     xs_array_create_int,
@@ -25,7 +31,7 @@ from xs_converter.functions import (
     xs_vector_get_z,
     xs_vector_set,
 )
-from xs_converter.symbols import XsExternConst, XsVector, i32range
+from xs_converter.symbols import XsExternConst, XsVector, i32range, XsConst
 
 c_string_vector_dict_success: XsExternConst[int32] = int32(0)
 c_string_vector_dict_generic_error: XsExternConst[int32] = int32(-1)
@@ -37,6 +43,8 @@ c_string_vector_dict_max_capacity: XsExternConst[int32] = int32(333333330)
 c_string_vector_dict_max_load_factor: XsExternConst[float32] = float32(0.75)
 c_string_vector_dict_initial_capacity: XsExternConst[int32] = int32(16)
 c_string_vector_dict_hash_constant: XsExternConst[int32] = int32(16777619)
+_c_string_vector_dict_empty_float: XsConst[float32] = float32(-9999999.0)
+_c_string_vector_dict_empty_vector: XsConst[XsVector] = vector(_c_string_vector_dict_empty_float, _c_string_vector_dict_empty_float, _c_string_vector_dict_empty_float)
 _string_vector_dict_last_operation_status: int32 = c_string_vector_dict_success
 _string_vector_dict_temp_keys: int32 = int32(-1)
 _string_vector_dict_temp_values: int32 = int32(-1)
@@ -684,3 +692,95 @@ def xs_string_vector_dict_equals(a: int32 = int32(-1), b: int32 = int32(-1)) -> 
             if xs_string_vector_dict_last_error() != c_string_vector_dict_success:
                 return False
     return True
+
+
+def _xs_string_vector_dict_find_separator(text: str = "", separator: str = ",", start: int32 = int32(0)) -> int32:
+    n: int32 = str_len(text)
+    in_quotes: bool = False
+    in_parens: bool = False
+    for i in i32range(start, n):
+        ch: str = str_char_at(text, i)
+        if ch == "'":
+            in_quotes = not in_quotes
+        elif not in_quotes:
+            if ch == "(":
+                in_parens = True
+            elif ch == ")":
+                in_parens = False
+            elif ch == separator and not in_parens:
+                return i
+    return int32(-1)
+
+
+def _xs_string_vector_dict_split_items(items: str = "") -> int32:
+    num_parts: int32 = int32(1)
+    sep: int32 = _xs_string_vector_dict_find_separator(items, ",", 0)
+    while sep >= 0:
+        num_parts += 1
+        sep = _xs_string_vector_dict_find_separator(items, ",", sep + 1)
+    parts: int32 = xs_array_create_string(num_parts)
+    start: int32 = int32(0)
+    for i in i32range(0, num_parts):
+        end: int32 = _xs_string_vector_dict_find_separator(items, ",", start)
+        if end < 0:
+            xs_array_set_string(parts, i, str_remove(items, 0, start))
+        else:
+            xs_array_set_string(parts, i, str_substring(items, start, end))
+        start = end + 1
+    return parts
+
+
+def _xs_string_vector_dict_is_quoted(text: str = "") -> bool:
+    n: int32 = str_len(text)
+    if n < 2:
+        return False
+    if str_char_at(text, 0) != "'" or str_char_at(text, n - 1) != "'":
+        return False
+    return str_index_of(str_substring(text, 1, n - 1), "'") == -1
+
+
+def _xs_string_vector_dict_parse_vector(text: str = "") -> XsVector:
+    n: int32 = str_len(text)
+    if n < 3:
+        return _c_string_vector_dict_empty_vector
+    if str_substring(text, 0, 2) != "v(" or str_char_at(text, n - 1) != ")":
+        return _c_string_vector_dict_empty_vector
+    coords: int32 = str_split(str_substring(text, 2, n - 1), ",")
+    if xs_array_get_size(coords) != 3:
+        xs_array_resize_string(coords, 0)
+        return _c_string_vector_dict_empty_vector
+    x: float32 = str_to_float(str_trim(xs_array_get_string(coords, 0)), _c_string_vector_dict_empty_float)
+    y: float32 = str_to_float(str_trim(xs_array_get_string(coords, 1)), _c_string_vector_dict_empty_float)
+    z: float32 = str_to_float(str_trim(xs_array_get_string(coords, 2)), _c_string_vector_dict_empty_float)
+    xs_array_resize_string(coords, 0)
+    if x == _c_string_vector_dict_empty_float or y == _c_string_vector_dict_empty_float or z == _c_string_vector_dict_empty_float:
+        return _c_string_vector_dict_empty_vector
+    return xs_vector_set(x, y, z)
+
+
+def xs_string_vector_dict_from_string(items: str = "") -> int32:
+    """
+    Creates a dict from a comma separated string of pairs, where key and value are separated by a colon. Strings must be wrapped in `'` and cannot contain `'`.
+    Keys and values are trimmed, and pairs that cannot be parsed are skipped.
+    :param items: comma separated key and value pairs
+    :return: created dict id, or `c_string_vector_dict_generic_error` on error
+    """
+    dct: int32 = xs_string_vector_dict_create()
+    if dct < 0:
+        return c_string_vector_dict_generic_error
+    if str_trim(items) == "":
+        return dct
+    parts: int32 = _xs_string_vector_dict_split_items(items)
+    num_parts: int32 = xs_array_get_size(parts)
+    for i in i32range(0, num_parts):
+        item: str = xs_array_get_string(parts, i)
+        sep: int32 = _xs_string_vector_dict_find_separator(item, ":", 0)
+        if sep >= 0:
+            key_str: str = str_trim(str_substring(item, 0, sep))
+            val_str: str = str_trim(str_remove(item, 0, sep + 1))
+            key: str = str_substring(key_str, 1, str_len(key_str) - 1)
+            val: XsVector = _xs_string_vector_dict_parse_vector(val_str)
+            if _xs_string_vector_dict_is_quoted(key_str) and val != _c_string_vector_dict_empty_vector:
+                xs_string_vector_dict_put(dct, key, val)
+    xs_array_resize_string(parts, 0)
+    return dct
