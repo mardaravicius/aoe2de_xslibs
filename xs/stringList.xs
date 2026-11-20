@@ -841,8 +841,8 @@ int xsStringListFromString(string items = "") {
     }
     for (i = 0; < numParts) {
         string item = strTrim(xsArrayGetString(parts, i));
-        string value = strSubstring(item, 1, strLen(item) - 1);
         if (_xsStringListIsQuoted(item)) {
+            string value = strSubstring(item, 1, strLen(item) - 1);
             xsStringListAppend(lst, value);
         }
     }

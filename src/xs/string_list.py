@@ -761,8 +761,8 @@ def xs_string_list_from_string(items: str = "") -> int32:
         return c_string_list_generic_error
     for i in i32range(0, num_parts):
         item: str = str_trim(xs_array_get_string(parts, i))
-        value: str = str_substring(item, 1, str_len(item) - 1)
         if _xs_string_list_is_quoted(item):
+            value: str = str_substring(item, 1, str_len(item) - 1)
             xs_string_list_append(lst, value)
     xs_array_resize_string(parts, 0)
     return lst

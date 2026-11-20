@@ -701,8 +701,8 @@ def xs_float_string_dict_from_string(items: str = "") -> int32:
             key_str: str = str_trim(str_substring(item, 0, sep))
             val_str: str = str_trim(str_remove(item, 0, sep + 1))
             key: float32 = str_to_float(key_str, c_float_string_dict_empty_key)
-            val: str = str_substring(val_str, 1, str_len(val_str) - 1)
             if key != c_float_string_dict_empty_key and _xs_float_string_dict_is_quoted(val_str):
+                val: str = str_substring(val_str, 1, str_len(val_str) - 1)
                 xs_float_string_dict_put(dct, key, val)
     xs_array_resize_string(parts, 0)
     return dct

@@ -688,9 +688,9 @@ def xs_string_int_dict_from_string(items: str = "") -> int32:
         if sep >= 0:
             key_str: str = str_trim(str_substring(item, 0, sep))
             val_str: str = str_trim(str_remove(item, 0, sep + 1))
-            key: str = str_substring(key_str, 1, str_len(key_str) - 1)
             val: int32 = str_to_int(val_str, 10, _c_string_int_dict_empty_int)
             if _xs_string_int_dict_is_quoted(key_str) and val != _c_string_int_dict_empty_int:
+                key: str = str_substring(key_str, 1, str_len(key_str) - 1)
                 xs_string_int_dict_put(dct, key, val)
     xs_array_resize_string(parts, 0)
     return dct

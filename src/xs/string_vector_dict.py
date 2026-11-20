@@ -778,9 +778,9 @@ def xs_string_vector_dict_from_string(items: str = "") -> int32:
         if sep >= 0:
             key_str: str = str_trim(str_substring(item, 0, sep))
             val_str: str = str_trim(str_remove(item, 0, sep + 1))
-            key: str = str_substring(key_str, 1, str_len(key_str) - 1)
             val: XsVector = _xs_string_vector_dict_parse_vector(val_str)
             if _xs_string_vector_dict_is_quoted(key_str) and val != _c_string_vector_dict_empty_vector:
+                key: str = str_substring(key_str, 1, str_len(key_str) - 1)
                 xs_string_vector_dict_put(dct, key, val)
     xs_array_resize_string(parts, 0)
     return dct

@@ -706,9 +706,9 @@ int xsStringStringDictFromString(string items = "") {
         if (sep >= 0) {
             string keyStr = strTrim(strSubstring(item, 0, sep));
             string valStr = strTrim(strRemove(item, 0, sep + 1));
-            string key = strSubstring(keyStr, 1, strLen(keyStr) - 1);
-            string val = strSubstring(valStr, 1, strLen(valStr) - 1);
             if (_xsStringStringDictIsQuoted(keyStr) && _xsStringStringDictIsQuoted(valStr)) {
+                string key = strSubstring(keyStr, 1, strLen(keyStr) - 1);
+                string val = strSubstring(valStr, 1, strLen(valStr) - 1);
                 xsStringStringDictPut(dct, key, val);
             }
         }

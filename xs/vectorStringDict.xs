@@ -800,8 +800,8 @@ int xsVectorStringDictFromString(string items = "") {
             string keyStr = strTrim(strSubstring(item, 0, sep));
             string valStr = strTrim(strRemove(item, 0, sep + 1));
             vector key = _xsVectorStringDictParseVector(keyStr);
-            string val = strSubstring(valStr, 1, strLen(valStr) - 1);
             if ((key != cVectorStringDictEmptyKey) && _xsVectorStringDictIsQuoted(valStr)) {
+                string val = strSubstring(valStr, 1, strLen(valStr) - 1);
                 xsVectorStringDictPut(dct, key, val);
             }
         }

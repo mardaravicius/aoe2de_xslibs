@@ -799,9 +799,9 @@ int xsStringVectorDictFromString(string items = "") {
         if (sep >= 0) {
             string keyStr = strTrim(strSubstring(item, 0, sep));
             string valStr = strTrim(strRemove(item, 0, sep + 1));
-            string key = strSubstring(keyStr, 1, strLen(keyStr) - 1);
             vector val = _xsStringVectorDictParseVector(valStr);
             if (_xsStringVectorDictIsQuoted(keyStr) && (val != _cStringVectorDictEmptyVector)) {
+                string key = strSubstring(keyStr, 1, strLen(keyStr) - 1);
                 xsStringVectorDictPut(dct, key, val);
             }
         }

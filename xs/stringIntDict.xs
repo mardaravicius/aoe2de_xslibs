@@ -724,9 +724,9 @@ int xsStringIntDictFromString(string items = "") {
         if (sep >= 0) {
             string keyStr = strTrim(strSubstring(item, 0, sep));
             string valStr = strTrim(strRemove(item, 0, sep + 1));
-            string key = strSubstring(keyStr, 1, strLen(keyStr) - 1);
             int val = strToInt(valStr, 10, _cStringIntDictEmptyInt);
             if (_xsStringIntDictIsQuoted(keyStr) && (val != _cStringIntDictEmptyInt)) {
+                string key = strSubstring(keyStr, 1, strLen(keyStr) - 1);
                 xsStringIntDictPut(dct, key, val);
             }
         }

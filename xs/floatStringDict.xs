@@ -734,8 +734,8 @@ int xsFloatStringDictFromString(string items = "") {
             string keyStr = strTrim(strSubstring(item, 0, sep));
             string valStr = strTrim(strRemove(item, 0, sep + 1));
             float key = strToFloat(keyStr, cFloatStringDictEmptyKey);
-            string val = strSubstring(valStr, 1, strLen(valStr) - 1);
             if ((key != cFloatStringDictEmptyKey) && _xsFloatStringDictIsQuoted(valStr)) {
+                string val = strSubstring(valStr, 1, strLen(valStr) - 1);
                 xsFloatStringDictPut(dct, key, val);
             }
         }
