@@ -405,6 +405,24 @@ int xsFloatStringDictClear(int dct = -1) {
 }
 
 /*
+    Resizes all arrays of the dict to 0 to free their memory. XS can't fully delete arrays,
+    so the dict id stays allocated and must not be used afterwards.
+    @param dct - dict id
+    @return `cFloatStringDictSuccess` on success, or `cFloatStringDictResizeFailedError` if any resize fails
+*/
+int xsFloatStringDictDelete(int dct = -1) {
+    int r = xsArrayResizeString(_xsFloatStringDictGetValuesArray(dct), 0);
+    if (r != 1) {
+        return (cFloatStringDictResizeFailedError);
+    }
+    r = xsArrayResizeInt(dct, 0);
+    if (r != 1) {
+        return (cFloatStringDictResizeFailedError);
+    }
+    return (cFloatStringDictSuccess);
+}
+
+/*
     Creates a shallow copy of the dict.
     @return new dict id, or `cFloatStringDictResizeFailedError` on error
 */

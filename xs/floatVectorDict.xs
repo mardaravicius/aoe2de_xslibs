@@ -394,6 +394,20 @@ int xsFloatVectorDictClear(int dct = -1) {
 }
 
 /*
+    Resizes all arrays of the dict to 0 to free their memory. XS can't fully delete arrays,
+    so the dict id stays allocated and must not be used afterwards.
+    @param dct - dict id
+    @return `cFloatVectorDictSuccess` on success, or `cFloatVectorDictResizeFailedError` if any resize fails
+*/
+int xsFloatVectorDictDelete(int dct = -1) {
+    int r = xsArrayResizeFloat(dct, 0);
+    if (r != 1) {
+        return (cFloatVectorDictResizeFailedError);
+    }
+    return (cFloatVectorDictSuccess);
+}
+
+/*
     Creates a shallow copy of the dict.
     @return new dict id, or `cFloatVectorDictResizeFailedError` on error
 */

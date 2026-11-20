@@ -340,6 +340,19 @@ def xs_int_int_dict_clear(dct: int32 = int32(-1)) -> int32:
     return c_int_int_dict_success
 
 
+def xs_int_int_dict_delete(dct: int32 = int32(-1)) -> int32:
+    """
+    Resizes all arrays of the dict to 0 to free their memory. XS can't fully delete arrays,
+    so the dict id stays allocated and must not be used afterwards.
+    :param dct: dict id
+    :return: `c_int_int_dict_success` on success, or `c_int_int_dict_resize_failed_error` if any resize fails
+    """
+    r: int32 = xs_array_resize_int(dct, 0)
+    if r != 1:
+        return c_int_int_dict_resize_failed_error
+    return c_int_int_dict_success
+
+
 def xs_int_int_dict_copy(dct: int32 = int32(-1)) -> int32:
     """
     Returns a deep copy of the dict.

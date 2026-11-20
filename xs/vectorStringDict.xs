@@ -442,6 +442,24 @@ int xsVectorStringDictClear(int dct = -1) {
 }
 
 /*
+    Resizes all arrays of the dict to 0 to free their memory. XS can't fully delete arrays,
+    so the dict id stays allocated and must not be used afterwards.
+    @param dct - dict id
+    @return `cVectorStringDictSuccess` on success, or `cVectorStringDictResizeFailedError` if any resize fails
+*/
+int xsVectorStringDictDelete(int dct = -1) {
+    int r = xsArrayResizeString(_xsVectorStringDictGetValuesArray(dct), 0);
+    if (r != 1) {
+        return (cVectorStringDictResizeFailedError);
+    }
+    r = xsArrayResizeFloat(dct, 0);
+    if (r != 1) {
+        return (cVectorStringDictResizeFailedError);
+    }
+    return (cVectorStringDictSuccess);
+}
+
+/*
     Returns a deep copy of the dict.
 */
 int xsVectorStringDictCopy(int dct = -1) {

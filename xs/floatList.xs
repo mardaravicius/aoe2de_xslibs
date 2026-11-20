@@ -607,6 +607,20 @@ int xsFloatListClear(int lst = -1) {
 }
 
 /*
+    Resizes all arrays of the list to 0 to free their memory. XS can't fully delete arrays,
+    so the list id stays allocated and must not be used afterwards.
+    @param lst - list id
+    @return `cFloatListSuccess` on success, or `cFloatListResizeFailedError` if any resize fails
+*/
+int xsFloatListDelete(int lst = -1) {
+    int r = xsArrayResizeFloat(lst, 0);
+    if (r != 1) {
+        return (cFloatListResizeFailedError);
+    }
+    return (cFloatListSuccess);
+}
+
+/*
     Performs lexicographic comparison of two lists.
     @param lst1 - first list id
     @param lst2 - second list id

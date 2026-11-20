@@ -649,6 +649,24 @@ int xsStringListClear(int lst = -1) {
 }
 
 /*
+    Resizes all arrays of the list to 0 to free their memory. XS can't fully delete arrays,
+    so the list id stays allocated and must not be used afterwards.
+    @param lst - list id
+    @return `cStringListSuccess` on success, or `cStringListResizeFailedError` if any resize fails
+*/
+int xsStringListDelete(int lst = -1) {
+    int r = xsArrayResizeString(xsArrayGetInt(lst, 1), 0);
+    if (r != 1) {
+        return (cStringListResizeFailedError);
+    }
+    r = xsArrayResizeInt(lst, 0);
+    if (r != 1) {
+        return (cStringListResizeFailedError);
+    }
+    return (cStringListSuccess);
+}
+
+/*
     Performs lexicographic comparison of two lists.
     @param lst1 - first list id
     @param lst2 - second list id

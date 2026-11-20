@@ -390,6 +390,24 @@ int xsIntStringDictClear(int dct = -1) {
 }
 
 /*
+    Resizes all arrays of the dict to 0 to free their memory. XS can't fully delete arrays,
+    so the dict id stays allocated and must not be used afterwards.
+    @param dct - dict id
+    @return `cIntStringDictSuccess` on success, or `cIntStringDictResizeFailedError` if any resize fails
+*/
+int xsIntStringDictDelete(int dct = -1) {
+    int r = xsArrayResizeString(_xsIntStringDictGetValuesArray(dct), 0);
+    if (r != 1) {
+        return (cIntStringDictResizeFailedError);
+    }
+    r = xsArrayResizeInt(dct, 0);
+    if (r != 1) {
+        return (cIntStringDictResizeFailedError);
+    }
+    return (cIntStringDictSuccess);
+}
+
+/*
     Returns a deep copy of the dict.
 */
 int xsIntStringDictCopy(int dct = -1) {

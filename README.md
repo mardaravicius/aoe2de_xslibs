@@ -45,6 +45,9 @@ void main() {
 All lists and dictionaries are returned as an `int` handle.
 You pass that handle to every follow-up function call for that object.
 
+XS cannot free arrays, so the `Delete` functions only resize the collection's arrays to 0 to release their memory.
+The handle must not be used afterwards, whether `Delete` succeeded or not, and calling `Delete` twice on the same handle is undefined behavior.
+
 # Using aoe2de_xslibs
 
 ## 1. Pick the generated `.xs` files
@@ -179,6 +182,7 @@ int    xsIntListInsert(int lst, int idx, int value)
 int    xsIntListPop(int lst, int idx)
 int    xsIntListRemove(int lst, int value)
 int    xsIntListClear(int lst)
+int    xsIntListDelete(int lst)
 void   xsIntListReverse(int lst)
 void   xsIntListSort(int lst, bool reverse)
 
@@ -258,6 +262,7 @@ int   xsFloatListInsert(int lst, int idx, float value)
 float xsFloatListPop(int lst, int idx)
 int   xsFloatListRemove(int lst, float value)
 int   xsFloatListClear(int lst)
+int   xsFloatListDelete(int lst)
 void  xsFloatListReverse(int lst)
 void  xsFloatListSort(int lst, bool reverse)
 
@@ -340,6 +345,7 @@ int  xsBoolListInsert(int lst, int idx, bool value)
 bool xsBoolListPop(int lst, int idx)
 int  xsBoolListRemove(int lst, bool value)
 int  xsBoolListClear(int lst)
+int  xsBoolListDelete(int lst)
 void xsBoolListReverse(int lst)
 void xsBoolListSort(int lst, bool reverse)
 
@@ -416,6 +422,7 @@ int    xsStringListInsert(int lst, int idx, string value)
 string xsStringListPop(int lst, int idx)
 int    xsStringListRemove(int lst, string value)
 int    xsStringListClear(int lst)
+int    xsStringListDelete(int lst)
 void   xsStringListReverse(int lst)
 void   xsStringListSort(int lst, bool reverse)
 
@@ -493,6 +500,7 @@ int    xsVectorListInsert(int lst, int idx, vector value)
 vector xsVectorListPop(int lst, int idx)
 int    xsVectorListRemove(int lst, vector value)
 int    xsVectorListClear(int lst)
+int    xsVectorListDelete(int lst)
 void   xsVectorListReverse(int lst)
 
 // Search
@@ -564,6 +572,7 @@ int  xsIntIntDictPut(int dct, int key, int val)
 int  xsIntIntDictPutIfAbsent(int dct, int key, int val)
 int  xsIntIntDictRemove(int dct, int key)
 int  xsIntIntDictClear(int dct)
+int  xsIntIntDictDelete(int dct)
 
 // Bulk operations
 int  xsIntIntDictUpdate(int source, int dct)      // copies entries from dct into source
@@ -651,6 +660,7 @@ string xsIntStringDictPut(int dct, int key, string val)
 string xsIntStringDictPutIfAbsent(int dct, int key, string val)
 string xsIntStringDictRemove(int dct, int key)
 int    xsIntStringDictClear(int dct)
+int    xsIntStringDictDelete(int dct)
 
 // Bulk operations
 int    xsIntStringDictUpdate(int source, int dct)
@@ -730,6 +740,7 @@ vector xsIntVectorDictPut(int dct, int key, vector val)
 vector xsIntVectorDictPutIfAbsent(int dct, int key, vector val)
 vector xsIntVectorDictRemove(int dct, int key)
 int    xsIntVectorDictClear(int dct)
+int    xsIntVectorDictDelete(int dct)
 
 // Bulk operations
 int    xsIntVectorDictUpdate(int source, int dct)
@@ -808,6 +819,7 @@ int   xsFloatIntDictPut(int dct, float key, int val)
 int   xsFloatIntDictPutIfAbsent(int dct, float key, int val)
 int   xsFloatIntDictRemove(int dct, float key)
 int   xsFloatIntDictClear(int dct)
+int   xsFloatIntDictDelete(int dct)
 
 // Bulk operations
 int   xsFloatIntDictUpdate(int source, int dct)
@@ -887,6 +899,7 @@ string xsFloatStringDictPut(int dct, float key, string val)
 string xsFloatStringDictPutIfAbsent(int dct, float key, string val)
 string xsFloatStringDictRemove(int dct, float key)
 int    xsFloatStringDictClear(int dct)
+int    xsFloatStringDictDelete(int dct)
 
 // Bulk operations
 int    xsFloatStringDictUpdate(int source, int dct)
@@ -965,6 +978,7 @@ vector xsFloatVectorDictPut(int dct, float key, vector val)
 vector xsFloatVectorDictPutIfAbsent(int dct, float key, vector val)
 vector xsFloatVectorDictRemove(int dct, float key)
 int    xsFloatVectorDictClear(int dct)
+int    xsFloatVectorDictDelete(int dct)
 
 // Bulk operations
 int    xsFloatVectorDictUpdate(int source, int dct)
@@ -1043,6 +1057,7 @@ int    xsStringIntDictPut(int dct, string key, int val)
 int    xsStringIntDictPutIfAbsent(int dct, string key, int val)
 int    xsStringIntDictRemove(int dct, string key)
 int    xsStringIntDictClear(int dct)
+int    xsStringIntDictDelete(int dct)
 
 // Bulk operations
 int    xsStringIntDictUpdate(int source, int dct)
@@ -1124,6 +1139,7 @@ string xsStringStringDictPut(int dct, string key, string val)
 string xsStringStringDictPutIfAbsent(int dct, string key, string val)
 string xsStringStringDictRemove(int dct, string key)
 int    xsStringStringDictClear(int dct)
+int    xsStringStringDictDelete(int dct)
 
 // Bulk operations
 int    xsStringStringDictUpdate(int source, int dct)
@@ -1203,6 +1219,7 @@ vector xsStringVectorDictPut(int dct, string key, vector val)
 vector xsStringVectorDictPutIfAbsent(int dct, string key, vector val)
 vector xsStringVectorDictRemove(int dct, string key)
 int    xsStringVectorDictClear(int dct)
+int    xsStringVectorDictDelete(int dct)
 
 // Bulk operations
 int    xsStringVectorDictUpdate(int source, int dct)
@@ -1281,6 +1298,7 @@ int    xsVectorIntDictPut(int dct, vector key, int val)
 int    xsVectorIntDictPutIfAbsent(int dct, vector key, int val)
 int    xsVectorIntDictRemove(int dct, vector key)
 int    xsVectorIntDictClear(int dct)
+int    xsVectorIntDictDelete(int dct)
 
 // Bulk operations
 int    xsVectorIntDictUpdate(int source, int dct)
@@ -1358,6 +1376,7 @@ string xsVectorStringDictPut(int dct, vector key, string val)
 string xsVectorStringDictPutIfAbsent(int dct, vector key, string val)
 string xsVectorStringDictRemove(int dct, vector key)
 int    xsVectorStringDictClear(int dct)
+int    xsVectorStringDictDelete(int dct)
 
 // Bulk operations
 int    xsVectorStringDictUpdate(int source, int dct)
@@ -1436,6 +1455,7 @@ vector xsVectorVectorDictPut(int dct, vector key, vector val)
 vector xsVectorVectorDictPutIfAbsent(int dct, vector key, vector val)
 vector xsVectorVectorDictRemove(int dct, vector key)
 int    xsVectorVectorDictClear(int dct)
+int    xsVectorVectorDictDelete(int dct)
 
 // Bulk operations
 int    xsVectorVectorDictUpdate(int source, int dct)

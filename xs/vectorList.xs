@@ -577,6 +577,20 @@ int xsVectorListClear(int lst = -1) {
 }
 
 /*
+    Resizes all arrays of the list to 0 to free their memory. XS can't fully delete arrays,
+    so the list id stays allocated and must not be used afterwards.
+    @param lst - list id
+    @return `cVectorListSuccess` on success, or `cVectorListResizeFailedError` if any resize fails
+*/
+int xsVectorListDelete(int lst = -1) {
+    int r = xsArrayResizeFloat(lst, 0);
+    if (r != 1) {
+        return (cVectorListResizeFailedError);
+    }
+    return (cVectorListSuccess);
+}
+
+/*
     Reverses the list in-place.
     @param lst - list id
 */

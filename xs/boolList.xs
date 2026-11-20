@@ -571,6 +571,24 @@ int xsBoolListClear(int lst = -1) {
 }
 
 /*
+    Resizes all arrays of the list to 0 to free their memory. XS can't fully delete arrays,
+    so the list id stays allocated and must not be used afterwards.
+    @param lst - list id
+    @return `cBoolListSuccess` on success, or `cBoolListResizeFailedError` if any resize fails
+*/
+int xsBoolListDelete(int lst = -1) {
+    int r = xsArrayResizeBool(xsArrayGetInt(lst, 1), 0);
+    if (r != 1) {
+        return (cBoolListResizeFailedError);
+    }
+    r = xsArrayResizeInt(lst, 0);
+    if (r != 1) {
+        return (cBoolListResizeFailedError);
+    }
+    return (cBoolListSuccess);
+}
+
+/*
     Performs lexicographic comparison of two lists.
     @param lst1 - first list id
     @param lst2 - second list id

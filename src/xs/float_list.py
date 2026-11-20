@@ -548,6 +548,19 @@ def xs_float_list_clear(lst: int32 = int32(-1)) -> int32:
     return c_float_list_success
 
 
+def xs_float_list_delete(lst: int32 = int32(-1)) -> int32:
+    """
+    Resizes all arrays of the list to 0 to free their memory. XS can't fully delete arrays,
+    so the list id stays allocated and must not be used afterwards.
+    :param lst: list id
+    :return: `c_float_list_success` on success, or `c_float_list_resize_failed_error` if any resize fails
+    """
+    r: int32 = xs_array_resize_float(lst, 0)
+    if r != 1:
+        return c_float_list_resize_failed_error
+    return c_float_list_success
+
+
 def xs_float_list_compare(lst1: int32 = int32(-1), lst2: int32 = int32(-1)) -> int32:
     """
     Performs lexicographic comparison of two lists.
