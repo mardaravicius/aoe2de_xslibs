@@ -102,6 +102,74 @@ def xs_string_array(
     return arr
 
 
+def _xs_string_array_find_separator(text: str = "", separator: str = ",", start: int32 = int32(0)) -> int32:
+    n: int32 = str_len(text)
+    in_quotes: bool = False
+    for i in i32range(start, n):
+        ch: str = str_char_at(text, i)
+        if ch == "'":
+            in_quotes = not in_quotes
+        elif ch == separator and not in_quotes:
+            return i
+    return int32(-1)
+
+
+def _xs_string_array_split_items(items: str = "") -> int32:
+    num_parts: int32 = int32(1)
+    sep: int32 = _xs_string_array_find_separator(items, ",", 0)
+    while sep >= 0:
+        num_parts += 1
+        sep = _xs_string_array_find_separator(items, ",", sep + 1)
+    parts: int32 = xs_array_create_string(num_parts)
+    start: int32 = int32(0)
+    for i in i32range(0, num_parts):
+        end: int32 = _xs_string_array_find_separator(items, ",", start)
+        if end < 0:
+            xs_array_set_string(parts, i, str_remove(items, 0, start))
+        else:
+            xs_array_set_string(parts, i, str_substring(items, start, end))
+        start = end + 1
+    return parts
+
+
+def _xs_string_array_is_quoted(text: str = "") -> bool:
+    n: int32 = str_len(text)
+    if n < 2:
+        return False
+    if str_char_at(text, 0) != "'" or str_char_at(text, n - 1) != "'":
+        return False
+    return str_index_of(str_substring(text, 1, n - 1), "'") == -1
+
+
+def xs_string_array_from_string(items: str = "") -> int32:
+    """
+    Creates an array from a comma separated string, e.g. `"'a','b c'"`. Strings must be wrapped in `'` and cannot contain `'`.
+    Items are trimmed, and items that cannot be parsed are skipped.
+    :param items: comma separated values
+    :return: created array id, or `c_string_array_generic_error` on error
+    """
+    if str_trim(items) == "":
+        return xs_array_create_string(0)
+    parts: int32 = _xs_string_array_split_items(items)
+    num_parts: int32 = xs_array_get_size(parts)
+    arr: int32 = xs_array_create_string(num_parts)
+    if arr < 0:
+        xs_array_resize_string(parts, 0)
+        return c_string_array_generic_error
+    size: int32 = int32(0)
+    for i in i32range(0, num_parts):
+        item: str = str_trim(xs_array_get_string(parts, i))
+        if _xs_string_array_is_quoted(item):
+            xs_array_set_string(arr, size, str_substring(item, 1, str_len(item) - 1))
+            size += 1
+    xs_array_resize_string(parts, 0)
+    if size < num_parts:
+        r: int32 = xs_array_resize_string(arr, size)
+        if r != 1:
+            return c_string_array_resize_failed_error
+    return arr
+
+
 def xs_string_array_from_repeated_val(value: str = "", times: int32 = int32(0)) -> int32:
     """
     Creates an array by repeating a single value.
@@ -393,71 +461,3 @@ def xs_string_array_last_error() -> int32:
     :return: `c_string_array_success` if the last such operation succeeded, or a negative error code
     """
     return _string_array_last_operation_status
-
-
-def _xs_string_array_find_separator(text: str = "", separator: str = ",", start: int32 = int32(0)) -> int32:
-    n: int32 = str_len(text)
-    in_quotes: bool = False
-    for i in i32range(start, n):
-        ch: str = str_char_at(text, i)
-        if ch == "'":
-            in_quotes = not in_quotes
-        elif ch == separator and not in_quotes:
-            return i
-    return int32(-1)
-
-
-def _xs_string_array_split_items(items: str = "") -> int32:
-    num_parts: int32 = int32(1)
-    sep: int32 = _xs_string_array_find_separator(items, ",", 0)
-    while sep >= 0:
-        num_parts += 1
-        sep = _xs_string_array_find_separator(items, ",", sep + 1)
-    parts: int32 = xs_array_create_string(num_parts)
-    start: int32 = int32(0)
-    for i in i32range(0, num_parts):
-        end: int32 = _xs_string_array_find_separator(items, ",", start)
-        if end < 0:
-            xs_array_set_string(parts, i, str_remove(items, 0, start))
-        else:
-            xs_array_set_string(parts, i, str_substring(items, start, end))
-        start = end + 1
-    return parts
-
-
-def _xs_string_array_is_quoted(text: str = "") -> bool:
-    n: int32 = str_len(text)
-    if n < 2:
-        return False
-    if str_char_at(text, 0) != "'" or str_char_at(text, n - 1) != "'":
-        return False
-    return str_index_of(str_substring(text, 1, n - 1), "'") == -1
-
-
-def xs_string_array_from_string(items: str = "") -> int32:
-    """
-    Creates an array from a comma separated string, e.g. `"'a','b c'"`. Strings must be wrapped in `'` and cannot contain `'`.
-    Items are trimmed, and items that cannot be parsed are skipped.
-    :param items: comma separated values
-    :return: created array id, or `c_string_array_generic_error` on error
-    """
-    if str_trim(items) == "":
-        return xs_array_create_string(0)
-    parts: int32 = _xs_string_array_split_items(items)
-    num_parts: int32 = xs_array_get_size(parts)
-    arr: int32 = xs_array_create_string(num_parts)
-    if arr < 0:
-        xs_array_resize_string(parts, 0)
-        return c_string_array_generic_error
-    size: int32 = int32(0)
-    for i in i32range(0, num_parts):
-        item: str = str_trim(xs_array_get_string(parts, i))
-        if _xs_string_array_is_quoted(item):
-            xs_array_set_string(arr, size, str_substring(item, 1, str_len(item) - 1))
-            size += 1
-    xs_array_resize_string(parts, 0)
-    if size < num_parts:
-        r: int32 = xs_array_resize_string(arr, size)
-        if r != 1:
-            return c_string_array_resize_failed_error
-    return arr

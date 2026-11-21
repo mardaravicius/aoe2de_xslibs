@@ -95,6 +95,87 @@ int xsStringArray(string v0 = "!<[empty", string v1 = "!<[empty", string v2 = "!
     return (arr);
 }
 
+int _xsStringArrayFindSeparator(string text = "", string separator = ",", int start = 0) {
+    int n = strLen(text);
+    bool inQuotes = false;
+    for (i = start; < n) {
+        string ch = strCharAt(text, i);
+        if (ch == "'") {
+            inQuotes = inQuotes == false;
+        } else if ((ch == separator) && (inQuotes == false)) {
+            return (i);
+        }
+    }
+    return (-1);
+}
+
+int _xsStringArraySplitItems(string items = "") {
+    int numParts = 1;
+    int sep = _xsStringArrayFindSeparator(items, ",", 0);
+    while (sep >= 0) {
+        numParts++;
+        sep = _xsStringArrayFindSeparator(items, ",", sep + 1);
+    }
+    int parts = xsArrayCreateString(numParts);
+    int start = 0;
+    for (i = 0; < numParts) {
+        int end = _xsStringArrayFindSeparator(items, ",", start);
+        if (end < 0) {
+            xsArraySetString(parts, i, strRemove(items, 0, start));
+        } else {
+            xsArraySetString(parts, i, strSubstring(items, start, end));
+        }
+        start = end + 1;
+    }
+    return (parts);
+}
+
+bool _xsStringArrayIsQuoted(string text = "") {
+    int n = strLen(text);
+    if (n < 2) {
+        return (false);
+    }
+    if ((strCharAt(text, 0) != "'") || (strCharAt(text, n - 1) != "'")) {
+        return (false);
+    }
+    return (strIndexOf(strSubstring(text, 1, n - 1), "'") == -1);
+}
+
+/*
+    Creates an array from a comma separated string, e.g. `"'a','b c'"`. Strings must be wrapped in `'` and cannot contain `'`.
+    Items are trimmed, and items that cannot be parsed are skipped.
+    @param items - comma separated values
+    @return created array id, or `cStringArrayGenericError` on error
+*/
+int xsStringArrayFromString(string items = "") {
+    if (strTrim(items) == "") {
+        return (xsArrayCreateString(0));
+    }
+    int parts = _xsStringArraySplitItems(items);
+    int numParts = xsArrayGetSize(parts);
+    int arr = xsArrayCreateString(numParts);
+    if (arr < 0) {
+        xsArrayResizeString(parts, 0);
+        return (cStringArrayGenericError);
+    }
+    int size = 0;
+    for (i = 0; < numParts) {
+        string item = strTrim(xsArrayGetString(parts, i));
+        if (_xsStringArrayIsQuoted(item)) {
+            xsArraySetString(arr, size, strSubstring(item, 1, strLen(item) - 1));
+            size++;
+        }
+    }
+    xsArrayResizeString(parts, 0);
+    if (size < numParts) {
+        int r = xsArrayResizeString(arr, size);
+        if (r != 1) {
+            return (cStringArrayResizeFailedError);
+        }
+    }
+    return (arr);
+}
+
 /*
     Creates an array by repeating a single value.
     @param value - value to repeat
@@ -428,85 +509,4 @@ string xsStringArrayMax(int arr = -1) {
 */
 int xsStringArrayLastError() {
     return (_stringArrayLastOperationStatus);
-}
-
-int _xsStringArrayFindSeparator(string text = "", string separator = ",", int start = 0) {
-    int n = strLen(text);
-    bool inQuotes = false;
-    for (i = start; < n) {
-        string ch = strCharAt(text, i);
-        if (ch == "'") {
-            inQuotes = inQuotes == false;
-        } else if ((ch == separator) && (inQuotes == false)) {
-            return (i);
-        }
-    }
-    return (-1);
-}
-
-int _xsStringArraySplitItems(string items = "") {
-    int numParts = 1;
-    int sep = _xsStringArrayFindSeparator(items, ",", 0);
-    while (sep >= 0) {
-        numParts++;
-        sep = _xsStringArrayFindSeparator(items, ",", sep + 1);
-    }
-    int parts = xsArrayCreateString(numParts);
-    int start = 0;
-    for (i = 0; < numParts) {
-        int end = _xsStringArrayFindSeparator(items, ",", start);
-        if (end < 0) {
-            xsArraySetString(parts, i, strRemove(items, 0, start));
-        } else {
-            xsArraySetString(parts, i, strSubstring(items, start, end));
-        }
-        start = end + 1;
-    }
-    return (parts);
-}
-
-bool _xsStringArrayIsQuoted(string text = "") {
-    int n = strLen(text);
-    if (n < 2) {
-        return (false);
-    }
-    if ((strCharAt(text, 0) != "'") || (strCharAt(text, n - 1) != "'")) {
-        return (false);
-    }
-    return (strIndexOf(strSubstring(text, 1, n - 1), "'") == -1);
-}
-
-/*
-    Creates an array from a comma separated string, e.g. `"'a','b c'"`. Strings must be wrapped in `'` and cannot contain `'`.
-    Items are trimmed, and items that cannot be parsed are skipped.
-    @param items - comma separated values
-    @return created array id, or `cStringArrayGenericError` on error
-*/
-int xsStringArrayFromString(string items = "") {
-    if (strTrim(items) == "") {
-        return (xsArrayCreateString(0));
-    }
-    int parts = _xsStringArraySplitItems(items);
-    int numParts = xsArrayGetSize(parts);
-    int arr = xsArrayCreateString(numParts);
-    if (arr < 0) {
-        xsArrayResizeString(parts, 0);
-        return (cStringArrayGenericError);
-    }
-    int size = 0;
-    for (i = 0; < numParts) {
-        string item = strTrim(xsArrayGetString(parts, i));
-        if (_xsStringArrayIsQuoted(item)) {
-            xsArraySetString(arr, size, strSubstring(item, 1, strLen(item) - 1));
-            size++;
-        }
-    }
-    xsArrayResizeString(parts, 0);
-    if (size < numParts) {
-        int r = xsArrayResizeString(arr, size);
-        if (r != 1) {
-            return (cStringArrayResizeFailedError);
-        }
-    }
-    return (arr);
 }
