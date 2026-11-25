@@ -6,6 +6,7 @@ extern const int cStringArrayMaxCapacityError = -4;
 extern const int cStringArrayMaxCapacity = 999999999;
 extern const int cStringArrayEmptyIntParam = -999999999;
 int _stringArrayLastOperationStatus = cStringArraySuccess;
+const int _cStringArraySortRun = 16;
 int _stringArraySortKeys = -1;
 int _stringArraySortValues = -1;
 
@@ -278,39 +279,74 @@ bool _xsStringArrayCompareElem(string a = "", string b = "", bool reverse = fals
     return (a < b);
 }
 
-void _xsStringArraySiftDown(int arr = -1, int start = -1, int end = -1, bool reverse = false) {
-    int root = start;
-    while (true) {
-        int child = (2 * root) + 1;
-        if (child > end) {
-            return;
+void _xsStringArrayInsertionSortWith(int arr = -1, int other = -1, int lo = 0, int hi = 0, bool reverse = false) {
+    bool hasOther = other >= 0;
+    for (i = lo + 1; < hi) {
+        string key = xsArrayGetString(arr, i);
+        int value = 0;
+        if (hasOther) {
+            value = xsArrayGetInt(other, i);
         }
-        string childVal = xsArrayGetString(arr, child);
-        if ((child + 1) <= end) {
-            string childVal1 = xsArrayGetString(arr, child + 1);
-            if (_xsStringArrayCompareElem(childVal, childVal1, reverse)) {
-                child++;
-                childVal = childVal1;
+        int j = i - 1;
+        bool shifting = true;
+        while (shifting && (j >= lo)) {
+            string prev = xsArrayGetString(arr, j);
+            if (_xsStringArrayCompareElem(key, prev, reverse)) {
+                xsArraySetString(arr, j + 1, prev);
+                if (hasOther) {
+                    xsArraySetInt(other, j + 1, xsArrayGetInt(other, j));
+                }
+                j--;
+            } else {
+                shifting = false;
             }
         }
-        string rootVal = xsArrayGetString(arr, root);
-        if (_xsStringArrayCompareElem(rootVal, childVal, reverse)) {
-            xsArraySetString(arr, root, childVal);
-            xsArraySetString(arr, child, rootVal);
-            root = child;
-        } else {
-            return;
+        xsArraySetString(arr, j + 1, key);
+        if (hasOther) {
+            xsArraySetInt(other, j + 1, value);
         }
     }
 }
 
+void _xsStringArraySiftDown(int arr = -1, int start = -1, int end = -1, bool reverse = false) {
+    int root = start;
+    string val = xsArrayGetString(arr, root);
+    bool sifting = true;
+    while (sifting) {
+        int child = (2 * root) + 1;
+        if (child > end) {
+            sifting = false;
+        } else {
+            string childVal = xsArrayGetString(arr, child);
+            if ((child + 1) <= end) {
+                string childVal1 = xsArrayGetString(arr, child + 1);
+                if (_xsStringArrayCompareElem(childVal, childVal1, reverse)) {
+                    child++;
+                    childVal = childVal1;
+                }
+            }
+            if (_xsStringArrayCompareElem(val, childVal, reverse)) {
+                xsArraySetString(arr, root, childVal);
+                root = child;
+            } else {
+                sifting = false;
+            }
+        }
+    }
+    xsArraySetString(arr, root, val);
+}
+
 /*
-    Sorts the array in-place using heapsort.
+    Sorts the array in-place.
     @param arr - array id
     @param reverse - if true, sorts in descending order
 */
 void xsStringArraySort(int arr = -1, bool reverse = false) {
     int size = xsArrayGetSize(arr);
+    if (size <= _cStringArraySortRun) {
+        _xsStringArrayInsertionSortWith(arr, -1, 0, size, reverse);
+        return;
+    }
     for (start = (size / 2) - 1; > -1) {
         _xsStringArraySiftDown(arr, start, size - 1, reverse);
     }
@@ -363,27 +399,6 @@ void _xsStringArrayReleaseSortBuffers(bool releaseBuffers = true) {
     }
 }
 
-void _xsStringArrayInsertionSortWith(int arr = -1, int other = -1, int lo = 0, int hi = 0, bool reverse = false) {
-    for (i = lo + 1; < hi) {
-        string key = xsArrayGetString(arr, i);
-        int value = xsArrayGetInt(other, i);
-        int j = i - 1;
-        bool shifting = true;
-        while (shifting && (j >= lo)) {
-            string prev = xsArrayGetString(arr, j);
-            if (_xsStringArrayCompareElem(key, prev, reverse)) {
-                xsArraySetString(arr, j + 1, prev);
-                xsArraySetInt(other, j + 1, xsArrayGetInt(other, j));
-                j--;
-            } else {
-                shifting = false;
-            }
-        }
-        xsArraySetString(arr, j + 1, key);
-        xsArraySetInt(other, j + 1, value);
-    }
-}
-
 void _xsStringArrayMergeWith(int src = -1, int srcOther = -1, int dst = -1, int dstOther = -1, int lo = 0, int mid = 0, int hi = 0, bool reverse = false) {
     int i = lo;
     int j = mid;
@@ -425,7 +440,7 @@ void _xsStringArrayMergeWith(int src = -1, int srcOther = -1, int dst = -1, int 
 }
 
 /*
-    Sorts the array in-place using a stable merge sort, and moves the elements of `other` the same way,
+    Sorts the array in-place with a stable sort, and moves the elements of `other` the same way,
     so `other[i]` stays paired with `arr[i]`. Equal elements keep their original order.
     Inputs larger than 16 elements use two internal buffer arrays shared by all calls.
     @param arr - array id
@@ -441,8 +456,7 @@ int xsStringArraySortWith(int arr = -1, int other = -1, bool reverse = false, bo
     if (xsArrayGetSize(other) != size) {
         return (cStringArrayGenericError);
     }
-    int run = 16;
-    if (size > run) {
+    if (size > _cStringArraySortRun) {
         int r = _xsStringArrayEnsureSortBuffers(size);
         if (r != cStringArraySuccess) {
             _xsStringArrayReleaseSortBuffers(releaseBuffers);
@@ -451,14 +465,14 @@ int xsStringArraySortWith(int arr = -1, int other = -1, bool reverse = false, bo
     }
     int runStart = 0;
     while (runStart < size) {
-        int runEnd = runStart + run;
+        int runEnd = runStart + _cStringArraySortRun;
         if (runEnd > size) {
             runEnd = size;
         }
         _xsStringArrayInsertionSortWith(arr, other, runStart, runEnd, reverse);
         runStart = runEnd;
     }
-    if (size <= run) {
+    if (size <= _cStringArraySortRun) {
         return (cStringArraySuccess);
     }
     int src = arr;
@@ -466,7 +480,7 @@ int xsStringArraySortWith(int arr = -1, int other = -1, bool reverse = false, bo
     int dst = _stringArraySortKeys;
     int dstOther = _stringArraySortValues;
     bool inBuffers = false;
-    int width = run;
+    int width = _cStringArraySortRun;
     while (width < size) {
         int lo = 0;
         while (lo < size) {

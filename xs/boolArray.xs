@@ -4,6 +4,7 @@ extern const int cBoolArrayResizeFailedError = -3;
 extern const int cBoolArrayMaxCapacityError = -4;
 extern const int cBoolArrayMaxCapacity = 999999999;
 extern const int cBoolArrayEmptyIntParam = -999999999;
+const int _cBoolArraySortRun = 16;
 int _boolArraySortKeys = -1;
 int _boolArraySortValues = -1;
 
@@ -107,47 +108,28 @@ bool _xsBoolArrayCompareElem(bool a = false, bool b = false, bool reverse = fals
     return ((a == false) && b);
 }
 
-void _xsBoolArraySiftDown(int arr = -1, int start = -1, int end = -1, bool reverse = false) {
-    int root = start;
-    while (true) {
-        int child = (2 * root) + 1;
-        if (child > end) {
-            return;
-        }
-        bool childVal = xsArrayGetBool(arr, child);
-        if ((child + 1) <= end) {
-            bool childVal1 = xsArrayGetBool(arr, child + 1);
-            if (_xsBoolArrayCompareElem(childVal, childVal1, reverse)) {
-                child++;
-                childVal = childVal1;
-            }
-        }
-        bool rootVal = xsArrayGetBool(arr, root);
-        if (_xsBoolArrayCompareElem(rootVal, childVal, reverse)) {
-            xsArraySetBool(arr, root, childVal);
-            xsArraySetBool(arr, child, rootVal);
-            root = child;
-        } else {
-            return;
-        }
-    }
-}
-
 /*
-    Sorts the array in-place using heapsort.
+    Sorts the array in-place.
     @param arr - array id
     @param reverse - if true, sorts in descending order
 */
 void xsBoolArraySort(int arr = -1, bool reverse = false) {
     int size = xsArrayGetSize(arr);
-    for (start = (size / 2) - 1; > -1) {
-        _xsBoolArraySiftDown(arr, start, size - 1, reverse);
+    int numTrues = 0;
+    for (i = 0; < size) {
+        if (xsArrayGetBool(arr, i)) {
+            numTrues++;
+        }
     }
-    for (end = size - 1; > 0) {
-        bool temp = xsArrayGetBool(arr, 0);
-        xsArraySetBool(arr, 0, xsArrayGetBool(arr, end));
-        xsArraySetBool(arr, end, temp);
-        _xsBoolArraySiftDown(arr, 0, end - 1, reverse);
+    int split = size - numTrues;
+    if (reverse) {
+        split = numTrues;
+    }
+    for (j = 0; < split) {
+        xsArraySetBool(arr, j, reverse);
+    }
+    for (k = split; < size) {
+        xsArraySetBool(arr, k, reverse == false);
     }
 }
 
@@ -254,7 +236,7 @@ void _xsBoolArrayMergeWith(int src = -1, int srcOther = -1, int dst = -1, int ds
 }
 
 /*
-    Sorts the array in-place using a stable merge sort, and moves the elements of `other` the same way,
+    Sorts the array in-place with a stable sort, and moves the elements of `other` the same way,
     so `other[i]` stays paired with `arr[i]`. Equal elements keep their original order.
     Inputs larger than 16 elements use two internal buffer arrays shared by all calls.
     @param arr - array id
@@ -270,8 +252,7 @@ int xsBoolArraySortWith(int arr = -1, int other = -1, bool reverse = false, bool
     if (xsArrayGetSize(other) != size) {
         return (cBoolArrayGenericError);
     }
-    int run = 16;
-    if (size > run) {
+    if (size > _cBoolArraySortRun) {
         int r = _xsBoolArrayEnsureSortBuffers(size);
         if (r != cBoolArraySuccess) {
             _xsBoolArrayReleaseSortBuffers(releaseBuffers);
@@ -280,14 +261,14 @@ int xsBoolArraySortWith(int arr = -1, int other = -1, bool reverse = false, bool
     }
     int runStart = 0;
     while (runStart < size) {
-        int runEnd = runStart + run;
+        int runEnd = runStart + _cBoolArraySortRun;
         if (runEnd > size) {
             runEnd = size;
         }
         _xsBoolArrayInsertionSortWith(arr, other, runStart, runEnd, reverse);
         runStart = runEnd;
     }
-    if (size <= run) {
+    if (size <= _cBoolArraySortRun) {
         return (cBoolArraySuccess);
     }
     int src = arr;
@@ -295,7 +276,7 @@ int xsBoolArraySortWith(int arr = -1, int other = -1, bool reverse = false, bool
     int dst = _boolArraySortKeys;
     int dstOther = _boolArraySortValues;
     bool inBuffers = false;
-    int width = run;
+    int width = _cBoolArraySortRun;
     while (width < size) {
         int lo = 0;
         while (lo < size) {

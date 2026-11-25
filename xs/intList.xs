@@ -8,6 +8,7 @@ extern const int cIntListEmptyParam = -999999999;
 int _cIntListIntMax = -1;
 int _cIntListIntMin = -1;
 int _intListLastOperationStatus = cIntListSuccess;
+const int _cIntListSortRun = 16;
 int _intListSortKeys = -1;
 int _intListSortValues = -1;
 
@@ -494,39 +495,74 @@ bool _xsIntListCompareElem(int a = -1, int b = -1, bool reverse = false) {
     return (a < b);
 }
 
-void _xsIntListSiftDown(int lst = -1, int start = -1, int end = -1, bool reverse = false) {
-    int root = start;
-    while (true) {
-        int child = 2 * root;
-        if (child > end) {
-            return;
+void _xsIntListInsertionSortWith(int data = -1, int other = -1, int lo = 0, int hi = 0, int voff = 0, bool reverse = false) {
+    bool hasOther = other >= 0;
+    for (i = lo + 1; < hi) {
+        int key = xsArrayGetInt(data, i);
+        int value = 0;
+        if (hasOther) {
+            value = xsArrayGetInt(other, i + voff);
         }
-        int childVal = xsArrayGetInt(lst, child);
-        if ((child + 1) <= end) {
-            int childVal1 = xsArrayGetInt(lst, child + 1);
-            if (_xsIntListCompareElem(childVal, childVal1, reverse)) {
-                child++;
-                childVal = childVal1;
+        int j = i - 1;
+        bool shifting = true;
+        while (shifting && (j >= lo)) {
+            int prev = xsArrayGetInt(data, j);
+            if (_xsIntListCompareElem(key, prev, reverse)) {
+                xsArraySetInt(data, j + 1, prev);
+                if (hasOther) {
+                    xsArraySetInt(other, (j + 1) + voff, xsArrayGetInt(other, j + voff));
+                }
+                j--;
+            } else {
+                shifting = false;
             }
         }
-        int rootVal = xsArrayGetInt(lst, root);
-        if (_xsIntListCompareElem(rootVal, childVal, reverse)) {
-            xsArraySetInt(lst, root, childVal);
-            xsArraySetInt(lst, child, rootVal);
-            root = child;
-        } else {
-            return;
+        xsArraySetInt(data, j + 1, key);
+        if (hasOther) {
+            xsArraySetInt(other, (j + 1) + voff, value);
         }
     }
 }
 
+void _xsIntListSiftDown(int lst = -1, int start = -1, int end = -1, bool reverse = false) {
+    int root = start;
+    int val = xsArrayGetInt(lst, root);
+    bool sifting = true;
+    while (sifting) {
+        int child = 2 * root;
+        if (child > end) {
+            sifting = false;
+        } else {
+            int childVal = xsArrayGetInt(lst, child);
+            if ((child + 1) <= end) {
+                int childVal1 = xsArrayGetInt(lst, child + 1);
+                if (_xsIntListCompareElem(childVal, childVal1, reverse)) {
+                    child++;
+                    childVal = childVal1;
+                }
+            }
+            if (_xsIntListCompareElem(val, childVal, reverse)) {
+                xsArraySetInt(lst, root, childVal);
+                root = child;
+            } else {
+                sifting = false;
+            }
+        }
+    }
+    xsArraySetInt(lst, root, val);
+}
+
 /*
-    Sorts the list in-place using heapsort.
+    Sorts the list in-place.
     @param lst - list id
     @param reverse - if true, sorts in descending order
 */
 void xsIntListSort(int lst = -1, bool reverse = false) {
     int size = xsArrayGetInt(lst, 0);
+    if (size <= _cIntListSortRun) {
+        _xsIntListInsertionSortWith(lst, -1, 1, size + 1, 0, reverse);
+        return;
+    }
     for (start = size / 2; > 0) {
         _xsIntListSiftDown(lst, start, size, reverse);
     }
@@ -579,27 +615,6 @@ void _xsIntListReleaseSortBuffers(bool releaseBuffers = true) {
     }
 }
 
-void _xsIntListInsertionSortWith(int data = -1, int other = -1, int lo = 0, int hi = 0, int voff = 0, bool reverse = false) {
-    for (i = lo + 1; < hi) {
-        int key = xsArrayGetInt(data, i);
-        int value = xsArrayGetInt(other, i + voff);
-        int j = i - 1;
-        bool shifting = true;
-        while (shifting && (j >= lo)) {
-            int prev = xsArrayGetInt(data, j);
-            if (_xsIntListCompareElem(key, prev, reverse)) {
-                xsArraySetInt(data, j + 1, prev);
-                xsArraySetInt(other, (j + 1) + voff, xsArrayGetInt(other, j + voff));
-                j--;
-            } else {
-                shifting = false;
-            }
-        }
-        xsArraySetInt(data, j + 1, key);
-        xsArraySetInt(other, (j + 1) + voff, value);
-    }
-}
-
 void _xsIntListMergeWith(int src = -1, int srcOther = -1, int dst = -1, int dstOther = -1, int lo = 0, int mid = 0, int hi = 0, int voff = 0, bool reverse = false) {
     int i = lo;
     int j = mid;
@@ -641,7 +656,7 @@ void _xsIntListMergeWith(int src = -1, int srcOther = -1, int dst = -1, int dstO
 }
 
 /*
-    Sorts the list in-place using a stable merge sort, and moves the elements of `other` the same way,
+    Sorts the list in-place with a stable sort, and moves the elements of `other` the same way,
     so `other[i]` stays paired with `lst[i]`. Equal elements keep their original order.
     Inputs larger than 16 elements use two internal buffer arrays shared by all calls.
     @param lst - list id
@@ -661,8 +676,7 @@ int xsIntListSortWith(int lst = -1, int other = -1, bool reverse = false, bool r
     if (xsArrayGetInt(other, 0) != size) {
         return (cIntListGenericError);
     }
-    int run = 16;
-    if (size > run) {
+    if (size > _cIntListSortRun) {
         int r = _xsIntListEnsureSortBuffers(end, end + voff);
         if (r != cIntListSuccess) {
             _xsIntListReleaseSortBuffers(releaseBuffers);
@@ -671,14 +685,14 @@ int xsIntListSortWith(int lst = -1, int other = -1, bool reverse = false, bool r
     }
     int runStart = start;
     while (runStart < end) {
-        int runEnd = runStart + run;
+        int runEnd = runStart + _cIntListSortRun;
         if (runEnd > end) {
             runEnd = end;
         }
         _xsIntListInsertionSortWith(data, other, runStart, runEnd, voff, reverse);
         runStart = runEnd;
     }
-    if (size <= run) {
+    if (size <= _cIntListSortRun) {
         return (cIntListSuccess);
     }
     int src = data;
@@ -686,7 +700,7 @@ int xsIntListSortWith(int lst = -1, int other = -1, bool reverse = false, bool r
     int dst = _intListSortKeys;
     int dstOther = _intListSortValues;
     bool inBuffers = false;
-    int width = run;
+    int width = _cIntListSortRun;
     while (width < size) {
         int lo = start;
         while (lo < end) {

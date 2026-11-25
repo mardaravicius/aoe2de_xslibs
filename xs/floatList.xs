@@ -8,6 +8,7 @@ extern const int cFloatListMaxCapacity = 999999999;
 extern const float cFloatListEmptyParam = -9999999.0;
 extern const int cFloatListEmptyIntParam = -999999999;
 int _floatListLastOperationStatus = cFloatListSuccess;
+const int _cFloatListSortRun = 16;
 int _floatListSortKeys = -1;
 int _floatListSortValues = -1;
 
@@ -433,39 +434,74 @@ bool _xsFloatListCompareElem(float a = -1.0, float b = -1.0, bool reverse = fals
     return (a < b);
 }
 
-void _xsFloatListSiftDown(int lst = -1, int start = -1, int end = -1, bool reverse = false) {
-    int root = start;
-    while (true) {
-        int child = 2 * root;
-        if (child > end) {
-            return;
+void _xsFloatListInsertionSortWith(int data = -1, int other = -1, int lo = 0, int hi = 0, int voff = 0, bool reverse = false) {
+    bool hasOther = other >= 0;
+    for (i = lo + 1; < hi) {
+        float key = xsArrayGetFloat(data, i);
+        int value = 0;
+        if (hasOther) {
+            value = xsArrayGetInt(other, i + voff);
         }
-        float childVal = xsArrayGetFloat(lst, child);
-        if ((child + 1) <= end) {
-            float childVal1 = xsArrayGetFloat(lst, child + 1);
-            if (_xsFloatListCompareElem(childVal, childVal1, reverse)) {
-                child++;
-                childVal = childVal1;
+        int j = i - 1;
+        bool shifting = true;
+        while (shifting && (j >= lo)) {
+            float prev = xsArrayGetFloat(data, j);
+            if (_xsFloatListCompareElem(key, prev, reverse)) {
+                xsArraySetFloat(data, j + 1, prev);
+                if (hasOther) {
+                    xsArraySetInt(other, (j + 1) + voff, xsArrayGetInt(other, j + voff));
+                }
+                j--;
+            } else {
+                shifting = false;
             }
         }
-        float rootVal = xsArrayGetFloat(lst, root);
-        if (_xsFloatListCompareElem(rootVal, childVal, reverse)) {
-            xsArraySetFloat(lst, root, childVal);
-            xsArraySetFloat(lst, child, rootVal);
-            root = child;
-        } else {
-            return;
+        xsArraySetFloat(data, j + 1, key);
+        if (hasOther) {
+            xsArraySetInt(other, (j + 1) + voff, value);
         }
     }
 }
 
+void _xsFloatListSiftDown(int lst = -1, int start = -1, int end = -1, bool reverse = false) {
+    int root = start;
+    float val = xsArrayGetFloat(lst, root);
+    bool sifting = true;
+    while (sifting) {
+        int child = 2 * root;
+        if (child > end) {
+            sifting = false;
+        } else {
+            float childVal = xsArrayGetFloat(lst, child);
+            if ((child + 1) <= end) {
+                float childVal1 = xsArrayGetFloat(lst, child + 1);
+                if (_xsFloatListCompareElem(childVal, childVal1, reverse)) {
+                    child++;
+                    childVal = childVal1;
+                }
+            }
+            if (_xsFloatListCompareElem(val, childVal, reverse)) {
+                xsArraySetFloat(lst, root, childVal);
+                root = child;
+            } else {
+                sifting = false;
+            }
+        }
+    }
+    xsArraySetFloat(lst, root, val);
+}
+
 /*
-    Sorts the list in-place using heapsort.
+    Sorts the list in-place.
     @param lst - list id
     @param reverse - if true, sorts in descending order
 */
 void xsFloatListSort(int lst = -1, bool reverse = false) {
     int size = xsFloatListSize(lst);
+    if (size <= _cFloatListSortRun) {
+        _xsFloatListInsertionSortWith(lst, -1, 1, size + 1, 0, reverse);
+        return;
+    }
     for (start = size / 2; > 0) {
         _xsFloatListSiftDown(lst, start, size, reverse);
     }
@@ -518,27 +554,6 @@ void _xsFloatListReleaseSortBuffers(bool releaseBuffers = true) {
     }
 }
 
-void _xsFloatListInsertionSortWith(int data = -1, int other = -1, int lo = 0, int hi = 0, int voff = 0, bool reverse = false) {
-    for (i = lo + 1; < hi) {
-        float key = xsArrayGetFloat(data, i);
-        int value = xsArrayGetInt(other, i + voff);
-        int j = i - 1;
-        bool shifting = true;
-        while (shifting && (j >= lo)) {
-            float prev = xsArrayGetFloat(data, j);
-            if (_xsFloatListCompareElem(key, prev, reverse)) {
-                xsArraySetFloat(data, j + 1, prev);
-                xsArraySetInt(other, (j + 1) + voff, xsArrayGetInt(other, j + voff));
-                j--;
-            } else {
-                shifting = false;
-            }
-        }
-        xsArraySetFloat(data, j + 1, key);
-        xsArraySetInt(other, (j + 1) + voff, value);
-    }
-}
-
 void _xsFloatListMergeWith(int src = -1, int srcOther = -1, int dst = -1, int dstOther = -1, int lo = 0, int mid = 0, int hi = 0, int voff = 0, bool reverse = false) {
     int i = lo;
     int j = mid;
@@ -580,7 +595,7 @@ void _xsFloatListMergeWith(int src = -1, int srcOther = -1, int dst = -1, int ds
 }
 
 /*
-    Sorts the list in-place using a stable merge sort, and moves the elements of `other` the same way,
+    Sorts the list in-place with a stable sort, and moves the elements of `other` the same way,
     so `other[i]` stays paired with `lst[i]`. Equal elements keep their original order.
     Inputs larger than 16 elements use two internal buffer arrays shared by all calls.
     @param lst - list id
@@ -600,8 +615,7 @@ int xsFloatListSortWith(int lst = -1, int other = -1, bool reverse = false, bool
     if (xsArrayGetInt(other, 0) != size) {
         return (cFloatListGenericError);
     }
-    int run = 16;
-    if (size > run) {
+    if (size > _cFloatListSortRun) {
         int r = _xsFloatListEnsureSortBuffers(end, end + voff);
         if (r != cFloatListSuccess) {
             _xsFloatListReleaseSortBuffers(releaseBuffers);
@@ -610,14 +624,14 @@ int xsFloatListSortWith(int lst = -1, int other = -1, bool reverse = false, bool
     }
     int runStart = start;
     while (runStart < end) {
-        int runEnd = runStart + run;
+        int runEnd = runStart + _cFloatListSortRun;
         if (runEnd > end) {
             runEnd = end;
         }
         _xsFloatListInsertionSortWith(data, other, runStart, runEnd, voff, reverse);
         runStart = runEnd;
     }
-    if (size <= run) {
+    if (size <= _cFloatListSortRun) {
         return (cFloatListSuccess);
     }
     int src = data;
@@ -625,7 +639,7 @@ int xsFloatListSortWith(int lst = -1, int other = -1, bool reverse = false, bool
     int dst = _floatListSortKeys;
     int dstOther = _floatListSortValues;
     bool inBuffers = false;
-    int width = run;
+    int width = _cFloatListSortRun;
     while (width < size) {
         int lo = start;
         while (lo < end) {

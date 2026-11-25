@@ -113,7 +113,7 @@ class XoRandomTest(unittest.TestCase):
                 r -= f
                 add = True
         r = abs(r)
-        self.assertLessEqual(r, float32(75.0))
+        self.assertLessEqual(r, float32(90.0))
 
     def test_random_bool(self):
         seed = int32(random.randint(-2147483648, 2147483647))

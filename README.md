@@ -138,8 +138,8 @@ red but still work.
   sentinel (for example `cIntListEmptyParam`) are treated as invalid.
   Each call leaks a small amount of memory: XS arrays cannot be deleted, so the temporary arrays used for
   splitting are only resized to zero. Avoid calling `FromString` constructors in frequently running rules.
-- `SortWith` functions (for example `xsIntArraySortWith(arr, other)` or `xsStringListSortWith(lst, other)`) sort with a
-  stable merge sort: equal values keep their original order, in both ascending and descending order. `other` is never
+- `SortWith` functions (for example `xsIntArraySortWith(arr, other)` or `xsStringListSortWith(lst, other)`) sort
+  stably: equal values keep their original order, in both ascending and descending order. `other` is never
   sorted on its own; its elements move the same way as the sorted ones, so `other[i]` stays paired with `arr[i]`.
   `other` must be an int array for the array variants and an int list for the list variants, with the same size.
   They return `...Success`, `...GenericError` when the sizes differ or the buffers can't be created, or

@@ -6,6 +6,7 @@ extern const int cBoolListMaxCapacityError = -4;
 extern const int cBoolListMaxCapacity = 999999999;
 extern const int cBoolListEmptyIntParam = -999999999;
 int _boolListLastOperationStatus = cBoolListSuccess;
+const int _cBoolListSortRun = 16;
 int _boolListSortKeys = -1;
 int _boolListSortValues = -1;
 
@@ -378,48 +379,29 @@ bool _xsBoolListCompareElem(bool a = false, bool b = false, bool reverse = false
     return ((a == false) && b);
 }
 
-void _xsBoolListSiftDown(int lst = -1, int start = -1, int end = -1, bool reverse = false) {
-    int root = start;
-    while (true) {
-        int child = (2 * root) + 1;
-        if (child > end) {
-            return;
-        }
-        bool childVal = xsArrayGetBool(lst, child);
-        if ((child + 1) <= end) {
-            bool childVal1 = xsArrayGetBool(lst, child + 1);
-            if (_xsBoolListCompareElem(childVal, childVal1, reverse)) {
-                child++;
-                childVal = childVal1;
-            }
-        }
-        bool rootVal = xsArrayGetBool(lst, root);
-        if (_xsBoolListCompareElem(rootVal, childVal, reverse)) {
-            xsArraySetBool(lst, root, childVal);
-            xsArraySetBool(lst, child, rootVal);
-            root = child;
-        } else {
-            return;
-        }
-    }
-}
-
 /*
-    Sorts the list in-place using heapsort.
+    Sorts the list in-place.
     @param lst - list id
     @param reverse - if true, sorts in descending order
 */
 void xsBoolListSort(int lst = -1, bool reverse = false) {
     int size = xsArrayGetInt(lst, 0);
     int boolLst = xsArrayGetInt(lst, 1);
-    for (start = (size / 2) - 1; > -1) {
-        _xsBoolListSiftDown(boolLst, start, size - 1, reverse);
+    int numTrues = 0;
+    for (i = 0; < size) {
+        if (xsArrayGetBool(boolLst, i)) {
+            numTrues++;
+        }
     }
-    for (end = size - 1; > 0) {
-        bool temp = xsArrayGetBool(boolLst, 0);
-        xsArraySetBool(boolLst, 0, xsArrayGetBool(boolLst, end));
-        xsArraySetBool(boolLst, end, temp);
-        _xsBoolListSiftDown(boolLst, 0, end - 1, reverse);
+    int split = size - numTrues;
+    if (reverse) {
+        split = numTrues;
+    }
+    for (j = 0; < split) {
+        xsArraySetBool(boolLst, j, reverse);
+    }
+    for (k = split; < size) {
+        xsArraySetBool(boolLst, k, reverse == false);
     }
 }
 
@@ -526,7 +508,7 @@ void _xsBoolListMergeWith(int src = -1, int srcOther = -1, int dst = -1, int dst
 }
 
 /*
-    Sorts the list in-place using a stable merge sort, and moves the elements of `other` the same way,
+    Sorts the list in-place with a stable sort, and moves the elements of `other` the same way,
     so `other[i]` stays paired with `lst[i]`. Equal elements keep their original order.
     Inputs larger than 16 elements use two internal buffer arrays shared by all calls.
     @param lst - list id
@@ -546,8 +528,7 @@ int xsBoolListSortWith(int lst = -1, int other = -1, bool reverse = false, bool 
     if (xsArrayGetInt(other, 0) != size) {
         return (cBoolListGenericError);
     }
-    int run = 16;
-    if (size > run) {
+    if (size > _cBoolListSortRun) {
         int r = _xsBoolListEnsureSortBuffers(end, end + voff);
         if (r != cBoolListSuccess) {
             _xsBoolListReleaseSortBuffers(releaseBuffers);
@@ -556,14 +537,14 @@ int xsBoolListSortWith(int lst = -1, int other = -1, bool reverse = false, bool 
     }
     int runStart = start;
     while (runStart < end) {
-        int runEnd = runStart + run;
+        int runEnd = runStart + _cBoolListSortRun;
         if (runEnd > end) {
             runEnd = end;
         }
         _xsBoolListInsertionSortWith(data, other, runStart, runEnd, voff, reverse);
         runStart = runEnd;
     }
-    if (size <= run) {
+    if (size <= _cBoolListSortRun) {
         return (cBoolListSuccess);
     }
     int src = data;
@@ -571,7 +552,7 @@ int xsBoolListSortWith(int lst = -1, int other = -1, bool reverse = false, bool 
     int dst = _boolListSortKeys;
     int dstOther = _boolListSortValues;
     bool inBuffers = false;
-    int width = run;
+    int width = _cBoolListSortRun;
     while (width < size) {
         int lo = start;
         while (lo < end) {

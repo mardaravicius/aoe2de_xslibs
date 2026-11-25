@@ -4,7 +4,7 @@ from xs_converter.functions import xs_array_get_size, xs_array_get_int, xs_array
     xs_array_create_int, xs_array_set_bool, xs_array_set_int, xs_array_get_bool, xs_array_resize_int, \
     xs_array_resize_bool, \
     str_split, str_trim, xs_array_get_string, xs_array_resize_string
-from xs_converter.symbols import XsExternConst, i32range
+from xs_converter.symbols import XsConst, XsExternConst, i32range
 
 c_bool_list_success: XsExternConst[int32] = int32(0)
 c_bool_list_generic_error: XsExternConst[int32] = int32(-1)
@@ -14,6 +14,7 @@ c_bool_list_max_capacity_error: XsExternConst[int32] = int32(-4)
 c_bool_list_max_capacity: XsExternConst[int32] = int32(999999999)
 c_bool_list_empty_int_param: XsExternConst[int32] = int32(-999999999)
 _bool_list_last_operation_status: int32 = c_bool_list_success
+_c_bool_list_sort_run: XsConst[int32] = int32(16)
 _bool_list_sort_keys: int32 = int32(-1)
 _bool_list_sort_values: int32 = int32(-1)
 
@@ -343,44 +344,25 @@ def _xs_bool_list_compare_elem(a: bool = False, b: bool = False, reverse: bool =
     return (not a) and b
 
 
-def _xs_bool_list_sift_down(lst: int32 = int32(-1), start: int32 = int32(-1), end: int32 = int32(-1),
-                            reverse: bool = False) -> None:
-    root: int32 = start
-    while True:
-        child: int32 = 2 * root + 1
-        if child > end:
-            return
-        child_val: bool = xs_array_get_bool(lst, child)
-        if child + 1 <= end:
-            child_val1: bool = xs_array_get_bool(lst, child + 1)
-            if _xs_bool_list_compare_elem(child_val, child_val1, reverse):
-                child += 1
-                child_val = child_val1
-        root_val: bool = xs_array_get_bool(lst, root)
-        if _xs_bool_list_compare_elem(root_val, child_val, reverse):
-            xs_array_set_bool(lst, root, child_val)
-            xs_array_set_bool(lst, child, root_val)
-            root = child
-        else:
-            return
-
-
 def xs_bool_list_sort(lst: int32 = int32(-1), reverse: bool = False) -> None:
     """
-    Sorts the list in-place using heapsort.
+    Sorts the list in-place.
     :param lst: list id
     :param reverse: if true, sorts in descending order
     """
     size: int32 = xs_array_get_int(lst, 0)
     bool_lst: int32 = xs_array_get_int(lst, 1)
-    for start in i32range(size // 2 - 1, -1, -1):
-        _xs_bool_list_sift_down(bool_lst, start, size - 1, reverse)
-
-    for end in i32range(size - 1, 0, -1):
-        temp: bool = xs_array_get_bool(bool_lst, 0)
-        xs_array_set_bool(bool_lst, 0, xs_array_get_bool(bool_lst, end))
-        xs_array_set_bool(bool_lst, end, temp)
-        _xs_bool_list_sift_down(bool_lst, int32(0), end - 1, reverse)
+    num_trues: int32 = int32(0)
+    for i in i32range(0, size):
+        if xs_array_get_bool(bool_lst, i):
+            num_trues += 1
+    split: int32 = size - num_trues
+    if reverse:
+        split = num_trues
+    for j in i32range(0, split):
+        xs_array_set_bool(bool_lst, j, reverse)
+    for k in i32range(split, size):
+        xs_array_set_bool(bool_lst, k, not reverse)
 
 
 def _xs_bool_list_ensure_sort_buffers(keys_size: int32 = int32(0), values_size: int32 = int32(0)) -> int32:
@@ -470,7 +452,7 @@ def _xs_bool_list_merge_with(src: int32 = int32(-1), src_other: int32 = int32(-1
 
 def xs_bool_list_sort_with(lst: int32 = int32(-1), other: int32 = int32(-1), reverse: bool = False, release_buffers: bool = True) -> int32:
     """
-    Sorts the list in-place using a stable merge sort, and moves the elements of `other` the same way,
+    Sorts the list in-place with a stable sort, and moves the elements of `other` the same way,
     so `other[i]` stays paired with `lst[i]`. Equal elements keep their original order.
     Inputs larger than 16 elements use two internal buffer arrays shared by all calls.
     :param lst: list id
@@ -488,27 +470,26 @@ def xs_bool_list_sort_with(lst: int32 = int32(-1), other: int32 = int32(-1), rev
     voff: int32 = int32(1)
     if xs_array_get_int(other, 0) != size:
         return c_bool_list_generic_error
-    run: int32 = int32(16)
-    if size > run:
+    if size > _c_bool_list_sort_run:
         r: int32 = _xs_bool_list_ensure_sort_buffers(end, end + voff)
         if r != c_bool_list_success:
             _xs_bool_list_release_sort_buffers(release_buffers)
             return r
     run_start: int32 = start
     while run_start < end:
-        run_end: int32 = run_start + run
+        run_end: int32 = run_start + _c_bool_list_sort_run
         if run_end > end:
             run_end = end
         _xs_bool_list_insertion_sort_with(data, other, run_start, run_end, voff, reverse)
         run_start = run_end
-    if size <= run:
+    if size <= _c_bool_list_sort_run:
         return c_bool_list_success
     src: int32 = data
     src_other: int32 = other
     dst: int32 = _bool_list_sort_keys
     dst_other: int32 = _bool_list_sort_values
     in_buffers: bool = False
-    width: int32 = run
+    width: int32 = _c_bool_list_sort_run
     while width < size:
         lo: int32 = start
         while lo < end:
