@@ -2,7 +2,8 @@ from numpy import int32
 
 from xs_converter.functions import xs_array_create_bool, xs_array_set_bool, xs_array_resize_bool, xs_array_get_bool, \
     xs_array_get_size, \
-    str_split, str_trim, xs_array_get_string, xs_array_resize_string
+    str_split, str_trim, xs_array_get_string, xs_array_resize_string, \
+    xs_array_create_int, xs_array_set_int, xs_array_get_int, xs_array_resize_int
 from xs_converter.symbols import XsExternConst, i32range
 
 c_bool_array_success: XsExternConst[int32] = int32(0)
@@ -11,6 +12,8 @@ c_bool_array_resize_failed_error: XsExternConst[int32] = int32(-3)
 c_bool_array_max_capacity_error: XsExternConst[int32] = int32(-4)
 c_bool_array_max_capacity: XsExternConst[int32] = int32(999999999)
 c_bool_array_empty_int_param: XsExternConst[int32] = int32(-999999999)
+_bool_array_sort_keys: int32 = int32(-1)
+_bool_array_sort_values: int32 = int32(-1)
 
 
 def xs_bool_array_from_repeated_val(value: bool = False, times: int32 = int32(0)) -> int32:
@@ -135,6 +138,155 @@ def xs_bool_array_sort(arr: int32 = int32(-1), reverse: bool = False) -> None:
         xs_array_set_bool(arr, 0, xs_array_get_bool(arr, end))
         xs_array_set_bool(arr, end, temp)
         _xs_bool_array_sift_down(arr, int32(0), end - 1, reverse)
+
+
+def _xs_bool_array_ensure_sort_buffers(size: int32 = int32(0)) -> int32:
+    global _bool_array_sort_keys, _bool_array_sort_values
+    if _bool_array_sort_keys < 0:
+        _bool_array_sort_keys = xs_array_create_bool(size)
+        if _bool_array_sort_keys < 0:
+            return c_bool_array_generic_error
+    if _bool_array_sort_values < 0:
+        _bool_array_sort_values = xs_array_create_int(size)
+        if _bool_array_sort_values < 0:
+            return c_bool_array_generic_error
+    r: int32 = int32(1)
+    if xs_array_get_size(_bool_array_sort_keys) < size:
+        r = xs_array_resize_bool(_bool_array_sort_keys, size)
+        if r != 1:
+            return c_bool_array_resize_failed_error
+    if xs_array_get_size(_bool_array_sort_values) < size:
+        r = xs_array_resize_int(_bool_array_sort_values, size)
+        if r != 1:
+            return c_bool_array_resize_failed_error
+    return c_bool_array_success
+
+
+def _xs_bool_array_release_sort_buffers(release_buffers: bool = True) -> None:
+    if not release_buffers:
+        return
+    if _bool_array_sort_keys >= 0:
+        xs_array_resize_bool(_bool_array_sort_keys, 0)
+    if _bool_array_sort_values >= 0:
+        xs_array_resize_int(_bool_array_sort_values, 0)
+
+
+def _xs_bool_array_insertion_sort_with(arr: int32 = int32(-1), other: int32 = int32(-1), lo: int32 = int32(0),
+                                       hi: int32 = int32(0), reverse: bool = False) -> None:
+    for i in i32range(lo + 1, hi):
+        key: bool = xs_array_get_bool(arr, i)
+        value: int32 = xs_array_get_int(other, i)
+        j: int32 = i - 1
+        shifting: bool = True
+        while shifting and j >= lo:
+            prev: bool = xs_array_get_bool(arr, j)
+            if _xs_bool_array_compare_elem(key, prev, reverse):
+                xs_array_set_bool(arr, j + 1, prev)
+                xs_array_set_int(other, j + 1, xs_array_get_int(other, j))
+                j -= 1
+            else:
+                shifting = False
+        xs_array_set_bool(arr, j + 1, key)
+        xs_array_set_int(other, j + 1, value)
+
+
+def _xs_bool_array_merge_with(src: int32 = int32(-1), src_other: int32 = int32(-1), dst: int32 = int32(-1),
+                              dst_other: int32 = int32(-1), lo: int32 = int32(0), mid: int32 = int32(0),
+                              hi: int32 = int32(0), reverse: bool = False) -> None:
+    i: int32 = lo
+    j: int32 = mid
+    k: int32 = lo
+    if i < mid and j < hi:
+        left: bool = xs_array_get_bool(src, i)
+        right: bool = xs_array_get_bool(src, j)
+        while i < mid and j < hi:
+            if _xs_bool_array_compare_elem(right, left, reverse):
+                xs_array_set_bool(dst, k, right)
+                xs_array_set_int(dst_other, k, xs_array_get_int(src_other, j))
+                j += 1
+                if j < hi:
+                    right = xs_array_get_bool(src, j)
+            else:
+                xs_array_set_bool(dst, k, left)
+                xs_array_set_int(dst_other, k, xs_array_get_int(src_other, i))
+                i += 1
+                if i < mid:
+                    left = xs_array_get_bool(src, i)
+            k += 1
+    while i < mid:
+        xs_array_set_bool(dst, k, xs_array_get_bool(src, i))
+        xs_array_set_int(dst_other, k, xs_array_get_int(src_other, i))
+        i += 1
+        k += 1
+    while j < hi:
+        xs_array_set_bool(dst, k, xs_array_get_bool(src, j))
+        xs_array_set_int(dst_other, k, xs_array_get_int(src_other, j))
+        j += 1
+        k += 1
+
+
+def xs_bool_array_sort_with(arr: int32 = int32(-1), other: int32 = int32(-1), reverse: bool = False, release_buffers: bool = True) -> int32:
+    """
+    Sorts the array in-place using a stable merge sort, and moves the elements of `other` the same way,
+    so `other[i]` stays paired with `arr[i]`. Equal elements keep their original order.
+    Inputs larger than 16 elements use two internal buffer arrays shared by all calls.
+    :param arr: array id
+    :param other: int array id of the same size as `arr`
+    :param reverse: if true, sorts in descending order
+    :param release_buffers: if true, resizes the internal buffers to 0 after sorting to free their memory;
+        the same buffers are grown again on the next call
+    :return: `c_bool_array_success` on success, `c_bool_array_generic_error` if the sizes differ or buffers
+        can't be created, or `c_bool_array_resize_failed_error` if the buffers can't grow
+    """
+    size: int32 = xs_array_get_size(arr)
+    if xs_array_get_size(other) != size:
+        return c_bool_array_generic_error
+    run: int32 = int32(16)
+    if size > run:
+        r: int32 = _xs_bool_array_ensure_sort_buffers(size)
+        if r != c_bool_array_success:
+            _xs_bool_array_release_sort_buffers(release_buffers)
+            return r
+    run_start: int32 = int32(0)
+    while run_start < size:
+        run_end: int32 = run_start + run
+        if run_end > size:
+            run_end = size
+        _xs_bool_array_insertion_sort_with(arr, other, run_start, run_end, reverse)
+        run_start = run_end
+    if size <= run:
+        return c_bool_array_success
+    src: int32 = arr
+    src_other: int32 = other
+    dst: int32 = _bool_array_sort_keys
+    dst_other: int32 = _bool_array_sort_values
+    in_buffers: bool = False
+    width: int32 = run
+    while width < size:
+        lo: int32 = int32(0)
+        while lo < size:
+            mid: int32 = lo + width
+            if mid > size:
+                mid = size
+            hi: int32 = mid + width
+            if hi > size:
+                hi = size
+            _xs_bool_array_merge_with(src, src_other, dst, dst_other, lo, mid, hi, reverse)
+            lo = hi
+        temp: int32 = src
+        src = dst
+        dst = temp
+        temp = src_other
+        src_other = dst_other
+        dst_other = temp
+        in_buffers = not in_buffers
+        width *= 2
+    if in_buffers:
+        for i in i32range(0, size):
+            xs_array_set_bool(arr, i, xs_array_get_bool(src, i))
+            xs_array_set_int(other, i, xs_array_get_int(src_other, i))
+    _xs_bool_array_release_sort_buffers(release_buffers)
+    return c_bool_array_success
 
 
 def xs_bool_array_to_string(arr: int32 = int32(-1), start: str = "[", sep: str = ", ", end: str = "]", str_true: str = "true",

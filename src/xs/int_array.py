@@ -15,6 +15,8 @@ c_int_array_empty_param: XsExternConst[int32] = int32(-999999999)
 _c_int_array_int_max: int32 = int32(-1)
 _c_int_array_int_min: int32 = int32(-1)
 _int_array_last_operation_status: int32 = c_int_array_success
+_int_array_sort_keys: int32 = int32(-1)
+_int_array_sort_values: int32 = int32(-1)
 
 
 def xs_int_array(
@@ -278,6 +280,155 @@ def xs_int_array_sort(arr: int32 = int32(-1), reverse: bool = False) -> None:
         xs_array_set_int(arr, 0, xs_array_get_int(arr, end))
         xs_array_set_int(arr, end, temp)
         _xs_int_array_sift_down(arr, int32(0), end - 1, reverse)
+
+
+def _xs_int_array_ensure_sort_buffers(size: int32 = int32(0)) -> int32:
+    global _int_array_sort_keys, _int_array_sort_values
+    if _int_array_sort_keys < 0:
+        _int_array_sort_keys = xs_array_create_int(size)
+        if _int_array_sort_keys < 0:
+            return c_int_array_generic_error
+    if _int_array_sort_values < 0:
+        _int_array_sort_values = xs_array_create_int(size)
+        if _int_array_sort_values < 0:
+            return c_int_array_generic_error
+    r: int32 = int32(1)
+    if xs_array_get_size(_int_array_sort_keys) < size:
+        r = xs_array_resize_int(_int_array_sort_keys, size)
+        if r != 1:
+            return c_int_array_resize_failed_error
+    if xs_array_get_size(_int_array_sort_values) < size:
+        r = xs_array_resize_int(_int_array_sort_values, size)
+        if r != 1:
+            return c_int_array_resize_failed_error
+    return c_int_array_success
+
+
+def _xs_int_array_release_sort_buffers(release_buffers: bool = True) -> None:
+    if not release_buffers:
+        return
+    if _int_array_sort_keys >= 0:
+        xs_array_resize_int(_int_array_sort_keys, 0)
+    if _int_array_sort_values >= 0:
+        xs_array_resize_int(_int_array_sort_values, 0)
+
+
+def _xs_int_array_insertion_sort_with(arr: int32 = int32(-1), other: int32 = int32(-1), lo: int32 = int32(0),
+                                      hi: int32 = int32(0), reverse: bool = False) -> None:
+    for i in i32range(lo + 1, hi):
+        key: int32 = xs_array_get_int(arr, i)
+        value: int32 = xs_array_get_int(other, i)
+        j: int32 = i - 1
+        shifting: bool = True
+        while shifting and j >= lo:
+            prev: int32 = xs_array_get_int(arr, j)
+            if _xs_int_array_compare_elem(key, prev, reverse):
+                xs_array_set_int(arr, j + 1, prev)
+                xs_array_set_int(other, j + 1, xs_array_get_int(other, j))
+                j -= 1
+            else:
+                shifting = False
+        xs_array_set_int(arr, j + 1, key)
+        xs_array_set_int(other, j + 1, value)
+
+
+def _xs_int_array_merge_with(src: int32 = int32(-1), src_other: int32 = int32(-1), dst: int32 = int32(-1),
+                             dst_other: int32 = int32(-1), lo: int32 = int32(0), mid: int32 = int32(0),
+                             hi: int32 = int32(0), reverse: bool = False) -> None:
+    i: int32 = lo
+    j: int32 = mid
+    k: int32 = lo
+    if i < mid and j < hi:
+        left: int32 = xs_array_get_int(src, i)
+        right: int32 = xs_array_get_int(src, j)
+        while i < mid and j < hi:
+            if _xs_int_array_compare_elem(right, left, reverse):
+                xs_array_set_int(dst, k, right)
+                xs_array_set_int(dst_other, k, xs_array_get_int(src_other, j))
+                j += 1
+                if j < hi:
+                    right = xs_array_get_int(src, j)
+            else:
+                xs_array_set_int(dst, k, left)
+                xs_array_set_int(dst_other, k, xs_array_get_int(src_other, i))
+                i += 1
+                if i < mid:
+                    left = xs_array_get_int(src, i)
+            k += 1
+    while i < mid:
+        xs_array_set_int(dst, k, xs_array_get_int(src, i))
+        xs_array_set_int(dst_other, k, xs_array_get_int(src_other, i))
+        i += 1
+        k += 1
+    while j < hi:
+        xs_array_set_int(dst, k, xs_array_get_int(src, j))
+        xs_array_set_int(dst_other, k, xs_array_get_int(src_other, j))
+        j += 1
+        k += 1
+
+
+def xs_int_array_sort_with(arr: int32 = int32(-1), other: int32 = int32(-1), reverse: bool = False, release_buffers: bool = True) -> int32:
+    """
+    Sorts the array in-place using a stable merge sort, and moves the elements of `other` the same way,
+    so `other[i]` stays paired with `arr[i]`. Equal elements keep their original order.
+    Inputs larger than 16 elements use two internal buffer arrays shared by all calls.
+    :param arr: array id
+    :param other: int array id of the same size as `arr`
+    :param reverse: if true, sorts in descending order
+    :param release_buffers: if true, resizes the internal buffers to 0 after sorting to free their memory;
+        the same buffers are grown again on the next call
+    :return: `c_int_array_success` on success, `c_int_array_generic_error` if the sizes differ or buffers
+        can't be created, or `c_int_array_resize_failed_error` if the buffers can't grow
+    """
+    size: int32 = xs_array_get_size(arr)
+    if xs_array_get_size(other) != size:
+        return c_int_array_generic_error
+    run: int32 = int32(16)
+    if size > run:
+        r: int32 = _xs_int_array_ensure_sort_buffers(size)
+        if r != c_int_array_success:
+            _xs_int_array_release_sort_buffers(release_buffers)
+            return r
+    run_start: int32 = int32(0)
+    while run_start < size:
+        run_end: int32 = run_start + run
+        if run_end > size:
+            run_end = size
+        _xs_int_array_insertion_sort_with(arr, other, run_start, run_end, reverse)
+        run_start = run_end
+    if size <= run:
+        return c_int_array_success
+    src: int32 = arr
+    src_other: int32 = other
+    dst: int32 = _int_array_sort_keys
+    dst_other: int32 = _int_array_sort_values
+    in_buffers: bool = False
+    width: int32 = run
+    while width < size:
+        lo: int32 = int32(0)
+        while lo < size:
+            mid: int32 = lo + width
+            if mid > size:
+                mid = size
+            hi: int32 = mid + width
+            if hi > size:
+                hi = size
+            _xs_int_array_merge_with(src, src_other, dst, dst_other, lo, mid, hi, reverse)
+            lo = hi
+        temp: int32 = src
+        src = dst
+        dst = temp
+        temp = src_other
+        src_other = dst_other
+        dst_other = temp
+        in_buffers = not in_buffers
+        width *= 2
+    if in_buffers:
+        for i in i32range(0, size):
+            xs_array_set_int(arr, i, xs_array_get_int(src, i))
+            xs_array_set_int(other, i, xs_array_get_int(src_other, i))
+    _xs_int_array_release_sort_buffers(release_buffers)
+    return c_int_array_success
 
 
 def xs_int_array_to_string(arr: int32 = int32(-1), start: str = "[", sep: str = ", ", end: str = "]") -> str:

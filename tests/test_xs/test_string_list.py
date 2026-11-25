@@ -575,6 +575,74 @@ class StringListTest(unittest.TestCase):
         self.assertEqual(str(c_string_list_generic_error), xs_string_list_max(xs_lst))
         self.assertEqual(c_string_list_index_out_of_range_error, xs_string_list_last_error())
 
+    def test_xs_string_list_sort_with(self):
+        from xs.int_list import xs_int_list_create, xs_int_list_append, xs_int_list_get
+        from random import Random
+        _r = Random(1)
+        for size in [0, 1, 2, 15, 16, 17, 31, 33, 64, 100, 257, 17]:
+            for reverse in [False, True]:
+                keys = [_r.choice(["", "a", "ab", "b"]) for _ in range(size)]
+                lst = xs_string_list_create(int32(0))
+                other = xs_int_list_create(int32(0))
+                for i, v in enumerate(keys):
+                    xs_string_list_append(lst, v)
+                    xs_int_list_append(other, int32(i))
+                self.assertEqual(c_string_list_success, xs_string_list_sort_with(lst, other, reverse))
+                expected = sorted(range(size), key=lambda i: keys[i], reverse=reverse)
+                self.assertEqual([keys[i] for i in expected], [xs_string_list_get(lst, int32(i)) for i in range(size)])
+                self.assertEqual(expected, [int(xs_int_list_get(other, int32(i))) for i in range(size)])
+
+    def test_xs_string_list_sort_with_size_mismatch(self):
+        from random import Random
+        _r = Random(1)
+        lst = xs_string_list_create(int32(0))
+        xs_string_list_append(lst, _r.choice(["", "a", "ab", "b"]))
+        other = xs_array_create_int(int32(1))
+        xs_array_set_int(other, int32(0), int32(0))
+        bigger = xs_array_create_int(int32(3))
+        xs_array_set_int(bigger, int32(0), int32(2))
+        self.assertEqual(c_string_list_generic_error, xs_string_list_sort_with(lst, other))
+        self.assertEqual(c_string_list_generic_error, xs_string_list_sort_with(lst, bigger))
+
+    def test_xs_string_list_sort_with_release_buffers(self):
+        import xs.string_list as module
+        for release, expected_empty in [(True, True), (False, False)]:
+            size = 40
+            lst = xs_string_list_create(int32(0))
+            other = xs_array_create_int(int32(size + 1))
+            xs_array_set_int(other, int32(0), int32(size))
+            for i in range(size):
+                xs_string_list_append(lst, str(i % 3))
+            self.assertEqual(c_string_list_success, xs_string_list_sort_with(lst, other, False, release))
+            keys_size = xs_array_get_size(module._string_list_sort_keys)
+            values_size = xs_array_get_size(module._string_list_sort_values)
+            self.assertEqual(expected_empty, keys_size == 0 and values_size == 0)
+
+    def test_xs_string_list_sort_with_buffer_failure_leaves_input_unchanged(self):
+        import xs.string_list as module
+        size = 40
+        lst = xs_string_list_create(int32(0))
+        other = xs_array_create_int(int32(size + 1))
+        xs_array_set_int(other, int32(0), int32(size))
+        for i in range(size):
+            xs_string_list_append(lst, str(size - i))
+            xs_array_set_int(other, int32(i + 1), int32(i))
+        before = ([xs_string_list_get(lst, int32(i)) for i in range(size)], [xs_array_get_int(other, int32(i + 1)) for i in range(size)])
+        orig_create_int = module.xs_array_create_int
+        orig_keys, orig_values = module._string_list_sort_keys, module._string_list_sort_values
+        module._string_list_sort_keys = int32(-1)
+        module._string_list_sort_values = int32(-1)
+        module.xs_array_create_int = lambda *args, **kwargs: int32(-1)
+        try:
+            self.assertEqual(c_string_list_generic_error, xs_string_list_sort_with(lst, other))
+        finally:
+            module.xs_array_create_int = orig_create_int
+            module._string_list_sort_keys, module._string_list_sort_values = orig_keys, orig_values
+        self.assertEqual(before, ([xs_string_list_get(lst, int32(i)) for i in range(size)], [xs_array_get_int(other, int32(i + 1)) for i in range(size)]))
+
+
+
+
 
 class StringListAllocationCleanupTest(unittest.TestCase):
     def setUp(self):

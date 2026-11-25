@@ -128,6 +128,65 @@ class StringArrayTest(unittest.TestCase):
         self.assertEqual(c_string_array_success, xs_string_array_delete(arr))
         self.assertEqual(0, xs_array_get_size(arr))
 
+    def test_xs_string_array_sort_with(self):
+        from random import Random
+        _r = Random(1)
+        for size in [0, 1, 2, 15, 16, 17, 31, 33, 64, 100, 257, 17]:
+            for reverse in [False, True]:
+                keys = [_r.choice(["", "a", "ab", "b"]) for _ in range(size)]
+                arr = xs_array_create_string(int32(size))
+                other = xs_array_create_int(int32(size))
+                for i, v in enumerate(keys):
+                    xs_array_set_string(arr, int32(i), v)
+                    xs_array_set_int(other, int32(i), int32(i))
+                self.assertEqual(c_string_array_success, xs_string_array_sort_with(arr, other, reverse))
+                expected = sorted(range(size), key=lambda i: keys[i], reverse=reverse)
+                self.assertEqual([keys[i] for i in expected], [xs_array_get_string(arr, int32(i)) for i in range(size)])
+                self.assertEqual(expected, [int(xs_array_get_int(other, int32(i))) for i in range(size)])
+
+    def test_xs_string_array_sort_with_size_mismatch(self):
+        arr = xs_array_create_string(int32(3))
+        other = xs_array_create_int(int32(2))
+        self.assertEqual(c_string_array_generic_error, xs_string_array_sort_with(arr, other))
+        self.assertEqual(c_string_array_generic_error, xs_string_array_sort_with(arr, xs_array_create_int(int32(4))))
+
+    def test_xs_string_array_sort_with_release_buffers(self):
+        import xs.string_array as module
+        for release, expected_empty in [(True, True), (False, False)]:
+            size = 40
+            arr = xs_array_create_string(int32(size))
+            other = xs_array_create_int(int32(size))
+            for i in range(size):
+                xs_array_set_string(arr, int32(i), str(i % 3))
+            self.assertEqual(c_string_array_success, xs_string_array_sort_with(arr, other, False, release))
+            keys_size = xs_array_get_size(module._string_array_sort_keys)
+            values_size = xs_array_get_size(module._string_array_sort_values)
+            self.assertEqual(expected_empty, keys_size == 0 and values_size == 0)
+
+    def test_xs_string_array_sort_with_buffer_failure_leaves_input_unchanged(self):
+        import xs.string_array as module
+        size = 40
+        arr = xs_array_create_string(int32(size))
+        other = xs_array_create_int(int32(size))
+        for i in range(size):
+            xs_array_set_string(arr, int32(i), str(size - i))
+            xs_array_set_int(other, int32(i), int32(i))
+        before = ([xs_array_get_string(arr, int32(i)) for i in range(size)], [xs_array_get_int(other, int32(i)) for i in range(size)])
+        orig_create_int = module.xs_array_create_int
+        orig_keys, orig_values = module._string_array_sort_keys, module._string_array_sort_values
+        module._string_array_sort_keys = int32(-1)
+        module._string_array_sort_values = int32(-1)
+        module.xs_array_create_int = lambda *args, **kwargs: int32(-1)
+        try:
+            self.assertEqual(c_string_array_generic_error, xs_string_array_sort_with(arr, other))
+        finally:
+            module.xs_array_create_int = orig_create_int
+            module._string_array_sort_keys, module._string_array_sort_values = orig_keys, orig_values
+        self.assertEqual(before, ([xs_array_get_string(arr, int32(i)) for i in range(size)], [xs_array_get_int(other, int32(i)) for i in range(size)]))
+
+
+
+
 
 def sstr(lst: list[str]) -> str:
     return "[" + ", ".join('"' + x + '"' for x in lst) + "]"

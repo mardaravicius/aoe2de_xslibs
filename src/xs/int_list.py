@@ -15,6 +15,8 @@ c_int_list_empty_param: XsExternConst[int32] = int32(-999999999)
 _c_int_list_int_max: int32 = int32(-1)
 _c_int_list_int_min: int32 = int32(-1)
 _int_list_last_operation_status: int32 = c_int_list_success
+_int_list_sort_keys: int32 = int32(-1)
+_int_list_sort_values: int32 = int32(-1)
 
 
 def xs_int_list_create(capacity: int32 = int32(7)) -> int32:
@@ -483,6 +485,159 @@ def xs_int_list_sort(lst: int32 = int32(-1), reverse: bool = False) -> None:
         xs_array_set_int(lst, 1, xs_array_get_int(lst, end))
         xs_array_set_int(lst, end, temp)
         _xs_int_list_sift_down(lst, int32(1), end - 1, reverse)
+
+
+def _xs_int_list_ensure_sort_buffers(keys_size: int32 = int32(0), values_size: int32 = int32(0)) -> int32:
+    global _int_list_sort_keys, _int_list_sort_values
+    if _int_list_sort_keys < 0:
+        _int_list_sort_keys = xs_array_create_int(keys_size)
+        if _int_list_sort_keys < 0:
+            return c_int_list_generic_error
+    if _int_list_sort_values < 0:
+        _int_list_sort_values = xs_array_create_int(values_size)
+        if _int_list_sort_values < 0:
+            return c_int_list_generic_error
+    r: int32 = int32(1)
+    if xs_array_get_size(_int_list_sort_keys) < keys_size:
+        r = xs_array_resize_int(_int_list_sort_keys, keys_size)
+        if r != 1:
+            return c_int_list_resize_failed_error
+    if xs_array_get_size(_int_list_sort_values) < values_size:
+        r = xs_array_resize_int(_int_list_sort_values, values_size)
+        if r != 1:
+            return c_int_list_resize_failed_error
+    return c_int_list_success
+
+
+def _xs_int_list_release_sort_buffers(release_buffers: bool = True) -> None:
+    if not release_buffers:
+        return
+    if _int_list_sort_keys >= 0:
+        xs_array_resize_int(_int_list_sort_keys, 0)
+    if _int_list_sort_values >= 0:
+        xs_array_resize_int(_int_list_sort_values, 0)
+
+
+def _xs_int_list_insertion_sort_with(data: int32 = int32(-1), other: int32 = int32(-1), lo: int32 = int32(0),
+                                     hi: int32 = int32(0), voff: int32 = int32(0), reverse: bool = False) -> None:
+    for i in i32range(lo + 1, hi):
+        key: int32 = xs_array_get_int(data, i)
+        value: int32 = xs_array_get_int(other, i + voff)
+        j: int32 = i - 1
+        shifting: bool = True
+        while shifting and j >= lo:
+            prev: int32 = xs_array_get_int(data, j)
+            if _xs_int_list_compare_elem(key, prev, reverse):
+                xs_array_set_int(data, j + 1, prev)
+                xs_array_set_int(other, j + 1 + voff, xs_array_get_int(other, j + voff))
+                j -= 1
+            else:
+                shifting = False
+        xs_array_set_int(data, j + 1, key)
+        xs_array_set_int(other, j + 1 + voff, value)
+
+
+def _xs_int_list_merge_with(src: int32 = int32(-1), src_other: int32 = int32(-1), dst: int32 = int32(-1),
+                            dst_other: int32 = int32(-1), lo: int32 = int32(0), mid: int32 = int32(0),
+                            hi: int32 = int32(0), voff: int32 = int32(0), reverse: bool = False) -> None:
+    i: int32 = lo
+    j: int32 = mid
+    k: int32 = lo
+    if i < mid and j < hi:
+        left: int32 = xs_array_get_int(src, i)
+        right: int32 = xs_array_get_int(src, j)
+        while i < mid and j < hi:
+            if _xs_int_list_compare_elem(right, left, reverse):
+                xs_array_set_int(dst, k, right)
+                xs_array_set_int(dst_other, k + voff, xs_array_get_int(src_other, j + voff))
+                j += 1
+                if j < hi:
+                    right = xs_array_get_int(src, j)
+            else:
+                xs_array_set_int(dst, k, left)
+                xs_array_set_int(dst_other, k + voff, xs_array_get_int(src_other, i + voff))
+                i += 1
+                if i < mid:
+                    left = xs_array_get_int(src, i)
+            k += 1
+    while i < mid:
+        xs_array_set_int(dst, k, xs_array_get_int(src, i))
+        xs_array_set_int(dst_other, k + voff, xs_array_get_int(src_other, i + voff))
+        i += 1
+        k += 1
+    while j < hi:
+        xs_array_set_int(dst, k, xs_array_get_int(src, j))
+        xs_array_set_int(dst_other, k + voff, xs_array_get_int(src_other, j + voff))
+        j += 1
+        k += 1
+
+
+def xs_int_list_sort_with(lst: int32 = int32(-1), other: int32 = int32(-1), reverse: bool = False, release_buffers: bool = True) -> int32:
+    """
+    Sorts the list in-place using a stable merge sort, and moves the elements of `other` the same way,
+    so `other[i]` stays paired with `lst[i]`. Equal elements keep their original order.
+    Inputs larger than 16 elements use two internal buffer arrays shared by all calls.
+    :param lst: list id
+    :param other: int list id of the same size as `lst`
+    :param reverse: if true, sorts in descending order
+    :param release_buffers: if true, resizes the internal buffers to 0 after sorting to free their memory;
+        the same buffers are grown again on the next call
+    :return: `c_int_list_success` on success, `c_int_list_generic_error` if the sizes differ or buffers
+        can't be created, or `c_int_list_resize_failed_error` if the buffers can't grow
+    """
+    size: int32 = xs_array_get_int(lst, 0)
+    data: int32 = lst
+    start: int32 = int32(1)
+    end: int32 = size + 1
+    voff: int32 = int32(0)
+    if xs_array_get_int(other, 0) != size:
+        return c_int_list_generic_error
+    run: int32 = int32(16)
+    if size > run:
+        r: int32 = _xs_int_list_ensure_sort_buffers(end, end + voff)
+        if r != c_int_list_success:
+            _xs_int_list_release_sort_buffers(release_buffers)
+            return r
+    run_start: int32 = start
+    while run_start < end:
+        run_end: int32 = run_start + run
+        if run_end > end:
+            run_end = end
+        _xs_int_list_insertion_sort_with(data, other, run_start, run_end, voff, reverse)
+        run_start = run_end
+    if size <= run:
+        return c_int_list_success
+    src: int32 = data
+    src_other: int32 = other
+    dst: int32 = _int_list_sort_keys
+    dst_other: int32 = _int_list_sort_values
+    in_buffers: bool = False
+    width: int32 = run
+    while width < size:
+        lo: int32 = start
+        while lo < end:
+            mid: int32 = lo + width
+            if mid > end:
+                mid = end
+            hi: int32 = mid + width
+            if hi > end:
+                hi = end
+            _xs_int_list_merge_with(src, src_other, dst, dst_other, lo, mid, hi, voff, reverse)
+            lo = hi
+        temp: int32 = src
+        src = dst
+        dst = temp
+        temp = src_other
+        src_other = dst_other
+        dst_other = temp
+        in_buffers = not in_buffers
+        width *= 2
+    if in_buffers:
+        for i in i32range(start, end):
+            xs_array_set_int(data, i, xs_array_get_int(src, i))
+            xs_array_set_int(other, i + voff, xs_array_get_int(src_other, i + voff))
+    _xs_int_list_release_sort_buffers(release_buffers)
+    return c_int_list_success
 
 
 def xs_int_list_to_string(lst: int32 = int32(-1), start: str = "[", sep: str = ", ", end: str = "]") -> str:

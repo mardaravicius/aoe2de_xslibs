@@ -6,6 +6,8 @@ extern const int cStringArrayMaxCapacityError = -4;
 extern const int cStringArrayMaxCapacity = 999999999;
 extern const int cStringArrayEmptyIntParam = -999999999;
 int _stringArrayLastOperationStatus = cStringArraySuccess;
+int _stringArraySortKeys = -1;
+int _stringArraySortValues = -1;
 
 /*
     Creates an array with provided values. The first value that equals the default sentinel will stop further insertion.
@@ -318,6 +320,184 @@ void xsStringArraySort(int arr = -1, bool reverse = false) {
         xsArraySetString(arr, end, temp);
         _xsStringArraySiftDown(arr, 0, end - 1, reverse);
     }
+}
+
+int _xsStringArrayEnsureSortBuffers(int size = 0) {
+    if (_stringArraySortKeys < 0) {
+        _stringArraySortKeys = xsArrayCreateString(size);
+        if (_stringArraySortKeys < 0) {
+            return (cStringArrayGenericError);
+        }
+    }
+    if (_stringArraySortValues < 0) {
+        _stringArraySortValues = xsArrayCreateInt(size);
+        if (_stringArraySortValues < 0) {
+            return (cStringArrayGenericError);
+        }
+    }
+    int r = 1;
+    if (xsArrayGetSize(_stringArraySortKeys) < size) {
+        r = xsArrayResizeString(_stringArraySortKeys, size);
+        if (r != 1) {
+            return (cStringArrayResizeFailedError);
+        }
+    }
+    if (xsArrayGetSize(_stringArraySortValues) < size) {
+        r = xsArrayResizeInt(_stringArraySortValues, size);
+        if (r != 1) {
+            return (cStringArrayResizeFailedError);
+        }
+    }
+    return (cStringArraySuccess);
+}
+
+void _xsStringArrayReleaseSortBuffers(bool releaseBuffers = true) {
+    if (releaseBuffers == false) {
+        return;
+    }
+    if (_stringArraySortKeys >= 0) {
+        xsArrayResizeString(_stringArraySortKeys, 0);
+    }
+    if (_stringArraySortValues >= 0) {
+        xsArrayResizeInt(_stringArraySortValues, 0);
+    }
+}
+
+void _xsStringArrayInsertionSortWith(int arr = -1, int other = -1, int lo = 0, int hi = 0, bool reverse = false) {
+    for (i = lo + 1; < hi) {
+        string key = xsArrayGetString(arr, i);
+        int value = xsArrayGetInt(other, i);
+        int j = i - 1;
+        bool shifting = true;
+        while (shifting && (j >= lo)) {
+            string prev = xsArrayGetString(arr, j);
+            if (_xsStringArrayCompareElem(key, prev, reverse)) {
+                xsArraySetString(arr, j + 1, prev);
+                xsArraySetInt(other, j + 1, xsArrayGetInt(other, j));
+                j--;
+            } else {
+                shifting = false;
+            }
+        }
+        xsArraySetString(arr, j + 1, key);
+        xsArraySetInt(other, j + 1, value);
+    }
+}
+
+void _xsStringArrayMergeWith(int src = -1, int srcOther = -1, int dst = -1, int dstOther = -1, int lo = 0, int mid = 0, int hi = 0, bool reverse = false) {
+    int i = lo;
+    int j = mid;
+    int k = lo;
+    if ((i < mid) && (j < hi)) {
+        string left = xsArrayGetString(src, i);
+        string right = xsArrayGetString(src, j);
+        while ((i < mid) && (j < hi)) {
+            if (_xsStringArrayCompareElem(right, left, reverse)) {
+                xsArraySetString(dst, k, right);
+                xsArraySetInt(dstOther, k, xsArrayGetInt(srcOther, j));
+                j++;
+                if (j < hi) {
+                    right = xsArrayGetString(src, j);
+                }
+            } else {
+                xsArraySetString(dst, k, left);
+                xsArraySetInt(dstOther, k, xsArrayGetInt(srcOther, i));
+                i++;
+                if (i < mid) {
+                    left = xsArrayGetString(src, i);
+                }
+            }
+            k++;
+        }
+    }
+    while (i < mid) {
+        xsArraySetString(dst, k, xsArrayGetString(src, i));
+        xsArraySetInt(dstOther, k, xsArrayGetInt(srcOther, i));
+        i++;
+        k++;
+    }
+    while (j < hi) {
+        xsArraySetString(dst, k, xsArrayGetString(src, j));
+        xsArraySetInt(dstOther, k, xsArrayGetInt(srcOther, j));
+        j++;
+        k++;
+    }
+}
+
+/*
+    Sorts the array in-place using a stable merge sort, and moves the elements of `other` the same way,
+    so `other[i]` stays paired with `arr[i]`. Equal elements keep their original order.
+    Inputs larger than 16 elements use two internal buffer arrays shared by all calls.
+    @param arr - array id
+    @param other - int array id of the same size as `arr`
+    @param reverse - if true, sorts in descending order
+    @param release_buffers - if true, resizes the internal buffers to 0 after sorting to free their memory;
+        the same buffers are grown again on the next call
+    @return `cStringArraySuccess` on success, `cStringArrayGenericError` if the sizes differ or buffers
+        can't be created, or `cStringArrayResizeFailedError` if the buffers can't grow
+*/
+int xsStringArraySortWith(int arr = -1, int other = -1, bool reverse = false, bool releaseBuffers = true) {
+    int size = xsArrayGetSize(arr);
+    if (xsArrayGetSize(other) != size) {
+        return (cStringArrayGenericError);
+    }
+    int run = 16;
+    if (size > run) {
+        int r = _xsStringArrayEnsureSortBuffers(size);
+        if (r != cStringArraySuccess) {
+            _xsStringArrayReleaseSortBuffers(releaseBuffers);
+            return (r);
+        }
+    }
+    int runStart = 0;
+    while (runStart < size) {
+        int runEnd = runStart + run;
+        if (runEnd > size) {
+            runEnd = size;
+        }
+        _xsStringArrayInsertionSortWith(arr, other, runStart, runEnd, reverse);
+        runStart = runEnd;
+    }
+    if (size <= run) {
+        return (cStringArraySuccess);
+    }
+    int src = arr;
+    int srcOther = other;
+    int dst = _stringArraySortKeys;
+    int dstOther = _stringArraySortValues;
+    bool inBuffers = false;
+    int width = run;
+    while (width < size) {
+        int lo = 0;
+        while (lo < size) {
+            int mid = lo + width;
+            if (mid > size) {
+                mid = size;
+            }
+            int hi = mid + width;
+            if (hi > size) {
+                hi = size;
+            }
+            _xsStringArrayMergeWith(src, srcOther, dst, dstOther, lo, mid, hi, reverse);
+            lo = hi;
+        }
+        int temp = src;
+        src = dst;
+        dst = temp;
+        temp = srcOther;
+        srcOther = dstOther;
+        dstOther = temp;
+        inBuffers = inBuffers == false;
+        width = width * 2;
+    }
+    if (inBuffers) {
+        for (i = 0; < size) {
+            xsArraySetString(arr, i, xsArrayGetString(src, i));
+            xsArraySetInt(other, i, xsArrayGetInt(srcOther, i));
+        }
+    }
+    _xsStringArrayReleaseSortBuffers(releaseBuffers);
+    return (cStringArraySuccess);
 }
 
 /*

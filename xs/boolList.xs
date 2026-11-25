@@ -6,6 +6,8 @@ extern const int cBoolListMaxCapacityError = -4;
 extern const int cBoolListMaxCapacity = 999999999;
 extern const int cBoolListEmptyIntParam = -999999999;
 int _boolListLastOperationStatus = cBoolListSuccess;
+int _boolListSortKeys = -1;
+int _boolListSortValues = -1;
 
 /*
     Returns the number of elements in the list.
@@ -419,6 +421,188 @@ void xsBoolListSort(int lst = -1, bool reverse = false) {
         xsArraySetBool(boolLst, end, temp);
         _xsBoolListSiftDown(boolLst, 0, end - 1, reverse);
     }
+}
+
+int _xsBoolListEnsureSortBuffers(int keysSize = 0, int valuesSize = 0) {
+    if (_boolListSortKeys < 0) {
+        _boolListSortKeys = xsArrayCreateBool(keysSize);
+        if (_boolListSortKeys < 0) {
+            return (cBoolListGenericError);
+        }
+    }
+    if (_boolListSortValues < 0) {
+        _boolListSortValues = xsArrayCreateInt(valuesSize);
+        if (_boolListSortValues < 0) {
+            return (cBoolListGenericError);
+        }
+    }
+    int r = 1;
+    if (xsArrayGetSize(_boolListSortKeys) < keysSize) {
+        r = xsArrayResizeBool(_boolListSortKeys, keysSize);
+        if (r != 1) {
+            return (cBoolListResizeFailedError);
+        }
+    }
+    if (xsArrayGetSize(_boolListSortValues) < valuesSize) {
+        r = xsArrayResizeInt(_boolListSortValues, valuesSize);
+        if (r != 1) {
+            return (cBoolListResizeFailedError);
+        }
+    }
+    return (cBoolListSuccess);
+}
+
+void _xsBoolListReleaseSortBuffers(bool releaseBuffers = true) {
+    if (releaseBuffers == false) {
+        return;
+    }
+    if (_boolListSortKeys >= 0) {
+        xsArrayResizeBool(_boolListSortKeys, 0);
+    }
+    if (_boolListSortValues >= 0) {
+        xsArrayResizeInt(_boolListSortValues, 0);
+    }
+}
+
+void _xsBoolListInsertionSortWith(int data = -1, int other = -1, int lo = 0, int hi = 0, int voff = 0, bool reverse = false) {
+    for (i = lo + 1; < hi) {
+        bool key = xsArrayGetBool(data, i);
+        int value = xsArrayGetInt(other, i + voff);
+        int j = i - 1;
+        bool shifting = true;
+        while (shifting && (j >= lo)) {
+            bool prev = xsArrayGetBool(data, j);
+            if (_xsBoolListCompareElem(key, prev, reverse)) {
+                xsArraySetBool(data, j + 1, prev);
+                xsArraySetInt(other, (j + 1) + voff, xsArrayGetInt(other, j + voff));
+                j--;
+            } else {
+                shifting = false;
+            }
+        }
+        xsArraySetBool(data, j + 1, key);
+        xsArraySetInt(other, (j + 1) + voff, value);
+    }
+}
+
+void _xsBoolListMergeWith(int src = -1, int srcOther = -1, int dst = -1, int dstOther = -1, int lo = 0, int mid = 0, int hi = 0, int voff = 0, bool reverse = false) {
+    int i = lo;
+    int j = mid;
+    int k = lo;
+    if ((i < mid) && (j < hi)) {
+        bool left = xsArrayGetBool(src, i);
+        bool right = xsArrayGetBool(src, j);
+        while ((i < mid) && (j < hi)) {
+            if (_xsBoolListCompareElem(right, left, reverse)) {
+                xsArraySetBool(dst, k, right);
+                xsArraySetInt(dstOther, k + voff, xsArrayGetInt(srcOther, j + voff));
+                j++;
+                if (j < hi) {
+                    right = xsArrayGetBool(src, j);
+                }
+            } else {
+                xsArraySetBool(dst, k, left);
+                xsArraySetInt(dstOther, k + voff, xsArrayGetInt(srcOther, i + voff));
+                i++;
+                if (i < mid) {
+                    left = xsArrayGetBool(src, i);
+                }
+            }
+            k++;
+        }
+    }
+    while (i < mid) {
+        xsArraySetBool(dst, k, xsArrayGetBool(src, i));
+        xsArraySetInt(dstOther, k + voff, xsArrayGetInt(srcOther, i + voff));
+        i++;
+        k++;
+    }
+    while (j < hi) {
+        xsArraySetBool(dst, k, xsArrayGetBool(src, j));
+        xsArraySetInt(dstOther, k + voff, xsArrayGetInt(srcOther, j + voff));
+        j++;
+        k++;
+    }
+}
+
+/*
+    Sorts the list in-place using a stable merge sort, and moves the elements of `other` the same way,
+    so `other[i]` stays paired with `lst[i]`. Equal elements keep their original order.
+    Inputs larger than 16 elements use two internal buffer arrays shared by all calls.
+    @param lst - list id
+    @param other - int list id of the same size as `lst`
+    @param reverse - if true, sorts in descending order
+    @param release_buffers - if true, resizes the internal buffers to 0 after sorting to free their memory;
+        the same buffers are grown again on the next call
+    @return `cBoolListSuccess` on success, `cBoolListGenericError` if the sizes differ or buffers
+        can't be created, or `cBoolListResizeFailedError` if the buffers can't grow
+*/
+int xsBoolListSortWith(int lst = -1, int other = -1, bool reverse = false, bool releaseBuffers = true) {
+    int size = xsArrayGetInt(lst, 0);
+    int data = xsArrayGetInt(lst, 1);
+    int start = 0;
+    int end = size;
+    int voff = 1;
+    if (xsArrayGetInt(other, 0) != size) {
+        return (cBoolListGenericError);
+    }
+    int run = 16;
+    if (size > run) {
+        int r = _xsBoolListEnsureSortBuffers(end, end + voff);
+        if (r != cBoolListSuccess) {
+            _xsBoolListReleaseSortBuffers(releaseBuffers);
+            return (r);
+        }
+    }
+    int runStart = start;
+    while (runStart < end) {
+        int runEnd = runStart + run;
+        if (runEnd > end) {
+            runEnd = end;
+        }
+        _xsBoolListInsertionSortWith(data, other, runStart, runEnd, voff, reverse);
+        runStart = runEnd;
+    }
+    if (size <= run) {
+        return (cBoolListSuccess);
+    }
+    int src = data;
+    int srcOther = other;
+    int dst = _boolListSortKeys;
+    int dstOther = _boolListSortValues;
+    bool inBuffers = false;
+    int width = run;
+    while (width < size) {
+        int lo = start;
+        while (lo < end) {
+            int mid = lo + width;
+            if (mid > end) {
+                mid = end;
+            }
+            int hi = mid + width;
+            if (hi > end) {
+                hi = end;
+            }
+            _xsBoolListMergeWith(src, srcOther, dst, dstOther, lo, mid, hi, voff, reverse);
+            lo = hi;
+        }
+        int temp = src;
+        src = dst;
+        dst = temp;
+        temp = srcOther;
+        srcOther = dstOther;
+        dstOther = temp;
+        inBuffers = inBuffers == false;
+        width = width * 2;
+    }
+    if (inBuffers) {
+        for (i = start; < end) {
+            xsArraySetBool(data, i, xsArrayGetBool(src, i));
+            xsArraySetInt(other, i + voff, xsArrayGetInt(srcOther, i + voff));
+        }
+    }
+    _xsBoolListReleaseSortBuffers(releaseBuffers);
+    return (cBoolListSuccess);
 }
 
 /*

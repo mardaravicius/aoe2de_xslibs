@@ -138,6 +138,15 @@ red but still work.
   sentinel (for example `cIntListEmptyParam`) are treated as invalid.
   Each call leaks a small amount of memory: XS arrays cannot be deleted, so the temporary arrays used for
   splitting are only resized to zero. Avoid calling `FromString` constructors in frequently running rules.
+- `SortWith` functions (for example `xsIntArraySortWith(arr, other)` or `xsStringListSortWith(lst, other)`) sort with a
+  stable merge sort: equal values keep their original order, in both ascending and descending order. `other` is never
+  sorted on its own; its elements move the same way as the sorted ones, so `other[i]` stays paired with `arr[i]`.
+  `other` must be an int array for the array variants and an int list for the list variants, with the same size.
+  They return `...Success`, `...GenericError` when the sizes differ or the buffers can't be created, or
+  `...ResizeFailedError` when the buffers can't grow. On error neither input is changed.
+  Inputs larger than 16 elements use two internal buffer arrays per module. With `releaseBuffers` set to `true`
+  (the default) they are resized to zero after sorting; the same arrays are grown again on the next call, so no new
+  arrays are created. Pass `false` to keep them allocated when sorting large inputs often.
 - There is no global initialization function for these libraries. You can use them immediately.
 - `xsIntIntDict`, `xsIntStringDict`, and `xsIntVectorDict` cannot store their reserved `...EmptyKey` int sentinel as a key.
 - `xsFloatIntDict`, `xsFloatStringDict`, and `xsFloatVectorDict` cannot store their reserved `...EmptyKey` float sentinel as a key.
@@ -181,6 +190,7 @@ int xsIntArrayFromRepeatedArray(int arr, int times)
 int    xsIntArrayDelete(int arr)
 void   xsIntArrayReverse(int arr)
 void   xsIntArraySort(int arr, bool reverse)
+int    xsIntArraySortWith(int arr, int other, bool reverse, bool releaseBuffers)  // stable; other is an int array kept paired
 
 // Search
 bool   xsIntArrayContains(int arr, int value)
@@ -208,10 +218,11 @@ void rankUnits() {
     int units = xsIntArray(cMilitiaLine, cArcherLine, cKnightLine);
     int costs = xsIntArray(60, 45, 135);
 
-    xsIntArraySort(costs, true);
-    xsChatData("Most expensive: " + xsArrayGetInt(costs, 0));
+    xsIntArraySortWith(costs, units, true);
+    xsChatData("Most expensive: unit " + xsArrayGetInt(units, 0) + " for " + xsArrayGetInt(costs, 0));
     xsChatData("Has archers: " + xsIntArrayContains(units, cArcherLine));
 }
+```
 
 ## 5. Float Array
 
@@ -247,6 +258,7 @@ int   xsFloatArrayFromRepeatedArray(int arr, int times)
 int   xsFloatArrayDelete(int arr)
 void  xsFloatArrayReverse(int arr)
 void  xsFloatArraySort(int arr, bool reverse)
+int   xsFloatArraySortWith(int arr, int other, bool reverse, bool releaseBuffers)  // stable; other is an int array kept paired
 
 // Search
 bool  xsFloatArrayContains(int arr, float value)
@@ -310,6 +322,7 @@ int    xsBoolArrayFromRepeatedArray(int arr, int times)
 int    xsBoolArrayDelete(int arr)
 void   xsBoolArrayReverse(int arr)
 void   xsBoolArraySort(int arr, bool reverse)          // false before true
+int    xsBoolArraySortWith(int arr, int other, bool reverse, bool releaseBuffers)  // stable; other is an int array kept paired
 
 // Search
 bool   xsBoolArrayContains(int arr, bool value)
@@ -369,6 +382,7 @@ int    xsStringArrayFromRepeatedArray(int arr, int times)
 int    xsStringArrayDelete(int arr)
 void   xsStringArrayReverse(int arr)
 void   xsStringArraySort(int arr, bool reverse)
+int    xsStringArraySortWith(int arr, int other, bool reverse, bool releaseBuffers)  // stable; other is an int array kept paired
 
 // Search
 bool   xsStringArrayContains(int arr, string value)
@@ -497,6 +511,7 @@ int    xsIntListClear(int lst)
 int    xsIntListDelete(int lst)
 void   xsIntListReverse(int lst)
 void   xsIntListSort(int lst, bool reverse)
+int    xsIntListSortWith(int lst, int other, bool reverse, bool releaseBuffers)  // stable; other is an int list kept paired
 
 // Search
 bool   xsIntListContains(int lst, int value)
@@ -577,6 +592,7 @@ int   xsFloatListClear(int lst)
 int   xsFloatListDelete(int lst)
 void  xsFloatListReverse(int lst)
 void  xsFloatListSort(int lst, bool reverse)
+int   xsFloatListSortWith(int lst, int other, bool reverse, bool releaseBuffers)  // stable; other is an int list kept paired
 
 // Search
 bool  xsFloatListContains(int lst, float value)
@@ -660,6 +676,7 @@ int  xsBoolListClear(int lst)
 int  xsBoolListDelete(int lst)
 void xsBoolListReverse(int lst)
 void xsBoolListSort(int lst, bool reverse)
+int  xsBoolListSortWith(int lst, int other, bool reverse, bool releaseBuffers)  // stable; other is an int list kept paired
 
 // Search
 bool xsBoolListContains(int lst, bool value)
@@ -737,6 +754,7 @@ int    xsStringListClear(int lst)
 int    xsStringListDelete(int lst)
 void   xsStringListReverse(int lst)
 void   xsStringListSort(int lst, bool reverse)
+int    xsStringListSortWith(int lst, int other, bool reverse, bool releaseBuffers)  // stable; other is an int list kept paired
 
 // Search
 bool   xsStringListContains(int lst, string value)

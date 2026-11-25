@@ -62,6 +62,8 @@ class BoolListTest(unittest.TestCase):
     def setUp(self):
         _impl.ARRAYS.clear()
         _impl.ARRAY_NAMES.clear()
+        _bl._bool_list_sort_keys = int32(-1)
+        _bl._bool_list_sort_values = int32(-1)
         self.orig_create_int = _bl.xs_array_create_int
         self.orig_create_bool = _bl.xs_array_create_bool
         self.orig_set_bool = _bl.xs_array_set_bool
@@ -641,6 +643,74 @@ class BoolListTest(unittest.TestCase):
 
         self.assertEqual(c_bool_list_generic_error, xs_bool_list_from_array(xs_arr))
         self.assertEqual(0, xs_array_get_size(created["arr"]))
+
+    def test_xs_bool_list_sort_with(self):
+        from xs.int_list import xs_int_list_create, xs_int_list_append, xs_int_list_get
+        from random import Random
+        _r = Random(1)
+        for size in [0, 1, 2, 15, 16, 17, 31, 33, 64, 100, 257, 17]:
+            for reverse in [False, True]:
+                keys = [_r.choice([False, True]) for _ in range(size)]
+                lst = xs_bool_list_create(int32(0))
+                other = xs_int_list_create(int32(0))
+                for i, v in enumerate(keys):
+                    xs_bool_list_append(lst, v)
+                    xs_int_list_append(other, int32(i))
+                self.assertEqual(c_bool_list_success, xs_bool_list_sort_with(lst, other, reverse))
+                expected = sorted(range(size), key=lambda i: keys[i], reverse=reverse)
+                self.assertEqual([keys[i] for i in expected], [xs_bool_list_get(lst, int32(i)) for i in range(size)])
+                self.assertEqual(expected, [int(xs_int_list_get(other, int32(i))) for i in range(size)])
+
+    def test_xs_bool_list_sort_with_size_mismatch(self):
+        from random import Random
+        _r = Random(1)
+        lst = xs_bool_list_create(int32(0))
+        xs_bool_list_append(lst, _r.choice([False, True]))
+        other = xs_array_create_int(int32(1))
+        xs_array_set_int(other, int32(0), int32(0))
+        bigger = xs_array_create_int(int32(3))
+        xs_array_set_int(bigger, int32(0), int32(2))
+        self.assertEqual(c_bool_list_generic_error, xs_bool_list_sort_with(lst, other))
+        self.assertEqual(c_bool_list_generic_error, xs_bool_list_sort_with(lst, bigger))
+
+    def test_xs_bool_list_sort_with_release_buffers(self):
+        import xs.bool_list as module
+        for release, expected_empty in [(True, True), (False, False)]:
+            size = 40
+            lst = xs_bool_list_create(int32(0))
+            other = xs_array_create_int(int32(size + 1))
+            xs_array_set_int(other, int32(0), int32(size))
+            for i in range(size):
+                xs_bool_list_append(lst, i % 2 == 0)
+            self.assertEqual(c_bool_list_success, xs_bool_list_sort_with(lst, other, False, release))
+            keys_size = xs_array_get_size(module._bool_list_sort_keys)
+            values_size = xs_array_get_size(module._bool_list_sort_values)
+            self.assertEqual(expected_empty, keys_size == 0 and values_size == 0)
+
+    def test_xs_bool_list_sort_with_buffer_failure_leaves_input_unchanged(self):
+        import xs.bool_list as module
+        size = 40
+        lst = xs_bool_list_create(int32(0))
+        other = xs_array_create_int(int32(size + 1))
+        xs_array_set_int(other, int32(0), int32(size))
+        for i in range(size):
+            xs_bool_list_append(lst, i % 2 == 0)
+            xs_array_set_int(other, int32(i + 1), int32(i))
+        before = ([xs_bool_list_get(lst, int32(i)) for i in range(size)], [xs_array_get_int(other, int32(i + 1)) for i in range(size)])
+        orig_create_int = module.xs_array_create_int
+        orig_keys, orig_values = module._bool_list_sort_keys, module._bool_list_sort_values
+        module._bool_list_sort_keys = int32(-1)
+        module._bool_list_sort_values = int32(-1)
+        module.xs_array_create_int = lambda *args, **kwargs: int32(-1)
+        try:
+            self.assertEqual(c_bool_list_generic_error, xs_bool_list_sort_with(lst, other))
+        finally:
+            module.xs_array_create_int = orig_create_int
+            module._bool_list_sort_keys, module._bool_list_sort_values = orig_keys, orig_values
+        self.assertEqual(before, ([xs_bool_list_get(lst, int32(i)) for i in range(size)], [xs_array_get_int(other, int32(i + 1)) for i in range(size)]))
+
+
+
 
 
 def bstr(lst: list[bool]) -> str:
